@@ -2,7 +2,19 @@
 
 import { useEffect, useState } from "react";
 
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+
+import { db } from "../lib/firebase";
+
 type Lich = {
+  id?: string;
   ngay: string;
   gio: string;
   tenKhach: string;
@@ -19,22 +31,23 @@ export default function Home() {
 
   const [timNgay, setTimNgay] = useState("");
 
-  const [dangSua, setDangSua] = useState<number | null>(null);
+  const [dangSua, setDangSua] = useState<string | null>(null);
 
   useEffect(() => {
-    const duLieuDaLuu = localStorage.getItem("lichStudio");
+    const unsub = onSnapshot(
+      collection(db, "lichStudio"),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Lich[];
 
-    if (duLieuDaLuu) {
-      setLichLamViec(JSON.parse(duLieuDaLuu));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(
-      "lichStudio",
-      JSON.stringify(lichLamViec)
+        setLichLamViec(data);
+      }
     );
-  }, [lichLamViec]);
+
+    return () => unsub();
+  }, []);
 
   const resetForm = () => {
     setNgay("");
@@ -44,69 +57,59 @@ export default function Home() {
     setDangSua(null);
   };
 
-  const themHoacSuaLich = () => {
+  const themHoacSuaLich = async () => {
     if (!ngay || !gio || !tenKhach || !theLoai) {
-      alert("Vui lòng nhập đầy đủ thông tin");
+      alert("Vui lòng nhập đầy đủ");
       return;
     }
 
     const trungLich = lichLamViec.some(
-      (item, index) =>
+      (item) =>
         item.ngay === ngay &&
         item.gio === gio &&
-        index !== dangSua
+        item.id !== dangSua
     );
 
     if (trungLich) {
-      alert("Khung giờ này đã có lịch!");
+      alert("Khung giờ đã có lịch");
       return;
     }
 
-    if (dangSua !== null) {
-      const danhSachMoi = [...lichLamViec];
-
-      danhSachMoi[dangSua] = {
+    if (dangSua) {
+      await updateDoc(doc(db, "lichStudio", dangSua), {
         ngay,
         gio,
         tenKhach,
         theLoai,
-      };
-
-      setLichLamViec(danhSachMoi);
+      });
 
       resetForm();
-
       return;
     }
 
-    setLichLamViec([
-      ...lichLamViec,
-      {
-        ngay,
-        gio,
-        tenKhach,
-        theLoai,
-      },
-    ]);
+    await addDoc(collection(db, "lichStudio"), {
+      ngay,
+      gio,
+      tenKhach,
+      theLoai,
+    });
 
     resetForm();
   };
 
-  const xoaLich = (index: number) => {
-    setLichLamViec(
-      lichLamViec.filter((_, i) => i !== index)
-    );
+  const xoaLich = async (id?: string) => {
+    if (!id) return;
+
+    await deleteDoc(doc(db, "lichStudio", id));
   };
 
-  const suaLich = (index: number) => {
-    const lich = lichLamViec[index];
+  const suaLich = (item: Lich) => {
+    setNgay(item.ngay);
+    setGio(item.gio);
+    setTenKhach(item.tenKhach);
+    setTheLoai(item.theLoai);
 
-    setNgay(lich.ngay);
-    setGio(lich.gio);
-    setTenKhach(lich.tenKhach);
-    setTheLoai(lich.theLoai);
-
-    setDangSua(index);
+    setDangSua(item.id || null);
 
     window.scrollTo({
       top: 0,
@@ -141,7 +144,7 @@ export default function Home() {
 
       <div className="bg-white rounded-lg shadow p-4 mb-6">
         <h2 className="text-xl font-bold mb-4">
-          {dangSua !== null
+          {dangSua
             ? "Sửa lịch chụp"
             : "Thêm lịch chụp"}
         </h2>
@@ -165,13 +168,17 @@ export default function Home() {
             type="text"
             placeholder="Tên khách"
             value={tenKhach}
-            onChange={(e) => setTenKhach(e.target.value)}
+            onChange={(e) =>
+              setTenKhach(e.target.value)
+            }
             className="border p-2 rounded"
           />
 
           <select
             value={theLoai}
-            onChange={(e) => setTheLoai(e.target.value)}
+            onChange={(e) =>
+              setTheLoai(e.target.value)
+            }
             className="border p-2 rounded"
           >
             <option value="">-- Chọn thể loại --</option>
@@ -189,12 +196,12 @@ export default function Home() {
               onClick={themHoacSuaLich}
               className="bg-blue-600 text-white p-2 rounded flex-1"
             >
-              {dangSua !== null
+              {dangSua
                 ? "Lưu thay đổi"
                 : "Thêm lịch"}
             </button>
 
-            {dangSua !== null && (
+            {dangSua && (
               <button
                 onClick={resetForm}
                 className="bg-gray-500 text-white p-2 rounded"
@@ -215,7 +222,9 @@ export default function Home() {
           <input
             type="date"
             value={timNgay}
-            onChange={(e) => setTimNgay(e.target.value)}
+            onChange={(e) =>
+              setTimNgay(e.target.value)
+            }
             className="border p-2 rounded"
           />
 
@@ -242,54 +251,41 @@ export default function Home() {
                   .sort((a, b) =>
                     a.gio.localeCompare(b.gio)
                   )
-                  .map((item) => {
-                    const indexGoc =
-                      lichLamViec.findIndex(
-                        (x) =>
-                          x.ngay === item.ngay &&
-                          x.gio === item.gio &&
-                          x.tenKhach ===
-                            item.tenKhach
-                      );
-
-                    return (
-                      <div
-                        key={`${item.ngay}-${item.gio}-${item.tenKhach}`}
-                        className="border rounded p-3 flex justify-between items-center"
-                      >
-                        <div>
-                          <div className="font-semibold">
-                            🕒 {item.gio} |{" "}
-                            {item.theLoai}
-                          </div>
-
-                          <div>
-                            {item.tenKhach}
-                          </div>
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className="border rounded p-3 flex justify-between items-center"
+                    >
+                      <div>
+                        <div className="font-semibold">
+                          🕒 {item.gio} |{" "}
+                          {item.theLoai}
                         </div>
 
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              suaLich(indexGoc)
-                            }
-                            className="bg-yellow-500 text-white px-3 py-1 rounded"
-                          >
-                            Sửa
-                          </button>
-
-                          <button
-                            onClick={() =>
-                              xoaLich(indexGoc)
-                            }
-                            className="bg-red-500 text-white px-3 py-1 rounded"
-                          >
-                            Xóa
-                          </button>
-                        </div>
+                        <div>{item.tenKhach}</div>
                       </div>
-                    );
-                  })}
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() =>
+                            suaLich(item)
+                          }
+                          className="bg-yellow-500 text-white px-3 py-1 rounded"
+                        >
+                          Sửa
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            xoaLich(item.id)
+                          }
+                          className="bg-red-500 text-white px-3 py-1 rounded"
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
           ))}
