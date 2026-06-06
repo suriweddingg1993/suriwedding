@@ -42,6 +42,8 @@ type TaiKhoan = {
   role: Role;
 };
 
+const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [dangTai, setDangTai] = useState(true);
@@ -79,6 +81,22 @@ export default function Home() {
 
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.uid);
+
+        if (currentUser.email === ADMIN_CHINH_EMAIL) {
+          await setDoc(
+            userRef,
+            {
+              email: currentUser.email,
+              role: "admin",
+            },
+            { merge: true }
+          );
+
+          setRole("admin");
+          setDangTai(false);
+          return;
+        }
+
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
@@ -188,7 +206,7 @@ export default function Home() {
       theLoai: theLoaiCuoi,
       goiChup,
       giaTien: Number(giaTien),
-      trangThai: dangSua ? undefined : "Chưa liên hệ",
+      trangThai: "Chưa liên hệ",
     };
 
     try {
@@ -269,10 +287,15 @@ export default function Home() {
       return;
     }
 
+    if (emailNhanVien === ADMIN_CHINH_EMAIL && quyenNhanVien !== "admin") {
+      alert("Admin chính luôn phải là admin");
+      return;
+    }
+
     try {
       await setDoc(doc(db, "users", uidNhanVien), {
         email: emailNhanVien,
-        role: quyenNhanVien,
+        role: emailNhanVien === ADMIN_CHINH_EMAIL ? "admin" : quyenNhanVien,
       });
 
       setUidNhanVien("");
@@ -289,6 +312,13 @@ export default function Home() {
   const doiQuyen = async (id: string, roleMoi: Role) => {
     if (!laAdmin) {
       alert("Chỉ admin mới được đổi quyền");
+      return;
+    }
+
+    const taiKhoanCanDoi = danhSachTaiKhoan.find((tk) => tk.id === id);
+
+    if (taiKhoanCanDoi?.email === ADMIN_CHINH_EMAIL) {
+      alert("Không thể đổi quyền admin chính");
       return;
     }
 
@@ -567,14 +597,18 @@ export default function Home() {
                   <div className="text-sm text-gray-500">UID: {tk.id}</div>
                 </div>
 
-                <select
-                  value={tk.role}
-                  onChange={(e) => doiQuyen(tk.id, e.target.value as Role)}
-                  className="border p-2 rounded"
-                >
-                  <option value="staff">Nhân viên</option>
-                  <option value="admin">Admin</option>
-                </select>
+                {tk.email === ADMIN_CHINH_EMAIL ? (
+                  <div className="text-green-600 font-bold">Admin chính</div>
+                ) : (
+                  <select
+                    value={tk.role}
+                    onChange={(e) => doiQuyen(tk.id, e.target.value as Role)}
+                    className="border p-2 rounded"
+                  >
+                    <option value="staff">Nhân viên</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                )}
               </div>
             ))}
           </div>
