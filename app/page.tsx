@@ -85,6 +85,15 @@ function gioHienTai() {
   });
 }
 
+function formatTienInput(value: string) {
+  const so = value.replace(/\D/g, "");
+  return so.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function chuyenTienVeSo(value: string) {
+  return Number(value.replace(/\./g, ""));
+}
+
 function tinhKhoangCachMet(
   lat1: number,
   lng1: number,
@@ -311,7 +320,7 @@ export default function Home() {
       soDienThoai,
       theLoai: theLoaiCuoi,
       goiChup,
-      giaTien: Number(giaTien),
+      giaTien: chuyenTienVeSo(giaTien),
       trangThai: "Chưa liên hệ",
     };
 
@@ -324,7 +333,7 @@ export default function Home() {
           soDienThoai,
           theLoai: theLoaiCuoi,
           goiChup,
-          giaTien: Number(giaTien),
+          giaTien: chuyenTienVeSo(giaTien),
         });
         resetForm();
         return;
@@ -360,7 +369,7 @@ export default function Home() {
     setTheLoai(item.theLoai || "");
     setTheLoaiKhac("");
     setGoiChup(item.goiChup || "");
-    setGiaTien(String(item.giaTien || ""));
+    setGiaTien(formatTienInput(String(item.giaTien || "")));
     setDangSua(item.id || null);
     setTab("lich");
 
@@ -451,7 +460,7 @@ export default function Home() {
         tenKhach: psTenKhach,
         soDienThoai: psSoDienThoai,
         loai: psLoai,
-        soTien: Number(psSoTien),
+        soTien: chuyenTienVeSo(psSoTien),
         nguoiGhi: user?.email || "",
         ghiChu: psGhiChu,
       });
@@ -546,8 +555,7 @@ export default function Home() {
       );
 
       if (loai === "checkIn") {
-        if (banGhiHomNay?.checkIn) {
-          alert("Bạn đã Check In hôm nay rồi");
+        if (banGhiHomNay?.checkIn) {          alert("Bạn đã Check In hôm nay rồi");
           return;
         }
 
@@ -834,7 +842,25 @@ export default function Home() {
               )}
 
               <input type="text" placeholder="Gói chụp" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="border p-2 rounded" />
-              <input type="number" placeholder="Giá tiền" value={giaTien} onChange={(e) => setGiaTien(e.target.value)} className="border p-2 rounded" />
+              <div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Giá tiền"
+                    value={giaTien}
+                    onChange={(e) => setGiaTien(formatTienInput(e.target.value))}
+                    className="border p-2 rounded w-full pr-10"
+                  />
+                  <span className="absolute right-3 top-2 text-gray-500">đ</span>
+                </div>
+
+                {giaTien && (
+                  <div className="text-sm text-green-600 mt-1">
+                    Giá trị: {giaTien}đ
+                  </div>
+                )}
+              </div>
 
               <div className="flex gap-2">
                 <button onClick={themHoacSuaLich} className="bg-blue-600 text-white p-2 rounded flex-1">
@@ -954,7 +980,25 @@ export default function Home() {
                 <option value="Khác">Khác</option>
               </select>
 
-              <input type="number" placeholder="Số tiền" value={psSoTien} onChange={(e) => setPsSoTien(e.target.value)} className="border p-2 rounded" />
+              <div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Số tiền"
+                    value={psSoTien}
+                    onChange={(e) => setPsSoTien(formatTienInput(e.target.value))}
+                    className="border p-2 rounded w-full pr-10"
+                  />
+                  <span className="absolute right-3 top-2 text-gray-500">đ</span>
+                </div>
+
+                {psSoTien && (
+                  <div className="text-sm text-green-600 mt-1">
+                    Giá trị: {psSoTien}đ
+                  </div>
+                )}
+              </div>
 
               <input type="text" placeholder="Ghi chú nếu có" value={psGhiChu} onChange={(e) => setPsGhiChu(e.target.value)} className="border p-2 rounded" />
 
