@@ -23,6 +23,7 @@ import {
 import { db, auth } from "../lib/firebase";
 
 type Role = "admin" | "staff";
+type Tab = "home" | "lich" | "phatSinh" | "chamCong" | "nhanVien" | "thongKe";
 
 type Lich = {
   id?: string;
@@ -42,7 +43,69 @@ type TaiKhoan = {
   role: Role;
 };
 
+type PhatSinh = {
+  id?: string;
+  ngay: string;
+  tenKhach: string;
+  soDienThoai?: string;
+  loai: string;
+  soTien: number;
+  nguoiGhi: string;
+  ghiChu?: string;
+};
+
+type ChamCong = {
+  id?: string;
+  uid: string;
+  email: string;
+  ngay: string;
+  checkIn?: string;
+  checkOut?: string;
+  checkInLat?: number;
+  checkInLng?: number;
+  checkOutLat?: number;
+  checkOutLng?: number;
+};
+
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
+
+const CUA_HANG_LAT = 21.436897313370316;
+const CUA_HANG_LNG = 103.68803473004635;
+const BAN_KINH_CHO_PHEP = 500;
+
+function homNay() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function gioHienTai() {
+  return new Date().toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function tinhKhoangCachMet(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+) {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(R * c);
+}
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -50,9 +113,12 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [matKhau, setMatKhau] = useState("");
   const [role, setRole] = useState<Role>("staff");
+  const [tab, setTab] = useState<Tab>("home");
 
   const [lichLamViec, setLichLamViec] = useState<Lich[]>([]);
   const [danhSachTaiKhoan, setDanhSachTaiKhoan] = useState<TaiKhoan[]>([]);
+  const [danhSachPhatSinh, setDanhSachPhatSinh] = useState<PhatSinh[]>([]);
+  const [danhSachChamCong, setDanhSachChamCong] = useState<ChamCong[]>([]);
 
   const [ngay, setNgay] = useState("");
   const [gio, setGio] = useState("");
@@ -72,6 +138,16 @@ export default function Home() {
   const [uidNhanVien, setUidNhanVien] = useState("");
   const [emailNhanVien, setEmailNhanVien] = useState("");
   const [quyenNhanVien, setQuyenNhanVien] = useState<Role>("staff");
+
+  const [psNgay, setPsNgay] = useState(homNay());
+  const [psTenKhach, setPsTenKhach] = useState("");
+  const [psSoDienThoai, setPsSoDienThoai] = useState("");
+  const [psLoai, setPsLoai] = useState("");
+  const [psSoTien, setPsSoTien] = useState("");
+  const [psGhiChu, setPsGhiChu] = useState("");
+
+  const [dangLayViTri, setDangLayViTri] = useState(false);
+  const [khoangCach, setKhoangCach] = useState<number | null>(null);
 
   const laAdmin = role === "admin";
 
@@ -123,6 +199,36 @@ export default function Home() {
       })) as Lich[];
 
       setLichLamViec(data);
+    });
+
+    return () => unsub();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const unsub = onSnapshot(collection(db, "phatSinh"), (snapshot) => {
+      const data = snapshot.docs.map((docItem) => ({
+        id: docItem.id,
+        ...docItem.data(),
+      })) as PhatSinh[];
+
+      setDanhSachPhatSinh(data);
+    });
+
+    return () => unsub();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const unsub = onSnapshot(collection(db, "chamCong"), (snapshot) => {
+      const data = snapshot.docs.map((docItem) => ({
+        id: docItem.id,
+        ...docItem.data(),
+      })) as ChamCong[];
+
+      setDanhSachChamCong(data);
     });
 
     return () => unsub();
@@ -256,6 +362,7 @@ export default function Home() {
     setGoiChup(item.goiChup || "");
     setGiaTien(String(item.giaTien || ""));
     setDangSua(item.id || null);
+    setTab("lich");
 
     window.scrollTo({
       top: 0,
@@ -332,6 +439,174 @@ export default function Home() {
     }
   };
 
+  const themPhatSinh = async () => {
+    if (!psNgay || !psLoai || !psSoTien) {
+      alert("Vui lòng nhập ngày, loại phát sinh và số tiền");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "phatSinh"), {
+        ngay: psNgay,
+        tenKhach: psTenKhach,
+        soDienThoai: psSoDienThoai,
+        loai: psLoai,
+        soTien: Number(psSoTien),
+        nguoiGhi: user?.email || "",
+        ghiChu: psGhiChu,
+      });
+
+      setPsNgay(homNay());
+      setPsTenKhach("");
+      setPsSoDienThoai("");
+      setPsLoai("");
+      setPsSoTien("");
+      setPsGhiChu("");
+
+      alert("Đã thêm phát sinh");
+    } catch (error) {
+      console.error(error);
+      alert("Không thêm được phát sinh");
+    }
+  };
+
+  const xoaPhatSinh = async (id?: string) => {
+    if (!id) return;
+
+    if (!laAdmin) {
+      alert("Chỉ admin mới được xóa phát sinh");
+      return;
+    }
+
+    const dongY = confirm("Bạn có chắc muốn xóa khoản phát sinh này không?");
+    if (!dongY) return;
+
+    await deleteDoc(doc(db, "phatSinh", id));
+  };
+
+  const layViTri = () => {
+    return new Promise<{ lat: number; lng: number; distance: number }>(
+      (resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("Thiết bị không hỗ trợ lấy vị trí"));
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const distance = tinhKhoangCachMet(
+              lat,
+              lng,
+              CUA_HANG_LAT,
+              CUA_HANG_LNG
+            );
+
+            resolve({
+              lat,
+              lng,
+              distance,
+            });
+          },
+          () => {
+            reject(new Error("Không lấy được vị trí. Hãy bật định vị."));
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+          }
+        );
+      }
+    );
+  };
+
+  const chamCong = async (loai: "checkIn" | "checkOut") => {
+    if (!user) return;
+
+    setDangLayViTri(true);
+
+    try {
+      const viTri = await layViTri();
+
+      setKhoangCach(viTri.distance);
+
+      if (viTri.distance > BAN_KINH_CHO_PHEP) {
+        alert(
+          `Bạn đang cách cửa hàng khoảng ${viTri.distance}m. Chỉ được chấm công trong bán kính ${BAN_KINH_CHO_PHEP}m.`
+        );
+        return;
+      }
+
+      const ngayHomNay = homNay();
+
+      const banGhiHomNay = danhSachChamCong.find(
+        (item) => item.uid === user.uid && item.ngay === ngayHomNay
+      );
+
+      if (loai === "checkIn") {
+        if (banGhiHomNay?.checkIn) {
+          alert("Bạn đã Check In hôm nay rồi");
+          return;
+        }
+
+        if (banGhiHomNay?.id) {
+          await updateDoc(doc(db, "chamCong", banGhiHomNay.id), {
+            checkIn: gioHienTai(),
+            checkInLat: viTri.lat,
+            checkInLng: viTri.lng,
+          });
+        } else {
+          await addDoc(collection(db, "chamCong"), {
+            uid: user.uid,
+            email: user.email || "",
+            ngay: ngayHomNay,
+            checkIn: gioHienTai(),
+            checkInLat: viTri.lat,
+            checkInLng: viTri.lng,
+          });
+        }
+
+        alert("Check In thành công");
+      }
+
+      if (loai === "checkOut") {
+        if (!banGhiHomNay?.id) {
+          await addDoc(collection(db, "chamCong"), {
+            uid: user.uid,
+            email: user.email || "",
+            ngay: ngayHomNay,
+            checkOut: gioHienTai(),
+            checkOutLat: viTri.lat,
+            checkOutLng: viTri.lng,
+          });
+
+          alert("Check Out thành công");
+          return;
+        }
+
+        if (banGhiHomNay.checkOut) {
+          alert("Bạn đã Check Out hôm nay rồi");
+          return;
+        }
+
+        await updateDoc(doc(db, "chamCong", banGhiHomNay.id), {
+          checkOut: gioHienTai(),
+          checkOutLat: viTri.lat,
+          checkOutLng: viTri.lng,
+        });
+
+        alert("Check Out thành công");
+      }
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "Không chấm công được");
+    } finally {
+      setDangLayViTri(false);
+    }
+  };
+
   const danhSachHienThi = lichLamViec.filter((item) => {
     const dungNgay = timNgay ? item.ngay === timNgay : true;
     const keyword = tuKhoa.toLowerCase().trim();
@@ -357,10 +632,29 @@ export default function Home() {
     ? lichLamViec.filter((item) => item.ngay.startsWith(thangThongKe))
     : [];
 
-  const tongThuNhap = lichTrongThang.reduce(
+  const phatSinhTrongThang = thangThongKe
+    ? danhSachPhatSinh.filter((item) => item.ngay.startsWith(thangThongKe))
+    : [];
+
+  const tongThuNhapLich = lichTrongThang.reduce(
     (sum, item) => sum + Number(item.giaTien || 0),
     0
   );
+
+  const tongThuNhapPhatSinh = phatSinhTrongThang.reduce(
+    (sum, item) => sum + Number(item.soTien || 0),
+    0
+  );
+
+  const tongThuNhap = tongThuNhapLich + tongThuNhapPhatSinh;
+
+  const chamCongHomNay = danhSachChamCong.find(
+    (item) => item.uid === user?.uid && item.ngay === homNay()
+  );
+
+  const chamCongHienThi = laAdmin
+    ? danhSachChamCong
+    : danhSachChamCong.filter((item) => item.uid === user?.uid);
 
   if (dangTai) {
     return (
@@ -405,11 +699,20 @@ export default function Home() {
     );
   }
 
+  const nutMenu = [
+    { key: "home", label: "🏠 Trang chủ", adminOnly: false },
+    { key: "lich", label: "📅 Lịch làm việc", adminOnly: false },
+    { key: "phatSinh", label: "💰 Phát sinh", adminOnly: false },
+    { key: "chamCong", label: "⏰ Chấm công", adminOnly: false },
+    { key: "nhanVien", label: "👥 Nhân viên", adminOnly: true },
+    { key: "thongKe", label: "📊 Thống kê", adminOnly: true },
+  ] as const;
+
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Lịch Studio Suri Wedding</h1>
+          <h1 className="text-3xl font-bold">Suri Wedding</h1>
 
           <div className="text-sm text-gray-600 mt-1">
             {user.email} • Quyền: {laAdmin ? "Admin" : "Nhân viên"}
@@ -424,174 +727,370 @@ export default function Home() {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <h2 className="text-xl font-bold mb-4">
-          {dangSua ? "Sửa lịch chụp" : "Thêm lịch chụp"}
-        </h2>
-
-        <div className="grid gap-3">
-          <input
-            type="date"
-            value={ngay}
-            onChange={(e) => setNgay(e.target.value)}
-            className="border p-2 rounded"
-          />
-
-          <input
-            type="time"
-            value={gio}
-            onChange={(e) => setGio(e.target.value)}
-            className="border p-2 rounded"
-          />
-
-          <input
-            type="text"
-            placeholder="Tên khách"
-            value={tenKhach}
-            onChange={(e) => setTenKhach(e.target.value)}
-            className="border p-2 rounded"
-          />
-
-          <input
-            type="text"
-            placeholder="Số điện thoại"
-            value={soDienThoai}
-            onChange={(e) => setSoDienThoai(e.target.value)}
-            className="border p-2 rounded"
-          />
-
-          <select
-            value={theLoai}
-            onChange={(e) => {
-              setTheLoai(e.target.value);
-              if (e.target.value !== "Khác") setTheLoaiKhac("");
-            }}
-            className="border p-2 rounded"
-          >
-            <option value="">-- Chọn thể loại --</option>
-            <option value="Ảnh cưới">Ảnh cưới</option>
-            <option value="Baby">Baby</option>
-            <option value="Beauty">Beauty</option>
-            <option value="Gia đình">Gia đình</option>
-            <option value="Bầu">Bầu</option>
-            <option value="Kỷ yếu">Kỷ yếu</option>
-            <option value="Khác">➕ Thêm thể loại khác</option>
-          </select>
-
-          {theLoai === "Khác" && (
-            <input
-              type="text"
-              placeholder="Nhập thể loại mới"
-              value={theLoaiKhac}
-              onChange={(e) => setTheLoaiKhac(e.target.value)}
-              className="border p-2 rounded"
-            />
-          )}
-
-          <input
-            type="text"
-            placeholder="Gói chụp"
-            value={goiChup}
-            onChange={(e) => setGoiChup(e.target.value)}
-            className="border p-2 rounded"
-          />
-
-          <input
-            type="number"
-            placeholder="Giá tiền"
-            value={giaTien}
-            onChange={(e) => setGiaTien(e.target.value)}
-            className="border p-2 rounded"
-          />
-
-          <div className="flex gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-6">
+        {nutMenu
+          .filter((item) => !item.adminOnly || laAdmin)
+          .map((item) => (
             <button
-              onClick={themHoacSuaLich}
-              className="bg-blue-600 text-white p-2 rounded flex-1"
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={`p-3 rounded shadow text-sm md:text-base ${
+                tab === item.key
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-800"
+              }`}
             >
-              {dangSua ? "Lưu thay đổi" : "Thêm lịch"}
+              {item.label}
             </button>
-
-            {dangSua && (
-              <button
-                onClick={resetForm}
-                className="bg-gray-500 text-white p-2 rounded"
-              >
-                Hủy
-              </button>
-            )}
-          </div>
-        </div>
+          ))}
       </div>
 
-      {laAdmin && (
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <h2 className="text-xl font-bold mb-4">Thống kê thu nhập</h2>
+      {tab === "home" && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <button
+            onClick={() => setTab("lich")}
+            className="bg-white rounded-lg shadow p-6 text-left"
+          >
+            <div className="text-3xl mb-2">📅</div>
+            <div className="font-bold text-xl">Lịch làm việc</div>
+            <div className="text-gray-600">Quản lý lịch chụp khách hàng</div>
+          </button>
 
-          <input
-            type="month"
-            value={thangThongKe}
-            onChange={(e) => setThangThongKe(e.target.value)}
-            className="border p-2 rounded mb-3"
-          />
+          <button
+            onClick={() => setTab("phatSinh")}
+            className="bg-white rounded-lg shadow p-6 text-left"
+          >
+            <div className="text-3xl mb-2">💰</div>
+            <div className="font-bold text-xl">Phát sinh</div>
+            <div className="text-gray-600">Thuê đồ, in ảnh, khách lẻ, phụ thu</div>
+          </button>
 
-          <div>Tổng lịch trong tháng: {lichTrongThang.length}</div>
+          <button
+            onClick={() => setTab("chamCong")}
+            className="bg-white rounded-lg shadow p-6 text-left"
+          >
+            <div className="text-3xl mb-2">⏰</div>
+            <div className="font-bold text-xl">Chấm công</div>
+            <div className="text-gray-600">Check In / Check Out bằng GPS</div>
+          </button>
 
-          <div className="text-green-600 font-bold text-xl">
-            Tổng tiền: {tongThuNhap.toLocaleString("vi-VN")}đ
-          </div>
+          {laAdmin && (
+            <>
+              <button
+                onClick={() => setTab("nhanVien")}
+                className="bg-white rounded-lg shadow p-6 text-left"
+              >
+                <div className="text-3xl mb-2">👥</div>
+                <div className="font-bold text-xl">Nhân viên</div>
+                <div className="text-gray-600">Tạo tài khoản và đổi quyền</div>
+              </button>
+
+              <button
+                onClick={() => setTab("thongKe")}
+                className="bg-white rounded-lg shadow p-6 text-left"
+              >
+                <div className="text-3xl mb-2">📊</div>
+                <div className="font-bold text-xl">Thống kê</div>
+                <div className="text-gray-600">Doanh thu tháng</div>
+              </button>
+            </>
+          )}
         </div>
       )}
 
-      {laAdmin && (
+      {tab === "lich" && (
+        <>
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <h2 className="text-xl font-bold mb-4">
+              {dangSua ? "Sửa lịch chụp" : "Thêm lịch chụp"}
+            </h2>
+
+            <div className="grid gap-3">
+              <input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="border p-2 rounded" />
+              <input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="border p-2 rounded" />
+              <input type="text" placeholder="Tên khách" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="border p-2 rounded" />
+              <input type="text" placeholder="Số điện thoại" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="border p-2 rounded" />
+
+              <select
+                value={theLoai}
+                onChange={(e) => {
+                  setTheLoai(e.target.value);
+                  if (e.target.value !== "Khác") setTheLoaiKhac("");
+                }}
+                className="border p-2 rounded"
+              >
+                <option value="">-- Chọn thể loại --</option>
+                <option value="Ảnh cưới">Ảnh cưới</option>
+                <option value="Baby">Baby</option>
+                <option value="Beauty">Beauty</option>
+                <option value="Gia đình">Gia đình</option>
+                <option value="Bầu">Bầu</option>
+                <option value="Kỷ yếu">Kỷ yếu</option>
+                <option value="Khác">➕ Thêm thể loại khác</option>
+              </select>
+
+              {theLoai === "Khác" && (
+                <input type="text" placeholder="Nhập thể loại mới" value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} className="border p-2 rounded" />
+              )}
+
+              <input type="text" placeholder="Gói chụp" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="border p-2 rounded" />
+              <input type="number" placeholder="Giá tiền" value={giaTien} onChange={(e) => setGiaTien(e.target.value)} className="border p-2 rounded" />
+
+              <div className="flex gap-2">
+                <button onClick={themHoacSuaLich} className="bg-blue-600 text-white p-2 rounded flex-1">
+                  {dangSua ? "Lưu thay đổi" : "Thêm lịch"}
+                </button>
+
+                {dangSua && (
+                  <button onClick={resetForm} className="bg-gray-500 text-white p-2 rounded">
+                    Hủy
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <h2 className="text-xl font-bold mb-4">Tìm lịch</h2>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <input type="date" value={timNgay} onChange={(e) => setTimNgay(e.target.value)} className="border p-2 rounded" />
+              <input type="text" placeholder="Tìm tên khách hoặc SĐT" value={tuKhoa} onChange={(e) => setTuKhoa(e.target.value)} className="border p-2 rounded" />
+
+              <button
+                onClick={() => {
+                  setTimNgay("");
+                  setTuKhoa("");
+                }}
+                className="bg-gray-500 text-white px-4 rounded"
+              >
+                Xem tất cả
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            {Object.entries(lichTheoNgay)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([ngay, dsLich]) => (
+                <div key={ngay} className="mb-6">
+                  <h2 className="text-xl font-bold mb-3">
+                    📅 {ngay} ({dsLich.length} lịch)
+                  </h2>
+
+                  <div className="space-y-2">
+                    {[...dsLich]
+                      .sort((a, b) => a.gio.localeCompare(b.gio))
+                      .map((item) => (
+                        <div key={item.id} className="border rounded p-3 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+                          <div>
+                            <div className="font-semibold">🕒 {item.gio} | {item.theLoai}</div>
+                            <div>{item.tenKhach}</div>
+                            <div className="text-sm text-gray-600">📞 {item.soDienThoai || "Chưa có SĐT"}</div>
+
+                            <div className="text-sm text-gray-600">
+                              📦 {item.goiChup || "Chưa có gói"}
+                              {laAdmin && <> • {Number(item.giaTien || 0).toLocaleString("vi-VN")}đ</>}
+                            </div>
+
+                            <div className="mt-2">
+                              <select
+                                value={item.trangThai || "Chưa liên hệ"}
+                                onChange={(e) => capNhatTrangThai(item.id, e.target.value)}
+                                className="border p-1 rounded text-sm"
+                              >
+                                <option value="Chưa liên hệ">Chưa liên hệ</option>
+                                <option value="Đã liên hệ">Đã liên hệ</option>
+                                <option value="Đã cọc">Đã cọc</option>
+                                <option value="Đã chụp">Đã chụp</option>
+                                <option value="Đã giao ảnh">Đã giao ảnh</option>
+                                <option value="Hoàn thành">Hoàn thành</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button onClick={() => suaLich(item)} className="bg-yellow-500 text-white px-3 py-1 rounded">
+                              Sửa
+                            </button>
+
+                            {laAdmin && (
+                              <button onClick={() => xoaLich(item.id)} className="bg-red-500 text-white px-3 py-1 rounded">
+                                Xóa
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </>
+      )}
+
+      {tab === "phatSinh" && (
+        <>
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <h2 className="text-xl font-bold mb-4">💰 Thêm phát sinh</h2>
+
+            <div className="grid gap-3">
+              <input type="date" value={psNgay} onChange={(e) => setPsNgay(e.target.value)} className="border p-2 rounded" />
+
+              <input type="text" placeholder="Tên khách nếu có" value={psTenKhach} onChange={(e) => setPsTenKhach(e.target.value)} className="border p-2 rounded" />
+
+              <input type="text" placeholder="Số điện thoại nếu có" value={psSoDienThoai} onChange={(e) => setPsSoDienThoai(e.target.value)} className="border p-2 rounded" />
+
+              <select value={psLoai} onChange={(e) => setPsLoai(e.target.value)} className="border p-2 rounded">
+                <option value="">-- Chọn loại phát sinh --</option>
+                <option value="Thuê váy">Thuê váy</option>
+                <option value="Thuê vest">Thuê vest</option>
+                <option value="In ảnh">In ảnh</option>
+                <option value="Rửa ảnh">Rửa ảnh</option>
+                <option value="Bán album">Bán album</option>
+                <option value="Trang điểm lẻ">Trang điểm lẻ</option>
+                <option value="Chụp ảnh thẻ">Chụp ảnh thẻ</option>
+                <option value="Phụ phí đi xa">Phụ phí đi xa</option>
+                <option value="Khác">Khác</option>
+              </select>
+
+              <input type="number" placeholder="Số tiền" value={psSoTien} onChange={(e) => setPsSoTien(e.target.value)} className="border p-2 rounded" />
+
+              <input type="text" placeholder="Ghi chú nếu có" value={psGhiChu} onChange={(e) => setPsGhiChu(e.target.value)} className="border p-2 rounded" />
+
+              <button onClick={themPhatSinh} className="bg-blue-600 text-white p-2 rounded">
+                Thêm phát sinh
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <h2 className="text-xl font-bold mb-4">Danh sách phát sinh</h2>
+
+            <div className="space-y-2">
+              {[...danhSachPhatSinh]
+                .sort((a, b) => b.ngay.localeCompare(a.ngay))
+                .map((item) => (
+                  <div key={item.id} className="border rounded p-3 flex flex-col md:flex-row md:justify-between gap-3">
+                    <div>
+                      <div className="font-semibold">
+                        {item.ngay} • {item.loai}
+                      </div>
+
+                      <div className="text-sm text-gray-600">
+                        Khách: {item.tenKhach || "Không có"} • SĐT: {item.soDienThoai || "Không có"}
+                      </div>
+
+                      <div className="text-sm text-gray-600">
+                        Người ghi: {item.nguoiGhi}
+                      </div>
+
+                      <div className="font-bold text-green-600">
+                        {Number(item.soTien || 0).toLocaleString("vi-VN")}đ
+                      </div>
+
+                      {item.ghiChu && (
+                        <div className="text-sm text-gray-500">
+                          Ghi chú: {item.ghiChu}
+                        </div>
+                      )}
+                    </div>
+
+                    {laAdmin && (
+                      <button onClick={() => xoaPhatSinh(item.id)} className="bg-red-500 text-white px-3 py-1 rounded h-fit">
+                        Xóa
+                      </button>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === "chamCong" && (
+        <>
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <h2 className="text-xl font-bold mb-4">⏰ Chấm công GPS</h2>
+
+            <div className="mb-3">
+              Hôm nay: <b>{homNay()}</b>
+            </div>
+
+            <div className="mb-3 text-sm text-gray-600">
+              Chỉ chấm công khi ở trong bán kính {BAN_KINH_CHO_PHEP}m quanh cửa hàng.
+            </div>
+
+            {khoangCach !== null && (
+              <div className="mb-3">
+                Khoảng cách hiện tại: <b>{khoangCach}m</b>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <div>Check In: {chamCongHomNay?.checkIn || "Chưa có"}</div>
+              <div>Check Out: {chamCongHomNay?.checkOut || "Chưa có"}</div>
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={() => chamCong("checkIn")} disabled={dangLayViTri} className="bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400">
+                {dangLayViTri ? "Đang lấy vị trí..." : "Check In"}
+              </button>
+
+              <button onClick={() => chamCong("checkOut")} disabled={dangLayViTri} className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-400">
+                {dangLayViTri ? "Đang lấy vị trí..." : "Check Out"}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <h2 className="text-xl font-bold mb-4">
+              {laAdmin ? "Lịch sử chấm công toàn bộ" : "Lịch sử chấm công"}
+            </h2>
+
+            <div className="space-y-2">
+              {[...chamCongHienThi]
+                .sort((a, b) => b.ngay.localeCompare(a.ngay))
+                .map((item) => (
+                  <div key={item.id} className="border rounded p-3">
+                    <div className="font-semibold">
+                      {item.ngay} • {item.email}
+                    </div>
+                    <div>Check In: {item.checkIn || "Chưa có"}</div>
+                    <div>Check Out: {item.checkOut || "Chưa có"}</div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === "nhanVien" && laAdmin && (
         <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <h2 className="text-xl font-bold mb-4">Quản lý tài khoản</h2>
+          <h2 className="text-xl font-bold mb-4">👥 Quản lý tài khoản</h2>
 
           <div className="bg-yellow-50 border border-yellow-300 p-3 rounded mb-4 text-sm">
-            Bước tạo nhân viên: vào Firebase Authentication tạo tài khoản trước,
-            copy UID của tài khoản đó, rồi dán UID vào đây.
+            Bước tạo nhân viên: vào Firebase Authentication tạo tài khoản trước, copy UID của tài khoản đó, rồi dán UID vào đây.
           </div>
 
           <div className="grid gap-3 md:grid-cols-4 mb-4">
-            <input
-              type="text"
-              placeholder="UID nhân viên"
-              value={uidNhanVien}
-              onChange={(e) => setUidNhanVien(e.target.value)}
-              className="border p-2 rounded"
-            />
+            <input type="text" placeholder="UID nhân viên" value={uidNhanVien} onChange={(e) => setUidNhanVien(e.target.value)} className="border p-2 rounded" />
 
-            <input
-              type="email"
-              placeholder="Email nhân viên"
-              value={emailNhanVien}
-              onChange={(e) => setEmailNhanVien(e.target.value)}
-              className="border p-2 rounded"
-            />
+            <input type="email" placeholder="Email nhân viên" value={emailNhanVien} onChange={(e) => setEmailNhanVien(e.target.value)} className="border p-2 rounded" />
 
-            <select
-              value={quyenNhanVien}
-              onChange={(e) => setQuyenNhanVien(e.target.value as Role)}
-              className="border p-2 rounded"
-            >
+            <select value={quyenNhanVien} onChange={(e) => setQuyenNhanVien(e.target.value as Role)} className="border p-2 rounded">
               <option value="staff">Nhân viên</option>
               <option value="admin">Admin</option>
             </select>
 
-            <button
-              onClick={taoHoSoNhanVien}
-              className="bg-green-600 text-white px-4 rounded"
-            >
+            <button onClick={taoHoSoNhanVien} className="bg-green-600 text-white px-4 rounded">
               Tạo hồ sơ
             </button>
           </div>
 
           <div className="space-y-2">
             {danhSachTaiKhoan.map((tk) => (
-              <div
-                key={tk.id}
-                className="border rounded p-3 flex justify-between items-center"
-              >
+              <div key={tk.id} className="border rounded p-3 flex justify-between items-center">
                 <div>
                   <div className="font-semibold">{tk.email}</div>
                   <div className="text-sm text-gray-500">UID: {tk.id}</div>
@@ -600,11 +1099,7 @@ export default function Home() {
                 {tk.email === ADMIN_CHINH_EMAIL ? (
                   <div className="text-green-600 font-bold">Admin chính</div>
                 ) : (
-                  <select
-                    value={tk.role}
-                    onChange={(e) => doiQuyen(tk.id, e.target.value as Role)}
-                    className="border p-2 rounded"
-                  >
+                  <select value={tk.role} onChange={(e) => doiQuyen(tk.id, e.target.value as Role)} className="border p-2 rounded">
                     <option value="staff">Nhân viên</option>
                     <option value="admin">Admin</option>
                   </select>
@@ -615,120 +1110,27 @@ export default function Home() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <h2 className="text-xl font-bold mb-4">Tìm lịch</h2>
+      {tab === "thongKe" && laAdmin && (
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <h2 className="text-xl font-bold mb-4">📊 Thống kê doanh thu</h2>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <input
-            type="date"
-            value={timNgay}
-            onChange={(e) => setTimNgay(e.target.value)}
-            className="border p-2 rounded"
-          />
+          <input type="month" value={thangThongKe} onChange={(e) => setThangThongKe(e.target.value)} className="border p-2 rounded mb-3" />
 
-          <input
-            type="text"
-            placeholder="Tìm tên khách hoặc SĐT"
-            value={tuKhoa}
-            onChange={(e) => setTuKhoa(e.target.value)}
-            className="border p-2 rounded"
-          />
+          <div>Tổng lịch trong tháng: {lichTrongThang.length}</div>
 
-          <button
-            onClick={() => {
-              setTimNgay("");
-              setTuKhoa("");
-            }}
-            className="bg-gray-500 text-white px-4 rounded"
-          >
-            Xem tất cả
-          </button>
+          <div>
+            Doanh thu lịch chụp: <b>{tongThuNhapLich.toLocaleString("vi-VN")}đ</b>
+          </div>
+
+          <div>
+            Doanh thu phát sinh: <b>{tongThuNhapPhatSinh.toLocaleString("vi-VN")}đ</b>
+          </div>
+
+          <div className="text-green-600 font-bold text-xl mt-3">
+            Tổng doanh thu: {tongThuNhap.toLocaleString("vi-VN")}đ
+          </div>
         </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-4">
-        {Object.entries(lichTheoNgay)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([ngay, dsLich]) => (
-            <div key={ngay} className="mb-6">
-              <h2 className="text-xl font-bold mb-3">
-                📅 {ngay} ({dsLich.length} lịch)
-              </h2>
-
-              <div className="space-y-2">
-                {[...dsLich]
-                  .sort((a, b) => a.gio.localeCompare(b.gio))
-                  .map((item) => (
-                    <div
-                      key={item.id}
-                      className="border rounded p-3 flex justify-between items-center"
-                    >
-                      <div>
-                        <div className="font-semibold">
-                          🕒 {item.gio} | {item.theLoai}
-                        </div>
-
-                        <div>{item.tenKhach}</div>
-
-                        <div className="text-sm text-gray-600">
-                          📞 {item.soDienThoai || "Chưa có SĐT"}
-                        </div>
-
-                        <div className="text-sm text-gray-600">
-                          📦 {item.goiChup || "Chưa có gói"}
-                          {laAdmin && (
-                            <>
-                              {" "}
-                              •{" "}
-                              {Number(item.giaTien || 0).toLocaleString(
-                                "vi-VN"
-                              )}
-                              đ
-                            </>
-                          )}
-                        </div>
-
-                        <div className="mt-2">
-                          <select
-                            value={item.trangThai || "Chưa liên hệ"}
-                            onChange={(e) =>
-                              capNhatTrangThai(item.id, e.target.value)
-                            }
-                            className="border p-1 rounded text-sm"
-                          >
-                            <option value="Chưa liên hệ">Chưa liên hệ</option>
-                            <option value="Đã liên hệ">Đã liên hệ</option>
-                            <option value="Đã cọc">Đã cọc</option>
-                            <option value="Đã chụp">Đã chụp</option>
-                            <option value="Đã giao ảnh">Đã giao ảnh</option>
-                            <option value="Hoàn thành">Hoàn thành</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => suaLich(item)}
-                          className="bg-yellow-500 text-white px-3 py-1 rounded"
-                        >
-                          Sửa
-                        </button>
-
-                        {laAdmin && (
-                          <button
-                            onClick={() => xoaLich(item.id)}
-                            className="bg-red-500 text-white px-3 py-1 rounded"
-                          >
-                            Xóa
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ))}
-      </div>
+      )}
     </div>
   );
 }
