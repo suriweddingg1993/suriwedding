@@ -1145,6 +1145,7 @@ return (
         </div>
       )}
             {tab === "tinhTrangKH" && (
+  <>
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <h2 className="text-xl font-bold mb-4">📋 Tình trạng khách hàng</h2>
           <div className="grid gap-4 mb-4 md:grid-cols-3">
@@ -1196,6 +1197,33 @@ return (
             </div>
           </div>
         </div>
+<div className="mt-6 border rounded-lg p-4">
+  <h3 className="font-bold text-lg mb-3">📞 Khách cần liên hệ</h3>
+
+  {quaHan.length === 0 && canTraHomNay.length === 0 ? (
+    <div className="text-gray-500">Không có khách cần liên hệ</div>
+  ) : (
+    <div className="space-y-2">
+      {quaHan.map((ps) => (
+        <div key={ps.id} className="border rounded p-3 bg-red-50">
+          <div className="font-semibold">{ps.tenKhach || "Không tên"}</div>
+          <div>📱 {ps.soDienThoai || "-"}</div>
+          <div className="text-red-600">Quá hạn trả đồ</div>
+        </div>
+      ))}
+
+      {canTraHomNay.map((ps) => (
+        <div key={ps.id} className="border rounded p-3 bg-yellow-50">
+          <div className="font-semibold">{ps.tenKhach || "Không tên"}</div>
+          <div>📱 {ps.soDienThoai || "-"}</div>
+          <div className="text-yellow-700">Trả hôm nay</div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+</>
+        
       )}
 
       {tab === "thongKe" && laAdmin && (
