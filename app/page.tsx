@@ -822,7 +822,18 @@ return (
       return (
         <button
           key={item.key}
-          onClick={() => setTab(item.key)}
+          onClick={() => {
+  setTab(item.key);
+
+  setTimeout(() => {
+    document
+      .getElementById("noi-dung-tab")
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+  }, 100);
+}}
           className={`rounded-2xl shadow p-5 min-h-[140px] flex flex-col items-center justify-center gap-3 transition ${
             tab === item.key
               ? "bg-blue-600 text-white scale-105"
@@ -838,6 +849,7 @@ return (
       );
     })}
 </div>
+<div id="noi-dung-tab"></div>
 
       {tab === "lich" && (
         <>
