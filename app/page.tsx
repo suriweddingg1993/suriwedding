@@ -723,7 +723,29 @@ export default function Home() {
   { key: "thongKe", label: "📊 Thống kê", adminOnly: true },
 ] as const;
 
-  return (
+const ngayHomNay = new Date().toISOString().split("T")[0];
+
+const canTraHomNay = danhSachPhatSinh.filter(
+  (ps) =>
+    (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") &&
+    ps.ngayTra === ngayHomNay
+);
+
+const quaHan = danhSachPhatSinh.filter(
+  (ps) =>
+    (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") &&
+    ps.ngayTra &&
+    ps.ngayTra < ngayHomNay
+);
+
+const dangThue = danhSachPhatSinh.filter(
+  (ps) =>
+    (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") &&
+    ps.ngayTra &&
+    ps.ngayTra < ngayHomNay
+);
+
+return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <div>
@@ -1125,6 +1147,36 @@ export default function Home() {
             {tab === "tinhTrangKH" && (
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <h2 className="text-xl font-bold mb-4">📋 Tình trạng khách hàng</h2>
+          <div className="grid gap-4 mb-4 md:grid-cols-3">
+
+  <div className="border rounded-lg p-4 bg-red-50">
+    <div className="text-2xl font-bold text-red-600">
+      {quaHan.length}
+    </div>
+    <div className="font-semibold">
+      🔴 Quá hạn trả đồ
+    </div>
+  </div>
+
+  <div className="border rounded-lg p-4 bg-yellow-50">
+    <div className="text-2xl font-bold text-yellow-600">
+      {canTraHomNay.length}
+    </div>
+    <div className="font-semibold">
+      🟡 Trả hôm nay
+    </div>
+  </div>
+
+  <div className="border rounded-lg p-4 bg-green-50">
+    <div className="text-2xl font-bold text-green-600">
+      {dangThue.length}
+    </div>
+    <div className="font-semibold">
+      🟢 Đang thuê
+    </div>
+  </div>
+
+</div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border rounded-lg p-4">
