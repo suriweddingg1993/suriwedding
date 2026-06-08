@@ -812,24 +812,32 @@ return (
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-6">
-        {nutMenu
-          .filter((item) => !item.adminOnly || laAdmin)
-          .map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setTab(item.key)}
-              className={`p-3 rounded shadow text-sm md:text-base ${
-                tab === item.key
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-800"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-      </div>
+<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+  {nutMenu
+    .filter((item) => !item.adminOnly || laAdmin)
+    .map((item) => {
+      const [icon, ...textParts] = item.label.split(" ");
+      const text = textParts.join(" ");
 
+      return (
+        <button
+          key={item.key}
+          onClick={() => setTab(item.key)}
+          className={`rounded-2xl shadow p-5 min-h-[140px] flex flex-col items-center justify-center gap-3 transition ${
+            tab === item.key
+              ? "bg-blue-600 text-white scale-105"
+              : "bg-white text-gray-800 hover:bg-blue-50"
+          }`}
+        >
+          <div className="text-5xl">{icon}</div>
+
+          <div className="font-semibold text-center text-sm md:text-base">
+            {text}
+          </div>
+        </button>
+      );
+    })}
+</div>
 
       {tab === "lich" && (
         <>
