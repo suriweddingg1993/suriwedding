@@ -52,6 +52,7 @@ type PhatSinh = {
   soTien: number;
   nguoiGhi: string;
   ngayTra?: string;
+ daTraDo?: boolean;
   ghiChu?: string;
 };
 
@@ -727,12 +728,14 @@ const ngayHomNay = new Date().toISOString().split("T")[0];
 
 const canTraHomNay = danhSachPhatSinh.filter(
   (ps) =>
+    !ps.daTraDo &&
     (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") &&
     ps.ngayTra === ngayHomNay
 );
 
 const quaHan = danhSachPhatSinh.filter(
   (ps) =>
+    !ps.daTraDo &&
     (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") &&
     ps.ngayTra &&
     ps.ngayTra < ngayHomNay
@@ -740,10 +743,21 @@ const quaHan = danhSachPhatSinh.filter(
 
 const dangThue = danhSachPhatSinh.filter(
   (ps) =>
+    !ps.daTraDo &&
     (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") &&
     ps.ngayTra &&
-    ps.ngayTra < ngayHomNay
+    ps.ngayTra > ngayHomNay
+
 );
+const danhDauDaTraDo = async (id: string) => {
+  try {
+    await updateDoc(doc(db, "phatSinh", id), {
+      daTraDo: true,
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
@@ -1211,13 +1225,22 @@ return (
   <span>{ps.soDienThoai || "-"}</span>
 
   {ps.soDienThoai && (
+  <>
     <a
       href={`tel:${ps.soDienThoai}`}
       className="bg-green-600 text-white px-2 py-1 rounded text-xs"
     >
       📞 Gọi
     </a>
-  )}
+
+    <button
+      onClick={() => danhDauDaTraDo(ps.id!)}
+      className="bg-blue-600 text-white px-2 py-1 rounded text-xs ml-2"
+    >
+      ✓ Đã trả đồ
+    </button>
+  </>
+)}
 </div>
 
 <div className="text-red-600">Quá hạn trả đồ</div>
@@ -1225,24 +1248,36 @@ return (
       ))}
 
       {canTraHomNay.map((ps) => (
-        <div key={ps.id} className="border rounded p-3 bg-yellow-50">
-          <div className="font-semibold">{ps.tenKhach || "Không tên"}</div>
-          <div className="flex items-center gap-2">
-  <span>{ps.soDienThoai || "-"}</span>
+  <div key={ps.id} className="border rounded p-3 bg-yellow-50">
+    <div className="font-semibold">
+      {ps.tenKhach || "Không tên"}
+    </div>
 
-  {ps.soDienThoai && (
-    <a
-      href={`tel:${ps.soDienThoai}`}
-      className="bg-green-600 text-white px-2 py-1 rounded text-xs"
-    >
-      📞 Gọi
-    </a>
-  )}
-</div>
+    <div className="flex items-center gap-2">
+      <span>{ps.soDienThoai || "-"}</span>
 
-<div className="text-yellow-700">Trả hôm nay</div>
-        </div>
-      ))}
+      {ps.soDienThoai && (
+        <>
+          <a
+            href={`tel:${ps.soDienThoai}`}
+            className="bg-green-600 text-white px-2 py-1 rounded text-xs"
+          >
+            📞 Gọi
+          </a>
+
+          <button
+            onClick={() => danhDauDaTraDo(ps.id!)}
+            className="bg-blue-600 text-white px-2 py-1 rounded text-xs ml-2"
+          >
+            ✓ Đã trả đồ
+          </button>
+        </>
+      )}
+    </div>
+
+    <div className="text-yellow-700">Trả hôm nay</div>
+  </div>
+))}
     </div>
   )}
 </div>
