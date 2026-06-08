@@ -162,6 +162,9 @@ const [moTraHomNay, setMoTraHomNay] = useState(false);
   const [hoTenNhanVien, setHoTenNhanVien] = useState("")
 const [soDienThoaiNhanVien, setSoDienThoaiNhanVien] = useState("")
   const [quyenNhanVien, setQuyenNhanVien] = useState<Role>("staff");
+  const [dangSuaNhanVien, setDangSuaNhanVien] = useState<string | null>(null);
+const [luongCungNhanVien, setLuongCungNhanVien] = useState("3.000.000");
+const [thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien] = useState("300.000");
 
   const [psNgay, setPsNgay] = useState(homNay());
   const [psTenKhach, setPsTenKhach] = useState("");
@@ -425,46 +428,50 @@ const [soDienThoaiNhanVien, setSoDienThoaiNhanVien] = useState("")
   };
 
   const taoHoSoNhanVien = async () => {
-    if (!laAdmin) {
-      alert("Chỉ admin mới được quản lý tài khoản");
-      return;
-    }
+  if (!laAdmin) {
+    alert("Chỉ admin mới được quản lý tài khoản");
+    return;
+  }
 
-    if (!uidNhanVien || !emailNhanVien) {
-      alert("Vui lòng nhập UID và email nhân viên");
-      return;
-    }
+  if (!uidNhanVien || !emailNhanVien) {
+    alert("Vui lòng nhập UID và email nhân viên");
+    return;
+  }
 
-    if (emailNhanVien === ADMIN_CHINH_EMAIL && quyenNhanVien !== "admin") {
-      alert("Admin chính luôn phải là admin");
-      return;
-    }
+  if (emailNhanVien === ADMIN_CHINH_EMAIL && quyenNhanVien !== "admin") {
+    alert("Admin chính luôn phải là admin");
+    return;
+  }
 
-    try {
-      await setDoc(doc(db, "users", uidNhanVien), {
-  email: emailNhanVien,
+  try {
+    await setDoc(
+      doc(db, "users", uidNhanVien),
+      {
+        email: emailNhanVien,
+        hoTen: hoTenNhanVien,
+        soDienThoai: soDienThoaiNhanVien,
+        luongCung: chuyenTienVeSo(luongCungNhanVien),
+        thuongChuyenCan: chuyenTienVeSo(thuongChuyenCanNhanVien),
+        role: emailNhanVien === ADMIN_CHINH_EMAIL ? "admin" : quyenNhanVien,
+      },
+      { merge: true }
+    );
 
-  hoTen: hoTenNhanVien,
-  soDienThoai: soDienThoaiNhanVien,
+    setUidNhanVien("");
+    setEmailNhanVien("");
+    setHoTenNhanVien("");
+    setSoDienThoaiNhanVien("");
+    setLuongCungNhanVien("3.000.000");
+    setThuongChuyenCanNhanVien("300.000");
+    setQuyenNhanVien("staff");
+    setDangSuaNhanVien(null);
 
-  luongCung: 3000000,
-  thuongChuyenCan: 300000,
-
-  role: emailNhanVien === ADMIN_CHINH_EMAIL ? "admin" : quyenNhanVien,
-});
-
-      setUidNhanVien("");
-      setEmailNhanVien("");
-      setHoTenNhanVien("");
-setSoDienThoaiNhanVien("");
-      setQuyenNhanVien("staff");
-
-      alert("Đã tạo hồ sơ tài khoản");
-    } catch (error) {
-      console.error(error);
-      alert("Không tạo được hồ sơ tài khoản");
-    }
-  };
+    alert(dangSuaNhanVien ? "Đã cập nhật hồ sơ nhân viên" : "Đã tạo hồ sơ tài khoản");
+  } catch (error) {
+    console.error(error);
+    alert("Không lưu được hồ sơ tài khoản");
+  }
+};
 
   const doiQuyen = async (id: string, roleMoi: Role) => {
     if (!laAdmin) {
@@ -1248,7 +1255,7 @@ return (
             Bước tạo nhân viên: vào Firebase Authentication tạo tài khoản trước, copy UID của tài khoản đó, rồi dán UID vào đây.
           </div>
 
-          <div className="grid gap-3 md:grid-cols-6 mb-4">
+          <div className="grid gap-3 md:grid-cols-4 mb-4">
             <input type="text" placeholder="UID nhân viên" value={uidNhanVien} onChange={(e) => setUidNhanVien(e.target.value)} className="border p-2 rounded" />
 
             <input type="email" placeholder="Email nhân viên" value={emailNhanVien} onChange={(e) => setEmailNhanVien(e.target.value)} className="border p-2 rounded" />
@@ -1265,6 +1272,23 @@ return (
   placeholder="Số điện thoại"
   value={soDienThoaiNhanVien}
   onChange={(e) => setSoDienThoaiNhanVien(e.target.value)}
+  className="border p-2 rounded"
+/>
+<input
+  type="text"
+  placeholder="Lương cứng"
+  value={luongCungNhanVien}
+  onChange={(e) => setLuongCungNhanVien(formatTienInput(e.target.value))}
+  className="border p-2 rounded"
+/>
+
+<input
+  type="text"
+  placeholder="Thưởng chuyên cần"
+  value={thuongChuyenCanNhanVien}
+  onChange={(e) =>
+    setThuongChuyenCanNhanVien(formatTienInput(e.target.value))
+  }
   className="border p-2 rounded"
 />
 
