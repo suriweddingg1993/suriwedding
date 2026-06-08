@@ -473,6 +473,23 @@ const [thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien] = useState("300.000"
   }
 };
 
+const suaHoSoNhanVien = (tk: TaiKhoan) => {
+  setDangSuaNhanVien(tk.id);
+  setUidNhanVien(tk.id);
+  setEmailNhanVien(tk.email || "");
+  setHoTenNhanVien(tk.hoTen || "");
+  setSoDienThoaiNhanVien(tk.soDienThoai || "");
+  setLuongCungNhanVien(formatTienInput(String(tk.luongCung || 3000000)));
+  setThuongChuyenCanNhanVien(
+    formatTienInput(String(tk.thuongChuyenCan || 300000))
+  );
+  setQuyenNhanVien(tk.role || "staff");
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+};
   const doiQuyen = async (id: string, roleMoi: Role) => {
     if (!laAdmin) {
       alert("Chỉ admin mới được đổi quyền");
@@ -1332,6 +1349,14 @@ return (
 )}
 </div>
 
+{laAdmin && (
+  <button
+    onClick={() => suaHoSoNhanVien(tk)}
+    className="border px-3 py-2 rounded mr-2"
+  >
+    ✏️ Sửa
+  </button>
+)}
                 {tk.email === ADMIN_CHINH_EMAIL ? (
                   <div className="text-green-600 font-bold">Admin chính</div>
                 ) : (
