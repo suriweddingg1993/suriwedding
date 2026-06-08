@@ -74,6 +74,7 @@ const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
+const APP_VERSION = "v1.0.1";
 
 function homNay() {
   return new Date().toISOString().slice(0, 10);
@@ -125,6 +126,7 @@ export default function Home() {
   const [matKhau, setMatKhau] = useState("");
   const [role, setRole] = useState<Role>("staff");
   const [tab, setTab] = useState<Tab>("home");
+  const [coBanCapNhat, setCoBanCapNhat] = useState(false);
 
   const [lichLamViec, setLichLamViec] = useState<Lich[]>([]);
   const [danhSachTaiKhoan, setDanhSachTaiKhoan] = useState<TaiKhoan[]>([]);
@@ -164,6 +166,22 @@ const [moTraHomNay, setMoTraHomNay] = useState(false);
   const [khoangCach, setKhoangCach] = useState<number | null>(null);
 
   const laAdmin = role === "admin";
+  useEffect(() => {
+  const phienBanDaLuu =
+    localStorage.getItem("suri_app_version");
+
+  if (
+    phienBanDaLuu &&
+    phienBanDaLuu !== APP_VERSION
+  ) {
+    setCoBanCapNhat(true);
+  }
+
+  localStorage.setItem(
+    "suri_app_version",
+    APP_VERSION
+  );
+}, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -763,6 +781,20 @@ const danhDauDaTraDo = async (id: string) => {
 
 return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+      {coBanCapNhat && (
+  <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 p-3 rounded-lg mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+    <div>
+      🔄 Có phiên bản mới của ứng dụng
+    </div>
+
+    <button
+      onClick={() => window.location.reload()}
+      className="bg-yellow-500 text-white px-4 py-2 rounded"
+    >
+      Cập nhật
+    </button>
+  </div>
+)}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold">Suri Wedding</h1>
@@ -1251,7 +1283,7 @@ return (
       )}
 
       <div className="text-center text-xs text-gray-400 mt-8 mb-2">
-        Phiên bản v1.0.0
+        Phiên bản {APP_VERSION}
       </div>
 
     </div>
