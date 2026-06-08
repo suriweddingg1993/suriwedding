@@ -1207,16 +1207,40 @@ return (
       {quaHan.map((ps) => (
         <div key={ps.id} className="border rounded p-3 bg-red-50">
           <div className="font-semibold">{ps.tenKhach || "Không tên"}</div>
-          <div>📱 {ps.soDienThoai || "-"}</div>
-          <div className="text-red-600">Quá hạn trả đồ</div>
+          <div className="flex items-center gap-2">
+  <span>{ps.soDienThoai || "-"}</span>
+
+  {ps.soDienThoai && (
+    <a
+      href={`tel:${ps.soDienThoai}`}
+      className="bg-green-600 text-white px-2 py-1 rounded text-xs"
+    >
+      📞 Gọi
+    </a>
+  )}
+</div>
+
+<div className="text-red-600">Quá hạn trả đồ</div>
         </div>
       ))}
 
       {canTraHomNay.map((ps) => (
         <div key={ps.id} className="border rounded p-3 bg-yellow-50">
           <div className="font-semibold">{ps.tenKhach || "Không tên"}</div>
-          <div>📱 {ps.soDienThoai || "-"}</div>
-          <div className="text-yellow-700">Trả hôm nay</div>
+          <div className="flex items-center gap-2">
+  <span>{ps.soDienThoai || "-"}</span>
+
+  {ps.soDienThoai && (
+    <a
+      href={`tel:${ps.soDienThoai}`}
+      className="bg-green-600 text-white px-2 py-1 rounded text-xs"
+    >
+      📞 Gọi
+    </a>
+  )}
+</div>
+
+<div className="text-yellow-700">Trả hôm nay</div>
         </div>
       ))}
     </div>
