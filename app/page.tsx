@@ -753,58 +753,6 @@ export default function Home() {
           ))}
       </div>
 
-      {tab === "home" && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <button
-            onClick={() => setTab("lich")}
-            className="bg-white rounded-lg shadow p-6 text-left"
-          >
-            <div className="text-3xl mb-2">📅</div>
-            <div className="font-bold text-xl">Lịch làm việc</div>
-            <div className="text-gray-600">Quản lý lịch chụp khách hàng</div>
-          </button>
-
-          <button
-            onClick={() => setTab("phatSinh")}
-            className="bg-white rounded-lg shadow p-6 text-left"
-          >
-            <div className="text-3xl mb-2">💰</div>
-            <div className="font-bold text-xl">Phát sinh</div>
-            <div className="text-gray-600">Thuê đồ, in ảnh, khách lẻ, phụ thu</div>
-          </button>
-
-          <button
-            onClick={() => setTab("chamCong")}
-            className="bg-white rounded-lg shadow p-6 text-left"
-          >
-            <div className="text-3xl mb-2">⏰</div>
-            <div className="font-bold text-xl">Chấm công</div>
-            <div className="text-gray-600">Check In / Check Out bằng GPS</div>
-          </button>
-
-          {laAdmin && (
-            <>
-              <button
-                onClick={() => setTab("nhanVien")}
-                className="bg-white rounded-lg shadow p-6 text-left"
-              >
-                <div className="text-3xl mb-2">👥</div>
-                <div className="font-bold text-xl">Nhân viên</div>
-                <div className="text-gray-600">Tạo tài khoản và đổi quyền</div>
-              </button>
-
-              <button
-                onClick={() => setTab("thongKe")}
-                className="bg-white rounded-lg shadow p-6 text-left"
-              >
-                <div className="text-3xl mb-2">📊</div>
-                <div className="font-bold text-xl">Thống kê</div>
-                <div className="text-gray-600">Doanh thu tháng</div>
-              </button>
-            </>
-          )}
-        </div>
-      )}
 
       {tab === "lich" && (
         <>
