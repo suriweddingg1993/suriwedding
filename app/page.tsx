@@ -1175,6 +1175,11 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <div className="text-center text-xs text-gray-400 mt-8 mb-2">
+        Phiên bản v1.0.0
+      </div>
+
     </div>
   );
 }
