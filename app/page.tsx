@@ -812,9 +812,9 @@ return (
         </button>
       </div>
 
-<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+<div className="mb-5">
   {nutMenu
-    .filter((item) => !item.adminOnly || laAdmin)
+    .filter((item) => item.key === "home")
     .map((item) => {
       const [icon, ...textParts] = item.label.split(" ");
       const text = textParts.join(" ");
@@ -823,31 +823,85 @@ return (
         <button
           key={item.key}
           onClick={() => {
-  setTab(item.key);
-
-  setTimeout(() => {
-    document
-      .getElementById("noi-dung-tab")
-      ?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-  }, 100);
-}}
-          className={`rounded-2xl shadow p-5 min-h-[140px] flex flex-col items-center justify-center gap-3 transition ${
+            setTab(item.key);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className={`w-full mb-3 rounded-2xl shadow-sm border p-3 min-h-[58px] flex items-center justify-center gap-3 transition ${
             tab === item.key
-              ? "bg-blue-600 text-white scale-105"
-              : "bg-white text-gray-800 hover:bg-blue-50"
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white text-gray-800 border-gray-200"
           }`}
         >
-          <div className="text-5xl">{icon}</div>
-
-          <div className="font-semibold text-center text-sm md:text-base">
-            {text}
-          </div>
+          <span className="text-2xl">{icon}</span>
+          <span className="font-bold text-base">{text}</span>
         </button>
       );
     })}
+
+  <div className="grid grid-cols-2 gap-3">
+    {nutMenu
+      .filter((item) => item.key !== "home")
+      .filter((item) => !item.adminOnly || laAdmin)
+      .map((item) => {
+        const [icon, ...textParts] = item.label.split(" ");
+        const text = textParts.join(" ");
+
+        return (
+          <button
+            key={item.key}
+            onClick={() => {
+              setTab(item.key);
+
+              setTimeout(() => {
+                document
+                  .getElementById("noi-dung-tab")
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+              }, 100);
+            }}
+            className={`rounded-2xl shadow-sm border p-3 min-h-[94px] flex flex-col items-center justify-center gap-2 transition ${
+              tab === item.key
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-gray-800 border-gray-200"
+            }`}
+          >
+            <div className="text-3xl">{icon}</div>
+
+            <div className="font-semibold text-center text-sm leading-tight">
+              {text}
+            </div>
+          </button>
+        );
+      })}
+  </div>
+</div>
+
+<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6">
+  <h2 className="font-bold text-base mb-3">⚠️ Việc cần chú ý hôm nay</h2>
+
+  <div className="space-y-2 text-sm">
+    <div className="flex justify-between">
+      <span>🔴 Khách quá hạn trả đồ</span>
+      <b>{quaHan.length}</b>
+    </div>
+
+    <div className="flex justify-between">
+      <span>🟡 Khách trả hôm nay</span>
+      <b>{canTraHomNay.length}</b>
+    </div>
+
+    <div className="flex justify-between">
+      <span>📅 Lịch hôm nay</span>
+      <b>{lichLamViec.filter((item) => item.ngay === homNay()).length}</b>
+    </div>
+
+    <div className="flex justify-between">
+      <span>⏰ Chấm công hôm nay</span>
+      <b>{chamCongHomNay?.checkIn ? "Đã check in" : "Chưa check in"}</b>
+    </div>
+  </div>
 </div>
 <div id="noi-dung-tab"></div>
 
