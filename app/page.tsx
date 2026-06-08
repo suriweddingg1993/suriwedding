@@ -1324,6 +1324,12 @@ return (
   <div className="text-sm text-gray-500">
     {tk.email}
   </div>
+  {laAdmin && (
+  <div className="text-sm text-gray-600 mt-1">
+    Lương cứng: {formatTienInput(String(tk.luongCung || 0))}đ · Chuyên cần:{" "}
+    {formatTienInput(String(tk.thuongChuyenCan || 0))}đ
+  </div>
+)}
 </div>
 
                 {tk.email === ADMIN_CHINH_EMAIL ? (
