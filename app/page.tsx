@@ -51,6 +51,7 @@ type PhatSinh = {
   loai: string;
   soTien: number;
   nguoiGhi: string;
+  ngayTra?: string;
   ghiChu?: string;
 };
 
@@ -152,6 +153,7 @@ export default function Home() {
   const [psTenKhach, setPsTenKhach] = useState("");
   const [psSoDienThoai, setPsSoDienThoai] = useState("");
   const [psLoai, setPsLoai] = useState("");
+  const [psNgayTra, setPsNgayTra] = useState("");
   const [psSoTien, setPsSoTien] = useState("");
   const [psGhiChu, setPsGhiChu] = useState("");
 
@@ -460,6 +462,7 @@ export default function Home() {
         tenKhach: psTenKhach,
         soDienThoai: psSoDienThoai,
         loai: psLoai,
+        ngayTra: psNgayTra,
         soTien: chuyenTienVeSo(psSoTien),
         nguoiGhi: user?.email || "",
         ghiChu: psGhiChu,
@@ -469,6 +472,7 @@ export default function Home() {
       setPsTenKhach("");
       setPsSoDienThoai("");
       setPsLoai("");
+      setPsNgayTra("");
       setPsSoTien("");
       setPsGhiChu("");
 
@@ -931,6 +935,20 @@ export default function Home() {
                 <option value="Khác">Khác</option>
               </select>
 
+{(psLoai === "Thuê váy" || psLoai === "Thuê vest") && (
+  <div>
+    <div className="text-sm text-gray-600 mb-1">
+      Ngày phải trả đồ
+    </div>
+
+    <input
+      type="date"
+      value={psNgayTra}
+      onChange={(e) => setPsNgayTra(e.target.value)}
+      className="border p-2 rounded w-full"
+    />
+  </div>
+)}
               <div>
                 <div className="relative">
                   <input
