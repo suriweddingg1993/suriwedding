@@ -23,7 +23,7 @@ import {
 import { db, auth } from "../lib/firebase";
 
 type Role = "admin" | "staff";
-type Tab = "home" | "lich" | "phatSinh" | "chamCong" | "nhanVien" | "thongKe";
+type Tab = "home" | "lich" | "phatSinh" | "tinhTrangKH" | "chamCong" | "nhanVien" | "thongKe";
 
 type Lich = {
   id?: string;
@@ -708,13 +708,16 @@ export default function Home() {
   }
 
   const nutMenu = [
-    { key: "home", label: "🏠 Trang chủ", adminOnly: false },
-    { key: "lich", label: "📅 Lịch làm việc", adminOnly: false },
-    { key: "phatSinh", label: "💰 Phát sinh", adminOnly: false },
-    { key: "chamCong", label: "⏰ Chấm công", adminOnly: false },
-    { key: "nhanVien", label: "👥 Nhân viên", adminOnly: true },
-    { key: "thongKe", label: "📊 Thống kê", adminOnly: true },
-  ] as const;
+  { key: "home", label: "🏠 Trang chủ", adminOnly: false },
+  { key: "lich", label: "📅 Lịch làm việc", adminOnly: false },
+  { key: "phatSinh", label: "💰 Phát sinh", adminOnly: false },
+
+  { key: "tinhTrangKH", label: "📋 Tình trạng KH", adminOnly: false },
+
+  { key: "chamCong", label: "⏰ Chấm công", adminOnly: false },
+  { key: "nhanVien", label: "👥 Nhân viên", adminOnly: true },
+  { key: "thongKe", label: "📊 Thống kê", adminOnly: true },
+] as const;
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
@@ -1098,6 +1101,29 @@ export default function Home() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+            {tab === "tinhTrangKH" && (
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <h2 className="text-xl font-bold mb-4">📋 Tình trạng khách hàng</h2>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="border rounded-lg p-4">
+              <div className="text-2xl mb-2">📦</div>
+              <div className="font-bold text-lg">Tình trạng đồ thuê</div>
+              <div className="text-sm text-gray-500 mt-1">
+                Theo dõi khách cần trả đồ hôm nay, quá hạn và đã trả
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <div className="text-2xl mb-2">💸</div>
+              <div className="font-bold text-lg">Tình trạng công nợ</div>
+              <div className="text-sm text-gray-500 mt-1">
+                Theo dõi khách còn nợ, đã thanh toán một phần hoặc đã thanh toán đủ
+              </div>
+            </div>
           </div>
         </div>
       )}
