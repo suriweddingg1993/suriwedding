@@ -40,6 +40,13 @@ type Lich = {
 type TaiKhoan = {
   id: string;
   email: string;
+
+  hoTen?: string;
+  soDienThoai?: string;
+
+  luongCung?: number;
+  thuongChuyenCan?: number;
+
   role: Role;
 };
 
@@ -152,6 +159,8 @@ const [moTraHomNay, setMoTraHomNay] = useState(false);
 
   const [uidNhanVien, setUidNhanVien] = useState("");
   const [emailNhanVien, setEmailNhanVien] = useState("");
+  const [hoTenNhanVien, setHoTenNhanVien] = useState("")
+const [soDienThoaiNhanVien, setSoDienThoaiNhanVien] = useState("")
   const [quyenNhanVien, setQuyenNhanVien] = useState<Role>("staff");
 
   const [psNgay, setPsNgay] = useState(homNay());
@@ -433,12 +442,21 @@ const [moTraHomNay, setMoTraHomNay] = useState(false);
 
     try {
       await setDoc(doc(db, "users", uidNhanVien), {
-        email: emailNhanVien,
-        role: emailNhanVien === ADMIN_CHINH_EMAIL ? "admin" : quyenNhanVien,
-      });
+  email: emailNhanVien,
+
+  hoTen: hoTenNhanVien,
+  soDienThoai: soDienThoaiNhanVien,
+
+  luongCung: 3000000,
+  thuongChuyenCan: 300000,
+
+  role: emailNhanVien === ADMIN_CHINH_EMAIL ? "admin" : quyenNhanVien,
+});
 
       setUidNhanVien("");
       setEmailNhanVien("");
+      setHoTenNhanVien("");
+setSoDienThoaiNhanVien("");
       setQuyenNhanVien("staff");
 
       alert("Đã tạo hồ sơ tài khoản");
@@ -1230,10 +1248,25 @@ return (
             Bước tạo nhân viên: vào Firebase Authentication tạo tài khoản trước, copy UID của tài khoản đó, rồi dán UID vào đây.
           </div>
 
-          <div className="grid gap-3 md:grid-cols-4 mb-4">
+          <div className="grid gap-3 md:grid-cols-6 mb-4">
             <input type="text" placeholder="UID nhân viên" value={uidNhanVien} onChange={(e) => setUidNhanVien(e.target.value)} className="border p-2 rounded" />
 
             <input type="email" placeholder="Email nhân viên" value={emailNhanVien} onChange={(e) => setEmailNhanVien(e.target.value)} className="border p-2 rounded" />
+            <input
+  type="text"
+  placeholder="Họ tên"
+  value={hoTenNhanVien}
+  onChange={(e) => setHoTenNhanVien(e.target.value)}
+  className="border p-2 rounded"
+/>
+
+<input
+  type="text"
+  placeholder="Số điện thoại"
+  value={soDienThoaiNhanVien}
+  onChange={(e) => setSoDienThoaiNhanVien(e.target.value)}
+  className="border p-2 rounded"
+/>
 
             <select value={quyenNhanVien} onChange={(e) => setQuyenNhanVien(e.target.value as Role)} className="border p-2 rounded">
               <option value="staff">Nhân viên</option>
@@ -1249,9 +1282,25 @@ return (
             {danhSachTaiKhoan.map((tk) => (
               <div key={tk.id} className="border rounded p-3 flex justify-between items-center">
                 <div>
-                  <div className="font-semibold">{tk.email}</div>
-                  <div className="text-sm text-gray-500">UID: {tk.id}</div>
-                </div>
+  <div className="font-semibold">
+    {tk.hoTen || tk.email}
+    {tk.soDienThoai && (
+      <>
+        {" · "}
+        <a
+          href={`tel:${tk.soDienThoai}`}
+          className="text-blue-600 font-medium"
+        >
+          📞 {tk.soDienThoai}
+        </a>
+      </>
+    )}
+  </div>
+
+  <div className="text-sm text-gray-500">
+    {tk.email}
+  </div>
+</div>
 
                 {tk.email === ADMIN_CHINH_EMAIL ? (
                   <div className="text-green-600 font-bold">Admin chính</div>
