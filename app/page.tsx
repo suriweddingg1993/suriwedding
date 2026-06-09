@@ -1354,13 +1354,7 @@ return (
           Lương cứng
         </div>
         <div className="font-bold text-lg">
-          {formatTienInput(
-            String(
-              danhSachTaiKhoan.find(
-                (tk) => tk.email === user?.email
-              )?.luongCung || 0
-            )
-          )}đ
+          {formatTienInput(String(luongCungCuaToi))}đ
         </div>
       </div>
 
@@ -1386,9 +1380,19 @@ return (
         <div className="text-gray-500 text-sm">
           Chuyên cần
         </div>
-        <div className="font-bold text-green-600">
-          {duocChuyenCan ? "Đủ điều kiện" : "Không đủ điều kiện"}
-        </div>
+        <div
+  className={`font-bold text-lg ${
+    duocChuyenCan ? "text-green-600" : "text-red-600"
+  }`}
+>
+  {duocChuyenCan ? "Đủ điều kiện" : "Không đủ điều kiện"}
+</div>
+
+<div className="text-sm text-gray-500 mt-1">
+  Thưởng: {duocChuyenCan
+    ? formatTienInput(String(thuongChuyenCanCuaToi))
+    : "0"}đ
+</div>
       </div>
 
     </div>
