@@ -158,6 +158,7 @@ export default function Home() {
 
   const [lichLamViec, setLichLamViec] = useState<Lich[]>([]);
   const [danhSachTaiKhoan, setDanhSachTaiKhoan] = useState<TaiKhoan[]>([]);
+  const [hoSoCuaToi, setHoSoCuaToi] = useState<TaiKhoan | null>(null);
   const [danhSachPhatSinh, setDanhSachPhatSinh] = useState<PhatSinh[]>([]);
   const [danhSachChamCong, setDanhSachChamCong] = useState<ChamCong[]>([]);
 
@@ -217,42 +218,63 @@ const [thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien] = useState("300.000"
 }, []);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
+  const unsub = onAuthStateChanged(auth, async (currentUser) => {
+    setUser(currentUser);
 
-      if (currentUser) {
-        const userRef = doc(db, "users", currentUser.uid);
+    if (currentUser) {
+      const userRef = doc(db, "users", currentUser.uid);
 
-        if (currentUser.email === ADMIN_CHINH_EMAIL) {
-          await setDoc(
-            userRef,
-            {
-              email: currentUser.email,
-              role: "admin",
-            },
-            { merge: true }
-          );
+      if (currentUser.email === ADMIN_CHINH_EMAIL) {
+        await setDoc(
+          userRef,
+          {
+            email: currentUser.email,
+            role: "admin",
+          },
+          { merge: true }
+        );
 
-          setRole("admin");
-          setDangTai(false);
-          return;
-        }
+        setHoSoCuaToi({
+          id: currentUser.uid,
+          email: currentUser.email || "",
+          role: "admin",
+        });
 
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          setRole(data.role === "admin" ? "admin" : "staff");
-        } else {
-          setRole("staff");
-        }
+        setRole("admin");
+        setDangTai(false);
+        return;
       }
 
-      setDangTai(false);
-    });
+      const userSnap = await getDoc(userRef);
 
-    return () => unsub();
-  }, []);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+
+        setHoSoCuaToi({
+          id: currentUser.uid,
+          email: data.email || currentUser.email || "",
+          hoTen: data.hoTen || "",
+          soDienThoai: data.soDienThoai || "",
+          luongCung: data.luongCung || 0,
+          thuongChuyenCan: data.thuongChuyenCan || 0,
+          role: data.role === "admin" ? "admin" : "staff",
+        });
+
+        setRole(data.role === "admin" ? "admin" : "staff");
+      } else {
+        setHoSoCuaToi(null);
+        setRole("staff");
+      }
+    } else {
+      setHoSoCuaToi(null);
+      setRole("staff");
+    }
+
+    setDangTai(false);
+  });
+
+  return () => unsub();
+}, []);
 
   useEffect(() => {
     if (!user) return;
@@ -766,6 +788,25 @@ const diMuon = soPhutMuon > 0;
   const chamCongHienThi = laAdmin
     ? danhSachChamCong
     : danhSachChamCong.filter((item) => item.uid === user?.uid);
+    const thangHienTai = homNay().slice(0, 7);
+
+const chamCongCuaToiThang = danhSachChamCong.filter(
+  (cc) => cc.uid === user?.uid && cc.ngay.startsWith(thangHienTai)
+);
+
+const soLanDiMuonThang = chamCongCuaToiThang.filter(
+  (cc) => cc.diMuon && cc.duyetMuon !== true
+).length;
+
+const soNgayNghiThang = chamCongCuaToiThang.filter(
+  (cc) => cc.nghiPhep
+).length;
+
+const duocChuyenCan =
+  soNgayNghiThang === 0 && soLanDiMuonThang <= 3;
+
+const luongCungCuaToi = hoSoCuaToi?.luongCung || 0;
+const thuongChuyenCanCuaToi = hoSoCuaToi?.thuongChuyenCan || 0;
 
   if (dangTai) {
     return (
@@ -1328,7 +1369,7 @@ return (
           Đi muộn
         </div>
         <div className="font-bold text-lg">
-          0 / 3 lần
+          {soLanDiMuonThang} / 3 lần
         </div>
       </div>
 
@@ -1337,7 +1378,7 @@ return (
           Nghỉ phép
         </div>
         <div className="font-bold text-lg">
-          0 / 2 ngày
+          {soNgayNghiThang} / 2 ngày
         </div>
       </div>
 
@@ -1346,7 +1387,7 @@ return (
           Chuyên cần
         </div>
         <div className="font-bold text-green-600">
-          Đủ điều kiện
+          {duocChuyenCan ? "Đủ điều kiện" : "Không đủ điều kiện"}
         </div>
       </div>
 
