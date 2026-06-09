@@ -23,7 +23,15 @@ import {
 import { db, auth } from "../lib/firebase";
 
 type Role = "admin" | "staff";
-type Tab = "home" | "lich" | "phatSinh" | "tinhTrangKH" | "chamCong" | "nhanVien" | "thongKe";
+type Tab =
+  | "home"
+  | "lich"
+  | "phatSinh"
+  | "tinhTrangKH"
+  | "chamCong"
+  | "luong"
+  | "nhanVien"
+  | "thongKe";
 
 type Lich = {
   id?: string;
@@ -94,6 +102,7 @@ const BAN_KINH_CHO_PHEP = 500;
 const APP_VERSION = "v1.0.1";
 const GIO_CHECKIN_CHUAN = "08:00";
 const SO_LAN_DI_MUON_TOI_DA = 3;
+const SO_NGAY_NGHI_PHEP_TOI_DA = 2;
 
 function homNay() {
   return new Date().toISOString().slice(0, 10);
@@ -809,6 +818,7 @@ const diMuon = soPhutMuon > 0;
   { key: "tinhTrangKH", label: "📋 Tình trạng KH", adminOnly: false },
 
   { key: "chamCong", label: "⏰ Chấm công", adminOnly: false },
+  { key: "luong", label: "💰 Lương của tôi", adminOnly: false },
   { key: "nhanVien", label: "👥 Nhân viên", adminOnly: true },
   { key: "thongKe", label: "📊 Thống kê", adminOnly: true },
 ] as const;
@@ -1290,6 +1300,59 @@ return (
           </div>
         </>
       )}
+      {tab === "luong" && (
+  <div className="bg-white rounded-lg shadow p-4 mb-6">
+    <h2 className="text-xl font-bold mb-4">
+      💰 Lương của tôi
+    </h2>
+
+    <div className="space-y-3">
+
+      <div className="border rounded p-3">
+        <div className="text-gray-500 text-sm">
+          Lương cứng
+        </div>
+        <div className="font-bold text-lg">
+          {formatTienInput(
+            String(
+              danhSachTaiKhoan.find(
+                (tk) => tk.email === user?.email
+              )?.luongCung || 0
+            )
+          )}đ
+        </div>
+      </div>
+
+      <div className="border rounded p-3">
+        <div className="text-gray-500 text-sm">
+          Đi muộn
+        </div>
+        <div className="font-bold text-lg">
+          0 / 3 lần
+        </div>
+      </div>
+
+      <div className="border rounded p-3">
+        <div className="text-gray-500 text-sm">
+          Nghỉ phép
+        </div>
+        <div className="font-bold text-lg">
+          0 / 2 ngày
+        </div>
+      </div>
+
+      <div className="border rounded p-3">
+        <div className="text-gray-500 text-sm">
+          Chuyên cần
+        </div>
+        <div className="font-bold text-green-600">
+          Đủ điều kiện
+        </div>
+      </div>
+
+    </div>
+  </div>
+)}
 
       {tab === "nhanVien" && laAdmin && (
         <div className="bg-white rounded-lg shadow p-4 mb-6">
