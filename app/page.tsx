@@ -70,10 +70,20 @@ type ChamCong = {
   ngay: string;
   checkIn?: string;
   checkOut?: string;
+
   checkInLat?: number;
   checkInLng?: number;
   checkOutLat?: number;
   checkOutLng?: number;
+
+  diMuon?: boolean;
+  soPhutMuon?: number;
+
+  lyDoMuon?: string;
+  duyetMuon?: boolean;
+
+  nghiPhep?: boolean;
+  ghiChuNghi?: string;
 };
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
@@ -82,6 +92,8 @@ const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
 const APP_VERSION = "v1.0.1";
+const GIO_CHECKIN_CHUAN = "08:00";
+const SO_LAN_DI_MUON_TOI_DA = 3;
 
 function homNay() {
   return new Date().toISOString().slice(0, 10);
@@ -620,7 +632,15 @@ const suaHoSoNhanVien = (tk: TaiKhoan) => {
       const banGhiHomNay = danhSachChamCong.find(
         (item) => item.uid === user.uid && item.ngay === ngayHomNay
       );
+const gioHienTaiCheckIn = gioHienTai();
 
+const [gio, phut] = gioHienTaiCheckIn.split(":").map(Number);
+
+const soPhutHienTai = gio * 60 + phut;
+const soPhutChuan = 8 * 60;
+
+const soPhutMuon = Math.max(0, soPhutHienTai - soPhutChuan);
+const diMuon = soPhutMuon > 0;
       if (loai === "checkIn") {
         if (banGhiHomNay?.checkIn) {          alert("Bạn đã Check In hôm nay rồi");
           return;
@@ -628,18 +648,25 @@ const suaHoSoNhanVien = (tk: TaiKhoan) => {
 
         if (banGhiHomNay?.id) {
           await updateDoc(doc(db, "chamCong", banGhiHomNay.id), {
-            checkIn: gioHienTai(),
-            checkInLat: viTri.lat,
-            checkInLng: viTri.lng,
+  checkIn: gioHienTaiCheckIn,
+  checkInLat: viTri.lat,
+  checkInLng: viTri.lng,
+
+  diMuon,
+  soPhutMuon,
           });
         } else {
           await addDoc(collection(db, "chamCong"), {
-            uid: user.uid,
-            email: user.email || "",
-            ngay: ngayHomNay,
-            checkIn: gioHienTai(),
-            checkInLat: viTri.lat,
-            checkInLng: viTri.lng,
+  uid: user.uid,
+  email: user.email || "",
+  ngay: ngayHomNay,
+
+  checkIn: gioHienTaiCheckIn,
+  checkInLat: viTri.lat,
+  checkInLng: viTri.lng,
+
+  diMuon,
+  soPhutMuon,
           });
         }
 
