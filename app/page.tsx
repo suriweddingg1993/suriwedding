@@ -1400,6 +1400,19 @@ return (
     : "0"}đ
 </div>
       </div>
+      <div className="border rounded p-3 bg-green-50">
+  <div className="text-gray-500 text-sm">
+    Lương tạm tính
+  </div>
+  <div className="font-bold text-xl text-green-700">
+    {formatTienInput(
+      String(
+        luongCungCuaToi +
+          (duocChuyenCan ? thuongChuyenCanCuaToi : 0)
+      )
+    )}đ
+  </div>
+</div>
 
     </div>
   </div>
