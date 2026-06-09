@@ -234,12 +234,18 @@ const [thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien] = useState("300.000"
           { merge: true }
         );
 
-        setHoSoCuaToi({
-          id: currentUser.uid,
-          email: currentUser.email || "",
-          role: "admin",
-        });
+        const adminSnap = await getDoc(userRef);
+const adminData = adminSnap.exists() ? adminSnap.data() : {};
 
+setHoSoCuaToi({
+  id: currentUser.uid,
+  email: currentUser.email || "",
+  hoTen: adminData.hoTen || "",
+  soDienThoai: adminData.soDienThoai || "",
+  luongCung: adminData.luongCung || 0,
+  thuongChuyenCan: adminData.thuongChuyenCan || 0,
+  role: "admin",
+});
         setRole("admin");
         setDangTai(false);
         return;
