@@ -1314,8 +1314,10 @@ return (
               <option value="admin">Admin</option>
             </select>
 
-            <button onClick={taoHoSoNhanVien} className="bg-green-600 text-white px-4 rounded">
-              Tạo hồ sơ
+            <button onClick={taoHoSoNhanVien}
+  className="bg-green-600 text-white px-4 rounded"
+>
+  {dangSuaNhanVien ? "💾 Cập nhật hồ sơ" : "Tạo hồ sơ"}
             </button>
           </div>
 
