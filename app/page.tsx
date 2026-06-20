@@ -890,7 +890,7 @@ const danhDauDaTraDo = async (id: string) => {
 };
 
 return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
       {coBanCapNhat && (
   <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 p-3 rounded-lg mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
     <div>
@@ -922,98 +922,60 @@ return (
         </button>
       </div>
 
-<div className="mb-5">
-  {nutMenu
-    .filter((item) => item.key === "home")
-    .map((item) => {
-      const [icon, ...textParts] = item.label.split(" ");
-      const text = textParts.join(" ");
+{tab === "home" && (
+        <div className="animate-fade-in">
+          {/* THẺ VIỆC CẦN CHÚ Ý */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+            <h2 className="font-bold text-lg mb-4 text-gray-800">⚠️ Việc cần chú ý hôm nay</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl">
+                <span className="text-red-700 font-medium">🔴 Khách quá hạn trả đồ</span>
+                <b className="text-red-700 text-lg">{quaHan.length}</b>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-xl">
+                <span className="text-yellow-700 font-medium">🟡 Khách trả hôm nay</span>
+                <b className="text-yellow-700 text-lg">{canTraHomNay.length}</b>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
+                <span className="text-blue-700 font-medium">📅 Lịch hôm nay</span>
+                <b className="text-blue-700 text-lg">{lichLamViec.filter((item) => item.ngay === homNay()).length}</b>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                <span className="text-green-700 font-medium">⏰ Chấm công hôm nay</span>
+                <b className="text-green-700">{chamCongHomNay?.checkIn ? "Đã Check-in" : "Chưa Check-in"}</b>
+              </div>
+            </div>
+          </div>
 
-      return (
-        <button
-          key={item.key}
-          onClick={() => {
-            setTab(item.key);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className={`w-full mb-3 rounded-2xl shadow-sm border p-3 min-h-[58px] flex items-center justify-center gap-3 transition ${
-            tab === item.key
-              ? "bg-blue-600 text-white border-blue-600"
-              : "bg-white text-gray-800 border-gray-200"
-          }`}
-        >
-          <span className="text-2xl">{icon}</span>
-          <span className="font-bold text-base">{text}</span>
-        </button>
-      );
-    })}
+          {/* LƯỚI MENU TÍNH NĂNG */}
+          <h2 className="font-bold text-lg mb-3 text-gray-800 ml-1">Cửa sổ tính năng</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {nutMenu
+              .filter((item) => item.key !== "home")
+              .filter((item) => !item.adminOnly || laAdmin)
+              .map((item) => {
+                const [icon, ...textParts] = item.label.split(" ");
+                const text = textParts.join(" ");
 
-  <div className="grid grid-cols-2 gap-3">
-    {nutMenu
-      .filter((item) => item.key !== "home")
-      .filter((item) => !item.adminOnly || laAdmin)
-      .map((item) => {
-        const [icon, ...textParts] = item.label.split(" ");
-        const text = textParts.join(" ");
-
-        return (
-          <button
-            key={item.key}
-            onClick={() => {
-              setTab(item.key);
-
-              setTimeout(() => {
-                document
-                  .getElementById("noi-dung-tab")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-              }, 100);
-            }}
-            className={`rounded-2xl shadow-sm border p-3 min-h-[94px] flex flex-col items-center justify-center gap-2 transition ${
-              tab === item.key
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-gray-800 border-gray-200"
-            }`}
-          >
-            <div className="text-3xl">{icon}</div>
-
-            <div className="font-semibold text-center text-sm leading-tight">
-              {text}
-            </div>
-          </button>
-        );
-      })}
-  </div>
-</div>
-
-<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6">
-  <h2 className="font-bold text-base mb-3">⚠️ Việc cần chú ý hôm nay</h2>
-
-  <div className="space-y-2 text-sm">
-    <div className="flex justify-between">
-      <span>🔴 Khách quá hạn trả đồ</span>
-      <b>{quaHan.length}</b>
-    </div>
-
-    <div className="flex justify-between">
-      <span>🟡 Khách trả hôm nay</span>
-      <b>{canTraHomNay.length}</b>
-    </div>
-
-    <div className="flex justify-between">
-      <span>📅 Lịch hôm nay</span>
-      <b>{lichLamViec.filter((item) => item.ngay === homNay()).length}</b>
-    </div>
-
-    <div className="flex justify-between">
-      <span>⏰ Chấm công hôm nay</span>
-      <b>{chamCongHomNay?.checkIn ? "Đã check in" : "Chưa check in"}</b>
-    </div>
-  </div>
-</div>
-<div id="noi-dung-tab"></div>
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => {
+                      setTab(item.key);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center justify-center gap-3 transition hover:shadow-md active:scale-95"
+                  >
+                    <div className="text-4xl mb-1 drop-shadow-sm">{icon}</div>
+                    <div className="font-semibold text-center text-sm text-gray-700">
+                      {text}
+                    </div>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {tab === "lich" && (
         <TabLich
@@ -1121,6 +1083,33 @@ return (
           tongThuNhap={tongThuNhap}
         />
       )}
+      {/* THANH ĐIỀU HƯỚNG DƯỚI CÙNG (BOTTOM NAVIGATION) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center pt-2 pb-4 md:pb-2 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-50">
+        {[
+          { key: "home", icon: "🏠", label: "Trang chủ" },
+          { key: "lich", icon: "📅", label: "Lịch làm việc" },
+          { key: "phatSinh", icon: "💰", label: "Phát sinh" },
+          { key: "chamCong", icon: "⏰", label: "Chấm công" },
+        ].map((nav) => (
+          <button
+            key={nav.key}
+            onClick={() => {
+              setTab(nav.key as Tab);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className={`flex flex-col items-center p-2 w-1/4 transition-colors ${
+              tab === nav.key ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            <span className={`text-2xl mb-1 transition-transform ${tab === nav.key ? "scale-110 drop-shadow-md" : ""}`}>
+              {nav.icon}
+            </span>
+            <span className={`text-[10px] font-semibold ${tab === nav.key ? "text-blue-600" : "text-gray-500"}`}>
+              {nav.label}
+            </span>
+          </button>
+        ))}
+      </div>
       </div>
   );
 }
