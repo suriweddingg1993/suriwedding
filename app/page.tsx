@@ -172,9 +172,7 @@ export default function Home() {
   const [ngay, setNgay] = useState("");
   const [gio, setGio] = useState("");
   const [tenKhach, setTenKhach] = useState("");
-  const [moQuaHan, setMoQuaHan] = useState(false);
-const [moTraHomNay, setMoTraHomNay] = useState(false);
-  const [soDienThoai, setSoDienThoai] = useState("");
+    const [soDienThoai, setSoDienThoai] = useState("");
   const [theLoai, setTheLoai] = useState("");
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
   const [goiChup, setGoiChup] = useState("");
@@ -546,28 +544,7 @@ const suaHoSoNhanVien = (tk: TaiKhoan) => {
     behavior: "smooth",
   });
 };
-  const doiQuyen = async (id: string, roleMoi: Role) => {
-    if (!laAdmin) {
-      alert("Chỉ admin mới được đổi quyền");
-      return;
-    }
-
-    const taiKhoanCanDoi = danhSachTaiKhoan.find((tk) => tk.id === id);
-
-    if (taiKhoanCanDoi?.email === ADMIN_CHINH_EMAIL) {
-      alert("Không thể đổi quyền admin chính");
-      return;
-    }
-
-    try {
-      await updateDoc(doc(db, "users", id), {
-        role: roleMoi,
-      });
-    } catch (error) {
-      console.error(error);
-      alert("Không đổi được quyền");
-    }
-  };
+  
 
   const themPhatSinh = async () => {
     if (!psNgay || !psLoai || !psSoTien) {
