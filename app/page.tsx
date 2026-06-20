@@ -438,25 +438,47 @@ export default function Home() {
 
       {tab === "home" && (
         <div className="animate-fade-in">
+          {/* THẺ VIỆC CẦN CHÚ Ý (ĐÃ NÂNG CẤP CLICK CHUYỂN TAB) */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
             <h2 className="font-bold text-lg mb-4 text-gray-800">⚠️ Việc cần chú ý hôm nay</h2>
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl">
+              
+              {/* Nút bấm chuyển sang Tình trạng KH */}
+              <button 
+                onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                className="w-full flex justify-between items-center p-3 bg-red-50 rounded-xl hover:bg-red-100 active:scale-[0.98] transition-all"
+              >
                 <span className="text-red-700 font-medium">🔴 Khách quá hạn trả đồ</span>
                 <b className="text-red-700 text-lg">{quaHan.length}</b>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-xl">
+              </button>
+
+              {/* Nút bấm chuyển sang Tình trạng KH */}
+              <button 
+                onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                className="w-full flex justify-between items-center p-3 bg-yellow-50 rounded-xl hover:bg-yellow-100 active:scale-[0.98] transition-all"
+              >
                 <span className="text-yellow-700 font-medium">🟡 Khách trả hôm nay</span>
                 <b className="text-yellow-700 text-lg">{canTraHomNay.length}</b>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
+              </button>
+
+              {/* Nút bấm chuyển sang Lịch làm việc */}
+              <button 
+                onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                className="w-full flex justify-between items-center p-3 bg-blue-50 rounded-xl hover:bg-blue-100 active:scale-[0.98] transition-all"
+              >
                 <span className="text-blue-700 font-medium">📅 Lịch hôm nay</span>
                 <b className="text-blue-700 text-lg">{lichLamViec.filter((item) => item.ngay === homNay()).length}</b>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+              </button>
+
+              {/* Nút bấm chuyển sang Chấm công */}
+              <button 
+                onClick={() => { setTab("chamCong"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                className="w-full flex justify-between items-center p-3 bg-green-50 rounded-xl hover:bg-green-100 active:scale-[0.98] transition-all"
+              >
                 <span className="text-green-700 font-medium">⏰ Chấm công hôm nay</span>
                 <b className="text-green-700">{chamCongHomNay?.checkIn ? "Đã Check-in" : "Chưa Check-in"}</b>
-              </div>
+              </button>
+
             </div>
           </div>
 
