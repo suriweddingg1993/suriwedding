@@ -66,6 +66,20 @@ export default function TabLich({
               <input type="text" placeholder="Tên khách" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="border p-3 rounded-xl" />
               <input type="text" placeholder="Số điện thoại" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="border p-3 rounded-xl" />
               <input type="text" placeholder="Gói chụp" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="border p-3 rounded-xl" />
+              
+              {/* Ô GIÁ TIỀN */}
+              <div className="relative">
+                <input 
+                  type="text" 
+                  inputMode="numeric" 
+                  placeholder="Giá tiền" 
+                  value={giaTien} 
+                  onChange={(e) => setGiaTien(formatTienInput(e.target.value))} 
+                  className="border p-3 rounded-xl w-full pr-10" 
+                />
+                <span className="absolute right-4 top-3.5 text-gray-400">đ</span>
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <button onClick={() => { themHoacSuaLich(); setShowModal(false); }} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">Lưu lại</button>
                 <button onClick={() => setShowModal(false)} className="px-6 py-3 bg-gray-200 rounded-xl">Hủy</button>
