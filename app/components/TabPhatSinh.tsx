@@ -1,3 +1,4 @@
+import { useState } from "react";
 import NutCopy from "./NutCopy";
 import toast from "react-hot-toast";
 
@@ -22,6 +23,7 @@ export default function TabPhatSinh({
         <div className="grid gap-3">
           <input type="date" value={psNgay} onChange={(e) => setPsNgay(e.target.value)} className="border p-3 rounded-xl" />
           <input type="text" placeholder="Tên khách" value={psTenKhach} onChange={(e) => setPsTenKhach(e.target.value)} className="border p-3 rounded-xl" />
+          
           <select value={psLoai} onChange={(e) => setPsLoai(e.target.value)} className="border p-3 rounded-xl">
             <option value="">-- Chọn loại phát sinh --</option>
             <option value="Thuê váy">Thuê váy</option>
@@ -29,11 +31,21 @@ export default function TabPhatSinh({
             <option value="In/Rửa ảnh">In/Rửa ảnh</option>
             <option value="Khác">Khác</option>
           </select>
+
+          {/* Logic hiện ngày trả nếu là thuê đồ */}
+          {(psLoai === "Thuê váy" || psLoai === "Thuê vest") && (
+            <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+              <label className="text-xs font-bold text-orange-700 block mb-1">NGÀY HẸN TRẢ ĐỒ</label>
+              <input type="date" value={psNgayTra} onChange={(e) => setPsNgayTra(e.target.value)} className="w-full bg-transparent border-none p-0 text-lg font-medium text-orange-800" />
+            </div>
+          )}
+
           <div className="relative">
             <input type="text" inputMode="numeric" placeholder="Số tiền" value={psSoTien} onChange={(e) => setPsSoTien(formatTienInput(e.target.value))} className="border p-3 rounded-xl w-full pr-10" />
             <span className="absolute right-4 top-3.5 text-gray-400">đ</span>
           </div>
-          <button onClick={themPhatSinh} className="bg-blue-600 text-white p-3 rounded-xl font-bold">Thêm phát sinh</button>
+          
+          <button onClick={themPhatSinh} className="bg-blue-600 text-white p-3 rounded-xl font-bold mt-2">Thêm phát sinh</button>
         </div>
       </div>
 
@@ -43,6 +55,9 @@ export default function TabPhatSinh({
             <div>
               <div className="font-bold text-gray-800">{item.loai}</div>
               <div className="text-xs text-gray-500">{item.ngay.split("-").reverse().join("/")} • {item.tenKhach}</div>
+              {item.ngayTra && (
+                <div className="text-xs font-bold text-orange-600 mt-0.5">📅 Trả: {item.ngayTra.split("-").reverse().join("/")}</div>
+              )}
               <div className="font-bold text-green-600 mt-1">{Number(item.soTien || 0).toLocaleString("vi-VN")}đ</div>
             </div>
             <div className="flex gap-2">
