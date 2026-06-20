@@ -1,60 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "react-hot-toast"; // <-- KHAI BÁO THÔNG BÁO
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Suri Wedding",
-  description: "Quản lý lịch Studio Suri Wedding",
-
-  manifest: "/manifest.json",
-
-  icons: {
-    icon: [
-      {
-        url: "/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-      },
-      {
-        url: "/icon-512.png",
-        sizes: "512x512",
-        type: "image/png",
-      },
-    ],
-
-    apple: [
-      {
-        url: "/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-      },
-    ],
-  },
-
-  appleWebApp: {
-    capable: true,
-    title: "Suri Wedding",
-    statusBarStyle: "default",
-  },
-
-  applicationName: "Suri Wedding",
-
-  keywords: [
-    "Suri Wedding",
-    "Studio",
-    "Wedding",
-    "Quản lý lịch",
-  ],
+  description: "Ứng dụng quản lý studio",
 };
 
 export default function RootLayout({
@@ -63,11 +16,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="vi"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="vi">
+      <body className={inter.className}>
+        {/* CỤC PHÁT SÓNG THÔNG BÁO HIỂN THỊ Ở TRÊN CÙNG Ở GIỮA */}
+        <Toaster position="top-center" reverseOrder={false} />
         {children}
       </body>
     </html>

@@ -1,4 +1,5 @@
 import NutCopy from "./NutCopy";
+import toast from "react-hot-toast"; // <-- Đã thêm vũ khí Toast
 
 export default function TabPhatSinh({
   psNgay, setPsNgay, psTenKhach, setPsTenKhach, psSoDienThoai, setPsSoDienThoai,
@@ -12,7 +13,7 @@ export default function TabPhatSinh({
     const ngayTraFormat = item.ngayTra ? item.ngayTra.split("-").reverse().join("/") : "";
     const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach}.\n\nEm thấy mình có lịch hẹn trả ${item.loai} vào ngày ${ngayTraFormat}.\nAnh/chị nhớ sắp xếp thời gian ghé qua cửa hàng gửi lại đồ giúp em để team kịp giặt là cho khách sau nhé!\n\nEm cảm ơn anh/chị nhiều ạ.`;
     navigator.clipboard.writeText(text);
-    alert("✅ Đã copy tin nhắn nhắc trả đồ!");
+    toast.success("Đã copy tin nhắn nhắc trả đồ Zalo!"); // <-- Đã đổi sang Toast mượt mà
   };
 
   return (

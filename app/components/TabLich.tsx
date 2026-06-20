@@ -1,4 +1,5 @@
 import NutCopy from "./NutCopy";
+import toast from "react-hot-toast"; // <-- Đã thêm vũ khí Toast
 
 export default function TabLich({
   dangSua, ngay, setNgay, gio, setGio, tenKhach, setTenKhach,
@@ -13,7 +14,7 @@ export default function TabLich({
     const ngayFormat = item.ngay.split("-").reverse().join("/");
     const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach}.\n\nEm xin phép nhắc lịch ${item.theLoai} của mình vào lúc ${item.gio} ngày ${ngayFormat} ạ.\nAnh/chị nhớ sắp xếp thời gian qua đúng giờ để team chuẩn bị tốt nhất cho mình nhé!\n\nCần hỗ trợ gì thêm anh/chị cứ nhắn em ạ.`;
     navigator.clipboard.writeText(text);
-    alert("✅ Đã copy tin nhắn nhắc lịch!");
+    toast.success("Đã copy tin nhắn nhắc lịch Zalo!"); // <-- Đã đổi sang Toast mượt mà
   };
 
   return (
