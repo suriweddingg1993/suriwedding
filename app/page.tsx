@@ -544,7 +544,7 @@ const suaHoSoNhanVien = (tk: TaiKhoan) => {
     behavior: "smooth",
   });
 };
-  
+  
 
   const themPhatSinh = async () => {
     if (!psNgay || !psLoai || !psSoTien) {
