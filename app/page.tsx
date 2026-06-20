@@ -21,6 +21,8 @@ import {
 } from "firebase/auth";
 
 import { db, auth } from "../lib/firebase";
+import TabLuong from "./components/TabLuong";
+import TabTinhTrangKH from "./components/TabTinhTrangKH";
 
 type Role = "admin" | "staff";
 type Tab =
@@ -1348,75 +1350,14 @@ return (
         </>
       )}
       {tab === "luong" && (
-  <div className="bg-white rounded-lg shadow p-4 mb-6">
-    <h2 className="text-xl font-bold mb-4">
-      💰 Lương của tôi
-    </h2>
-
-    <div className="space-y-3">
-
-      <div className="border rounded p-3">
-        <div className="text-gray-500 text-sm">
-          Lương cứng
-        </div>
-        <div className="font-bold text-lg">
-          {formatTienInput(String(luongCungCuaToi))}đ
-        </div>
-      </div>
-
-      <div className="border rounded p-3">
-        <div className="text-gray-500 text-sm">
-          Đi muộn
-        </div>
-        <div className="font-bold text-lg">
-          {soLanDiMuonThang} / 3 lần
-        </div>
-      </div>
-
-      <div className="border rounded p-3">
-        <div className="text-gray-500 text-sm">
-          Nghỉ phép
-        </div>
-        <div className="font-bold text-lg">
-          {soNgayNghiThang} / 2 ngày
-        </div>
-      </div>
-
-      <div className="border rounded p-3">
-        <div className="text-gray-500 text-sm">
-          Chuyên cần
-        </div>
-        <div
-  className={`font-bold text-lg ${
-    duocChuyenCan ? "text-green-600" : "text-red-600"
-  }`}
->
-  {duocChuyenCan ? "Đủ điều kiện" : "Không đủ điều kiện"}
-</div>
-
-<div className="text-sm text-gray-500 mt-1">
-  Thưởng: {duocChuyenCan
-    ? formatTienInput(String(thuongChuyenCanCuaToi))
-    : "0"}đ
-</div>
-      </div>
-      <div className="border rounded p-3 bg-green-50">
-  <div className="text-gray-500 text-sm">
-    Lương tạm tính
-  </div>
-  <div className="font-bold text-xl text-green-700">
-    {formatTienInput(
-      String(
-        luongCungCuaToi +
-          (duocChuyenCan ? thuongChuyenCanCuaToi : 0)
-      )
-    )}đ
-  </div>
-</div>
-
-    </div>
-  </div>
-)}
+        <TabLuong
+          luongCungCuaToi={luongCungCuaToi}
+          soLanDiMuonThang={soLanDiMuonThang}
+          soNgayNghiThang={soNgayNghiThang}
+          duocChuyenCan={duocChuyenCan}
+          thuongChuyenCanCuaToi={thuongChuyenCanCuaToi}
+        />
+      )}
 
       {tab === "nhanVien" && laAdmin && (
         <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -1527,72 +1468,13 @@ return (
         </div>
       )}
 {tab === "tinhTrangKH" && (
-  <div className="bg-white rounded-lg shadow p-4 mb-6">
-    <h2 className="text-xl font-bold mb-4">📋 Tình trạng khách hàng</h2>
-
-    <div className="grid gap-4 mb-4 md:grid-cols-3">
-      <div className="border rounded-lg p-4 bg-red-50">
-        <div className="text-2xl font-bold text-red-600">{quaHan.length}</div>
-        <div className="font-semibold">🔴 Quá hạn trả đồ</div>
-      </div>
-
-      <div className="border rounded-lg p-4 bg-yellow-50">
-        <div className="text-2xl font-bold text-yellow-600">{canTraHomNay.length}</div>
-        <div className="font-semibold">🟡 Trả hôm nay</div>
-      </div>
-
-      <div className="border rounded-lg p-4 bg-green-50">
-        <div className="text-2xl font-bold text-green-600">{dangThue.length}</div>
-        <div className="font-semibold">🟢 Đang thuê</div>
-      </div>
-    </div>
-
-    <div className="mt-6 border rounded-lg p-4">
-      <h3 className="font-bold text-lg mb-3">📞 Khách cần liên hệ</h3>
-
-      {quaHan.length === 0 && canTraHomNay.length === 0 ? (
-        <div className="text-gray-500">Không có khách cần liên hệ</div>
-      ) : (
-        <div className="space-y-2">
-          {[...quaHan, ...canTraHomNay].map((ps) => (
-            <div
-              key={ps.id}
-              className={`border rounded p-3 ${
-                quaHan.includes(ps) ? "bg-red-50" : "bg-yellow-50"
-              }`}
-            >
-              <div className="font-semibold">{ps.tenKhach || "Không tên"}</div>
-
-              <div className="flex items-center gap-2">
-                <span>{ps.soDienThoai || "-"}</span>
-
-                {ps.soDienThoai && (
-                  <a
-                    href={`tel:${ps.soDienThoai}`}
-                    className="bg-green-600 text-white px-2 py-1 rounded text-xs"
-                  >
-                    📞 Gọi
-                  </a>
-                )}
-
-                <button
-                  onClick={() => danhDauDaTraDo(ps.id!)}
-                  className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                >
-                  ✓ Đã trả đồ
-                </button>
-              </div>
-
-              <div className={quaHan.includes(ps) ? "text-red-600" : "text-yellow-700"}>
-                {quaHan.includes(ps) ? "Quá hạn trả đồ" : "Trả hôm nay"}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </div>
-)}
+        <TabTinhTrangKH
+          quaHan={quaHan}
+          canTraHomNay={canTraHomNay}
+          dangThue={dangThue}
+          danhDauDaTraDo={danhDauDaTraDo}
+        />
+      )}
 
       {tab === "thongKe" && laAdmin && (
         <div className="bg-white rounded-lg shadow p-4 mb-6">
