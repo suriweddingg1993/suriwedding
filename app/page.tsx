@@ -27,6 +27,7 @@ import TabThongKe from "./components/TabThongKe";
 import TabNhanVien from "./components/TabNhanVien";
 import TabPhatSinh from "./components/TabPhatSinh";
 import TabLich from "./components/TabLich";
+import TabChamCong from "./components/TabChamCong";
 
 type Role = "admin" | "staff";
 type Tab =
@@ -1079,61 +1080,17 @@ return (
       )}
 
       {tab === "chamCong" && (
-        <>
-          <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <h2 className="text-xl font-bold mb-4">⏰ Chấm công GPS</h2>
-
-            <div className="mb-3">
-              Hôm nay: <b>{homNay()}</b>
-            </div>
-
-            <div className="mb-3 text-sm text-gray-600">
-              Chỉ chấm công khi ở trong bán kính {BAN_KINH_CHO_PHEP}m quanh cửa hàng.
-            </div>
-
-            {khoangCach !== null && (
-              <div className="mb-3">
-                Khoảng cách hiện tại: <b>{khoangCach}m</b>
-              </div>
-            )}
-
-            <div className="mb-4">
-              <div>Check In: {chamCongHomNay?.checkIn || "Chưa có"}</div>
-              <div>Check Out: {chamCongHomNay?.checkOut || "Chưa có"}</div>
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={() => chamCong("checkIn")} disabled={dangLayViTri} className="bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400">
-                {dangLayViTri ? "Đang lấy vị trí..." : "Check In"}
-              </button>
-
-              <button onClick={() => chamCong("checkOut")} disabled={dangLayViTri} className="bg-blue-600 text-white px-4 py-2 rounded disabled:bg-gray-400">
-                {dangLayViTri ? "Đang lấy vị trí..." : "Check Out"}
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-xl font-bold mb-4">
-              {laAdmin ? "Lịch sử chấm công toàn bộ" : "Lịch sử chấm công"}
-            </h2>
-
-            <div className="space-y-2">
-              {[...chamCongHienThi]
-                .sort((a, b) => b.ngay.localeCompare(a.ngay))
-                .map((item) => (
-                  <div key={item.id} className="border rounded p-3">
-                    <div className="font-semibold">
-                      {item.ngay} • {item.email}
-                    </div>
-                    <div>Check In: {item.checkIn || "Chưa có"}</div>
-                    <div>Check Out: {item.checkOut || "Chưa có"}</div>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </>
-      )}
+        <TabChamCong
+          homNay={homNay}
+          BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP}
+          khoangCach={khoangCach}
+          chamCongHomNay={chamCongHomNay}
+          chamCong={chamCong}
+          dangLayViTri={dangLayViTri}
+          laAdmin={laAdmin}
+          chamCongHienThi={chamCongHienThi}
+        />
+      )}
       {tab === "luong" && (
         <TabLuong
           luongCungCuaToi={luongCungCuaToi}
