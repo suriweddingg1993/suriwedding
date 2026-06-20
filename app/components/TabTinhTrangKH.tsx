@@ -1,3 +1,5 @@
+import NutCopy from "./NutCopy";
+
 export default function TabTinhTrangKH({
   quaHan,
   canTraHomNay,
@@ -41,8 +43,11 @@ export default function TabTinhTrangKH({
               >
                 <div className="font-semibold">{ps.tenKhach || "Không tên"}</div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mt-1">
                   <span>{ps.soDienThoai || "-"}</span>
+
+                  {/* NÚT COPY VẠN NĂNG ĐƯỢC GẮN VÀO ĐÂY */}
+                  {ps.soDienThoai && <NutCopy textCanCopy={ps.soDienThoai} />}
 
                   {ps.soDienThoai && (
                     <a
@@ -61,7 +66,7 @@ export default function TabTinhTrangKH({
                   </button>
                 </div>
 
-                <div className={quaHan.includes(ps) ? "text-red-600" : "text-yellow-700"}>
+                <div className={`mt-2 ${quaHan.includes(ps) ? "text-red-600" : "text-yellow-700"}`}>
                   {quaHan.includes(ps) ? "Quá hạn trả đồ" : "Trả hôm nay"}
                 </div>
               </div>
