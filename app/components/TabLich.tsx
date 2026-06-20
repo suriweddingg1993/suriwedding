@@ -17,7 +17,7 @@ export default function TabLich({
 
   return (
     <div className="pb-20">
-      {/* 1. DANH SÁCH TIMELINE */}
+      {/* DANH SÁCH TIMELINE */}
       <div className="space-y-6">
         {Object.entries(lichTheoNgay).sort(([a], [b]) => a.localeCompare(b)).map(([ngay, dsLich]: any) => (
           <div key={ngay}>
@@ -28,18 +28,24 @@ export default function TabLich({
             
             <div className="space-y-3 mt-2">
               {[...dsLich].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: any) => (
-                <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-                  <div className="flex flex-col items-center min-w-[60px]">
-                    <span className="font-bold text-lg text-blue-600">{item.gio}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-bold text-gray-800">{item.tenKhach}</div>
-                    <div className="text-sm text-gray-500">{item.theLoai} • {item.goiChup}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => copyZaloLich(item)} className="p-2 bg-blue-50 text-blue-600 rounded-lg">💬</button>
-                    <button onClick={() => { suaLich(item); setShowModal(true); }} className="p-2 bg-yellow-50 text-yellow-600 rounded-lg">✏️</button>
-                  </div>
+                <div key={item.id} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${
+                    item.trangThai === "Đã cọc" ? "border-l-green-500" : 
+                    item.trangThai === "Hoàn thành" ? "border-l-gray-400" : "border-l-blue-400"
+                  } border border-gray-100 flex items-center gap-4`}>
+                    <div className="flex flex-col items-center min-w-[60px]">
+                        <span className="font-bold text-lg text-blue-600">{item.gio}</span>
+                        <span className="text-[10px] uppercase font-bold text-gray-400">{item.trangThai}</span>
+                    </div>
+                    <div className="flex-1">
+                        <div className="font-bold text-gray-800 text-base">{item.tenKhach}</div>
+                        <div className="text-xs text-gray-500">
+                            {item.theLoai} • <span className="font-medium text-blue-600">{Number(item.giaTien || 0).toLocaleString("vi-VN")}đ</span>
+                        </div>
+                    </div>
+                    <div className="flex gap-1">
+                        <button onClick={() => copyZaloLich(item)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">💬</button>
+                        <button onClick={() => { suaLich(item); setShowModal(true); }} className="p-2 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100">✏️</button>
+                    </div>
                 </div>
               ))}
             </div>
@@ -47,7 +53,7 @@ export default function TabLich({
         ))}
       </div>
 
-      {/* 2. NÚT FAB THÊM LỊCH */}
+      {/* NÚT FAB THÊM LỊCH */}
       <button 
         onClick={() => { resetForm(); setShowModal(true); }}
         className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-3xl font-bold hover:bg-blue-700 transition-transform active:scale-90 z-40"
@@ -55,7 +61,7 @@ export default function TabLich({
         +
       </button>
 
-      {/* 3. MODAL THÊM/SỬA LỊCH */}
+      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -66,20 +72,10 @@ export default function TabLich({
               <input type="text" placeholder="Tên khách" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="border p-3 rounded-xl" />
               <input type="text" placeholder="Số điện thoại" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="border p-3 rounded-xl" />
               <input type="text" placeholder="Gói chụp" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="border p-3 rounded-xl" />
-              
-              {/* Ô GIÁ TIỀN */}
               <div className="relative">
-                <input 
-                  type="text" 
-                  inputMode="numeric" 
-                  placeholder="Giá tiền" 
-                  value={giaTien} 
-                  onChange={(e) => setGiaTien(formatTienInput(e.target.value))} 
-                  className="border p-3 rounded-xl w-full pr-10" 
-                />
+                <input type="text" inputMode="numeric" placeholder="Giá tiền" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} className="border p-3 rounded-xl w-full pr-10" />
                 <span className="absolute right-4 top-3.5 text-gray-400">đ</span>
               </div>
-
               <div className="flex gap-2 pt-4">
                 <button onClick={() => { themHoacSuaLich(); setShowModal(false); }} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">Lưu lại</button>
                 <button onClick={() => setShowModal(false)} className="px-6 py-3 bg-gray-200 rounded-xl">Hủy</button>
