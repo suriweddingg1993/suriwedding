@@ -10,7 +10,6 @@ export default function TabLich({
   const [flashDate, setFlashDate] = useState("");
   const scrollRef = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // Cuộn đến hôm nay khi load
   useEffect(() => {
     const homNay = new Date().toISOString().slice(0, 10);
     if (scrollRef.current[homNay]) {
@@ -20,17 +19,14 @@ export default function TabLich({
     }
   }, [lichTheoNgay]);
 
-  // Hàm TÌM NGÀY NHANH
   const kiemTraNgay = (dateStr: string) => {
     if (!dateStr) return;
     if (scrollRef.current[dateStr]) {
-      // Nếu có lịch -> Cuộn đến và nháy sáng
       scrollRef.current[dateStr]?.scrollIntoView({ behavior: "smooth", block: "center" });
       setFlashDate(dateStr);
       setTimeout(() => setFlashDate(""), 2000);
       toast.success("Ngày này đã có lịch!");
     } else {
-      // Nếu không có lịch
       toast.success("✨ Ngày này đang trống lịch, có thể nhận khách!", {
         style: { border: '1px solid #4ade80', padding: '16px', color: '#166534', backgroundColor: '#f0fdf4' },
         iconTheme: { primary: '#16a34a', secondary: '#FFFAEE' },
@@ -40,15 +36,14 @@ export default function TabLich({
 
   return (
     <div className="pb-24 px-2">
-      
-      {/* THANH TÌM KIẾM NGÀY NHANH (Nằm cố định trên cùng) */}
+      {/* THANH TÌM KIẾM NGÀY NHANH */}
       <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur py-3 mb-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-gray-600">🔍 Kiểm tra nhanh:</span>
+          <span className="text-sm font-bold text-gray-600">🔍 Kiểm tra:</span>
           <input 
             type="date" 
             onChange={(e) => kiemTraNgay(e.target.value)} 
-            className="flex-1 border-none bg-white shadow-sm p-2 rounded-xl text-blue-600 font-bold outline-none ring-1 ring-gray-200 focus:ring-blue-400"
+            className="flex-1 bg-white shadow-sm p-2 rounded-xl text-blue-600 font-bold outline-none ring-1 ring-gray-200 focus:ring-blue-400 w-full"
           />
         </div>
       </div>
@@ -109,7 +104,6 @@ export default function TabLich({
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">{dangSua ? "Sửa lịch" : "Thêm lịch mới"}</h2>
             
-            {/* CẢNH BÁO THÔNG MINH TRONG MODAL */}
             {ngay && lichTheoNgay[ngay] && !dangSua && (
               <div className="mb-4 bg-orange-50 p-3 rounded-xl border border-orange-200">
                 <div className="text-sm font-bold text-orange-700 mb-1">
@@ -124,11 +118,22 @@ export default function TabLich({
             )}
 
             <div className="grid gap-3">
-              <input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="border p-3 rounded-xl" />
-              <input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="border p-3 rounded-xl" />
-              <input type="text" placeholder="Tên khách" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="border p-3 rounded-xl" />
-              <input type="text" placeholder="Số điện thoại" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="border p-3 rounded-xl" />
-              <input type="text" placeholder="Gói chụp" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="border p-3 rounded-xl" />
+              {/* ĐÃ FIX LỖI ĐIỆN THOẠI TẠI ĐÂY */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-gray-500 font-bold ml-1 mb-1 block">Ngày chụp</label>
+                  <input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-gray-500 font-bold ml-1 mb-1 block">Giờ chụp</label>
+                  <input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900" />
+                </div>
+              </div>
+
+              <input type="text" placeholder="Tên khách" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 mt-2" />
+              <input type="text" placeholder="Số điện thoại" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900" />
+              <input type="text" placeholder="Gói chụp" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900" />
+              
               <div className="relative">
                 <input 
                   type="text" 
@@ -136,13 +141,14 @@ export default function TabLich({
                   placeholder="Giá tiền" 
                   value={giaTien} 
                   onChange={(e) => setGiaTien(formatTienInput(e.target.value))} 
-                  className="border p-3 rounded-xl w-full pr-10" 
+                  className="border p-3 rounded-xl w-full pr-10 bg-white text-gray-900" 
                 />
-                <span className="absolute right-4 top-3.5 text-gray-400">đ</span>
+                <span className="absolute right-4 top-3.5 text-gray-400 font-medium">đ</span>
               </div>
+
               <div className="flex gap-2 pt-4">
                 <button onClick={() => { themHoacSuaLich(); setShowModal(false); }} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">Lưu lại</button>
-                <button onClick={() => setShowModal(false)} className="px-6 py-3 bg-gray-200 rounded-xl font-medium">Hủy</button>
+                <button onClick={() => setShowModal(false)} className="px-6 py-3 bg-gray-200 rounded-xl font-medium text-gray-800">Hủy</button>
               </div>
             </div>
           </div>
