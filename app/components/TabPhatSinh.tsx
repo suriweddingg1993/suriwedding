@@ -16,7 +16,7 @@ export default function TabPhatSinh({
     toast.success("Đã copy tin nhắn nhắc trả đồ!");
   };
 
-  // MẸO: Khai báo danh sách các dịch vụ cần phải trả đồ
+  // Các dịch vụ cần phải trả đồ
   const cacLoaiCanTraDo = ["Thuê váy", "Thuê vest", "Thuê áo dài", "Thuê phụ kiện"];
   const hienOChonNgayTra = cacLoaiCanTraDo.includes(psLoai);
 
@@ -34,7 +34,9 @@ export default function TabPhatSinh({
                 <span className="font-bold text-gray-800 text-[15px]">{item.loai}</span>
               </div>
               
-              <div className="text-[14px] text-gray-600 font-medium mb-1">{item.tenKhach}</div>
+              <div className="text-[14px] text-gray-600 font-medium mb-1">
+                {item.tenKhach} {item.soDienThoai ? `- ${item.soDienThoai}` : ""}
+              </div>
               
               {/* Hiển thị ngày trả nếu có */}
               {item.ngayTra && (
@@ -85,9 +87,12 @@ export default function TabPhatSinh({
                 <input type="date" value={psNgay} onChange={(e) => setPsNgay(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900" />
               </div>
 
+              {/* Tên khách và SĐT */}
               <input type="text" placeholder="Tên khách hàng" value={psTenKhach} onChange={(e) => setPsTenKhach(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 mt-1" />
               
-              {/* ĐÃ NÂNG CẤP DANH SÁCH LỰA CHỌN */}
+              <input type="text" placeholder="Số điện thoại" value={psSoDienThoai} onChange={(e) => setPsSoDienThoai(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900" />
+              
+              {/* Loại dịch vụ */}
               <select value={psLoai} onChange={(e) => setPsLoai(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900">
                 <option value="">-- Chọn loại dịch vụ --</option>
                 
@@ -112,7 +117,7 @@ export default function TabPhatSinh({
                 </optgroup>
               </select>
 
-              {/* Logic thông minh: Chỉ hiện ô ngày trả với các loại đồ cho thuê */}
+              {/* Box hiện ngày hẹn trả đồ */}
               {hienOChonNgayTra && (
                 <div className="bg-orange-50 p-3 rounded-xl border border-orange-200 mt-1">
                   <label className="text-xs font-bold text-orange-700 block mb-1">📅 NGÀY HẸN TRẢ ĐỒ</label>
@@ -120,6 +125,7 @@ export default function TabPhatSinh({
                 </div>
               )}
 
+              {/* Số tiền */}
               <div className="relative mt-1">
                 <input 
                   type="text" 
