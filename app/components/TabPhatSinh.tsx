@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import toast from "react-hot-toast";
 
 export default function TabPhatSinh({
@@ -9,6 +9,14 @@ export default function TabPhatSinh({
 }: any) {
   const [showModal, setShowModal] = useState(false);
 
+  // ==========================================
+  // VŨ KHÍ TỐI ƯU: useMemo (Chống đơ máy)
+  // Chỉ sắp xếp lại khi danh sách thực sự có thay đổi
+  // ==========================================
+  const danhSachDaSapXep = useMemo(() => {
+    return [...danhSachPhatSinh].sort((a, b) => b.ngay.localeCompare(a.ngay));
+  }, [danhSachPhatSinh]);
+
   const copyZaloTraDo = (item: any) => {
     const ngayTraFormat = item.ngayTra ? item.ngayTra.split("-").reverse().join("/") : "";
     const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach}.\n\nEm thấy mình có lịch hẹn trả ${item.loai} vào ngày ${ngayTraFormat}.\nAnh/chị nhớ sắp xếp thời gian ghé qua cửa hàng gửi lại đồ giúp em nhé!\n\nEm cảm ơn anh/chị nhiều ạ.`;
@@ -16,7 +24,6 @@ export default function TabPhatSinh({
     toast.success("Đã copy tin nhắn nhắc trả đồ!");
   };
 
-  // Các dịch vụ cần phải trả đồ
   const cacLoaiCanTraDo = ["Thuê váy", "Thuê vest", "Thuê áo dài", "Thuê phụ kiện"];
   const hienOChonNgayTra = cacLoaiCanTraDo.includes(psLoai);
 
@@ -24,7 +31,8 @@ export default function TabPhatSinh({
     <div className="pb-24 px-2 pt-4">
       {/* DANH SÁCH PHÁT SINH */}
       <div className="space-y-4">
-        {[...danhSachPhatSinh].sort((a, b) => b.ngay.localeCompare(a.ngay)).map((item: any) => (
+        {/* Đã thay đổi ở đây: Dùng danhSachDaSapXep thay vì sort trực tiếp */}
+        {danhSachDaSapXep.map((item: any) => (
           <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center hover:border-green-200 transition-colors">
             <div className="flex flex-col">
               <div className="flex items-center gap-2 mb-1">
@@ -38,7 +46,6 @@ export default function TabPhatSinh({
                 {item.tenKhach} {item.soDienThoai ? `- ${item.soDienThoai}` : ""}
               </div>
               
-              {/* Hiển thị ngày trả nếu có */}
               {item.ngayTra && (
                 <div className="text-[12px] font-bold text-orange-600 bg-orange-50 w-fit px-2 py-1 rounded-md mb-1 border border-orange-100">
                   📅 Hẹn trả: {item.ngayTra.split("-").reverse().join("/")}
@@ -50,7 +57,6 @@ export default function TabPhatSinh({
               </div>
             </div>
 
-            {/* Cột Nút bấm */}
             <div className="flex flex-col gap-2">
               {item.ngayTra && (
                 <button onClick={() => copyZaloTraDo(item)} className="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-bold flex items-center gap-1 transition-colors">
@@ -67,7 +73,6 @@ export default function TabPhatSinh({
         ))}
       </div>
 
-      {/* NÚT THÊM */}
       <button 
         onClick={() => setShowModal(true)} 
         className="fixed bottom-24 right-6 w-14 h-14 bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center text-3xl font-bold hover:scale-105 active:scale-95 transition-all z-40"
@@ -75,7 +80,6 @@ export default function TabPhatSinh({
         +
       </button>
 
-      {/* MODAL THÊM PHÁT SINH */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -87,29 +91,24 @@ export default function TabPhatSinh({
                 <input type="date" value={psNgay} onChange={(e) => setPsNgay(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900" />
               </div>
 
-              {/* Tên khách và SĐT */}
               <input type="text" placeholder="Tên khách hàng" value={psTenKhach} onChange={(e) => setPsTenKhach(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 mt-1" />
               
               <input type="text" placeholder="Số điện thoại" value={psSoDienThoai} onChange={(e) => setPsSoDienThoai(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900" />
               
-              {/* Loại dịch vụ */}
               <select value={psLoai} onChange={(e) => setPsLoai(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900">
                 <option value="">-- Chọn loại dịch vụ --</option>
-                
                 <optgroup label="👗 Đồ cho thuê (Cần thu lại)">
                   <option value="Thuê váy">Thuê váy</option>
                   <option value="Thuê vest">Thuê vest</option>
                   <option value="Thuê áo dài">Thuê áo dài</option>
                   <option value="Thuê phụ kiện">Thuê phụ kiện</option>
                 </optgroup>
-                
                 <optgroup label="💄 Dịch vụ lẻ">
                   <option value="Trang điểm/Làm tóc">Trang điểm/Làm tóc</option>
                   <option value="Hoa cưới/Hoa xe">Hoa cưới/Hoa xe</option>
                   <option value="Thuê xe hoa">Thuê xe hoa</option>
                   <option value="In/Rửa ảnh">In/Rửa ảnh</option>
                 </optgroup>
-                
                 <optgroup label="📸 Nhân sự">
                   <option value="Thợ chụp/quay thêm">Thợ chụp/quay thêm</option>
                   <option value="Đội bê tráp">Đội bê tráp</option>
@@ -117,7 +116,6 @@ export default function TabPhatSinh({
                 </optgroup>
               </select>
 
-              {/* Box hiện ngày hẹn trả đồ */}
               {hienOChonNgayTra && (
                 <div className="bg-orange-50 p-3 rounded-xl border border-orange-200 mt-1">
                   <label className="text-xs font-bold text-orange-700 block mb-1">📅 NGÀY HẸN TRẢ ĐỒ</label>
@@ -125,7 +123,6 @@ export default function TabPhatSinh({
                 </div>
               )}
 
-              {/* Số tiền */}
               <div className="relative mt-1">
                 <input 
                   type="text" 

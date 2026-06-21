@@ -7,32 +7,84 @@ export default function TabThongKe({
   tongThuNhap
 }: any) {
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6">
-      <h2 className="text-xl font-bold mb-4">📊 Thống kê doanh thu</h2>
+    <div className="pb-24 px-2 pt-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+        <h2 className="text-xl font-bold mb-5 flex items-center gap-2 text-gray-800">
+          📊 Thống kê doanh thu
+        </h2>
 
-      <input 
-        type="month" 
-        value={thangThongKe} 
-        onChange={(e) => setThangThongKe(e.target.value)} 
-        className="border p-2 rounded mb-3" 
-      />
+        {/* Ô CHỌN THÁNG TỐI ƯU MOBILE */}
+        <div className="mb-6">
+          <label className="text-xs font-bold text-gray-500 block mb-2 ml-1 uppercase tracking-wider">
+            Chọn tháng cần xem báo cáo
+          </label>
+          <input 
+            type="month" 
+            value={thangThongKe} 
+            onChange={(e) => setThangThongKe(e.target.value)} 
+            className="w-full bg-slate-50 text-gray-900 p-4 rounded-xl border border-gray-200 font-bold text-lg focus:ring-2 focus:ring-blue-400 outline-none transition-all shadow-inner" 
+          />
+        </div>
 
-      <div>Tổng lịch trong tháng: {lichTrongThang.length}</div>
+        {/* GIAO DIỆN KHI CHƯA CHỌN THÁNG */}
+        {!thangThongKe ? (
+          <div className="text-center py-10 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <span className="text-3xl block mb-2">🗓️</span>
+            Vui lòng chọn một tháng để xem số liệu thống kê
+          </div>
+        ) : (
+          /* DASHBOARD SỐ LIỆU */
+          <div className="space-y-4 animate-fade-in">
+            
+            {/* Thẻ Tổng doanh thu (Chủ đạo) */}
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg shadow-green-200/50 relative overflow-hidden">
+              <div className="absolute -top-4 -right-4 p-4 opacity-20 text-8xl transform rotate-12">💰</div>
+              <div className="text-sm font-medium mb-1 opacity-90 tracking-wide">
+                TỔNG DOANH THU THÁNG {thangThongKe.split("-").reverse().join("/")}
+              </div>
+              <div className="text-4xl font-black tracking-tight mt-1">
+                {tongThuNhap.toLocaleString("vi-VN")}<span className="text-2xl font-bold ml-1 opacity-80">đ</span>
+              </div>
+            </div>
 
-      <div>
-        Doanh thu lịch chụp: <b>{tongThuNhapLich.toLocaleString("vi-VN")}đ</b>
+            {/* Hai thẻ doanh thu phụ */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm flex flex-col justify-center">
+                <div className="text-[11px] font-bold text-blue-500 uppercase tracking-wide mb-1">Từ lịch chụp</div>
+                <div className="text-lg font-black text-gray-800">
+                  {tongThuNhapLich.toLocaleString("vi-VN")}đ
+                </div>
+              </div>
+
+              <div className="bg-white border border-orange-100 rounded-2xl p-4 shadow-sm flex flex-col justify-center">
+                <div className="text-[11px] font-bold text-orange-500 uppercase tracking-wide mb-1">Từ phát sinh</div>
+                <div className="text-lg font-black text-gray-800">
+                  {tongThuNhapPhatSinh.toLocaleString("vi-VN")}đ
+                </div>
+              </div>
+            </div>
+
+            {/* Thẻ Tổng số lượng khách */}
+            <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4 flex justify-between items-center shadow-sm mt-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xl">
+                  📸
+                </div>
+                <div className="font-bold text-gray-700">Tổng số lịch đã nhận</div>
+              </div>
+              <div className="text-2xl font-black text-purple-700">
+                {lichTrongThang.length}
+              </div>
+            </div>
+
+          </div>
+        )}
       </div>
 
-      <div>
-        Doanh thu phát sinh: <b>{tongThuNhapPhatSinh.toLocaleString("vi-VN")}đ</b>
-      </div>
-
-      <div className="text-green-600 font-bold text-xl mt-3">
-        Tổng doanh thu: {tongThuNhap.toLocaleString("vi-VN")}đ
-      </div>
-
-      <div className="text-center text-xs text-gray-400 mt-8 mb-2">
-        Phiên bản 1.0.0
+      {/* FOOTER BẢN QUYỀN */}
+      <div className="text-center mt-8 mb-4">
+        <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Suri Wedding App</div>
+        <div className="text-[10px] text-gray-400">Phiên bản 1.0.1 • Thiết kế dành riêng cho Studio</div>
       </div>
     </div>
   );
