@@ -12,13 +12,16 @@ import {
 } from "firebase/auth";
 
 import { db, auth } from "../lib/firebase";
-import TabLuong from "./components/TabLuong";
-import TabTinhTrangKH from "./components/TabTinhTrangKH";
-import TabThongKe from "./components/TabThongKe";
-import TabNhanVien from "./components/TabNhanVien";
-import TabPhatSinh from "./components/TabPhatSinh";
-import TabLich from "./components/TabLich";
-import TabChamCong from "./components/TabChamCong";
+import dynamic from "next/dynamic";
+
+// Áp dụng Lazy Load: Chỉ tải code của các Tab khi người dùng bấm vào
+const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabThongKe = dynamic(() => import("./components/TabThongKe"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
 
 type Role = "admin" | "staff";
 type Tab = "home" | "lich" | "phatSinh" | "tinhTrangKH" | "chamCong" | "luong" | "nhanVien" | "thongKe";
@@ -329,8 +332,14 @@ export default function Home() {
     } catch (error) { toast.error("Không chấm công được"); } finally { setDangLayViTri(false); }
   };
 
-  // Group lịch cho Lịch Kép
-  const lichTheoNgay = lichLamViec.reduce((acc: Record<string, Lich[]>, item) => {
+  const danhSachHienThi = lichLamViec.filter((item) => {
+    const dungNgay = timNgay ? item.ngay === timNgay : true;
+    const keyword = tuKhoa.toLowerCase().trim();
+    const dungTuKhoa = keyword ? item.tenKhach.toLowerCase().includes(keyword) || (item.soDienThoai || "").includes(keyword) : true;
+    return dungNgay && dungTuKhoa;
+  });
+
+  const lichTheoNgay = danhSachHienThi.reduce((acc: Record<string, Lich[]>, item) => {
     if (!acc[item.ngay]) acc[item.ngay] = []; acc[item.ngay].push(item); return acc;
   }, {});
 
@@ -415,7 +424,7 @@ export default function Home() {
       )}
 
       <div id="noi-dung-tab" className="mt-4">
-        {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} />}
+        {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} />}
         {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} />}
         {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
