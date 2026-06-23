@@ -33,8 +33,7 @@ const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
-// ĐÂY LÀ PHIÊN BẢN MỚI
-const APP_VERSION = "v1.0.2"; 
+const APP_VERSION = "v1.0.3"; // Cập nhật version
 
 function homNay() { return new Date().toISOString().slice(0, 10); }
 function gioHienTai() { return new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
@@ -106,25 +105,29 @@ export default function Home() {
     return d.toISOString().slice(0, 10);
   }, []);
 
-  // LẮNG NGHE BẢN CẬP NHẬT TỪ FIREBASE
+  // LẮNG NGHE BẢN CẬP NHẬT TỪ FIREBASE (CÓ XỬ LÝ LỖI)
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "system", "appVersion"), (snap) => {
-      if (snap.exists()) {
-        const liveVersion = snap.data().version;
-        if (liveVersion && liveVersion !== APP_VERSION) {
-          setCoBanCapNhat(true);
-        } else {
-          setCoBanCapNhat(false);
+    const unsub = onSnapshot(
+      doc(db, "system", "appVersion"), 
+      (snap) => {
+        if (snap.exists()) {
+          const liveVersion = snap.data().version;
+          if (liveVersion && liveVersion !== APP_VERSION) {
+            setCoBanCapNhat(true);
+          } else {
+            setCoBanCapNhat(false);
+          }
+        } else if (laAdmin) {
+          setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION }).catch(e => console.log(e));
         }
-      } else if (laAdmin) {
-        // Nếu chưa có bảng version trên Firebase thì admin tạo ra
-        setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION });
+      },
+      (error) => {
+        console.error("Lỗi khi kết nối đến System Version:", error);
       }
-    });
+    );
     return () => unsub();
   }, [laAdmin]);
 
-  // HÀM ADMIN PHÁT LỆNH CẬP NHẬT CHUNG
   const xacNhanPhatHanh = async () => {
     try {
       await setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION });
@@ -134,26 +137,47 @@ export default function Home() {
     }
   };
 
+  // HỆ THỐNG ĐĂNG NHẬP CÓ TRY CATCH (CHỐNG KẸT LOADING)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        const userRef = doc(db, "users", currentUser.uid);
-        if (currentUser.email === ADMIN_CHINH_EMAIL) {
-          await setDoc(userRef, { email: currentUser.email, role: "admin" }, { merge: true });
-          const adminSnap = await getDoc(userRef);
-          const adminData = adminSnap.exists() ? adminSnap.data() : {};
-          setHoSoCuaToi({ id: currentUser.uid, email: currentUser.email || "", hoTen: adminData.hoTen || "", soDienThoai: adminData.soDienThoai || "", luongCung: adminData.luongCung || 0, thuongChuyenCan: adminData.thuongChuyenCan || 0, role: "admin" });
-          setRole("admin"); setDangTai(false); return;
+      try {
+        setUser(currentUser);
+        if (currentUser) {
+          const userRef = doc(db, "users", currentUser.uid);
+          
+          if (currentUser.email === ADMIN_CHINH_EMAIL) {
+            try {
+              await setDoc(userRef, { email: currentUser.email, role: "admin" }, { merge: true });
+            } catch (e) {
+              console.warn("Chưa tạo được role trên Firebase, đang duyệt thẳng vào Admin...");
+            }
+            
+            const adminSnap = await getDoc(userRef);
+            const adminData = adminSnap.exists() ? adminSnap.data() : {};
+            setHoSoCuaToi({ id: currentUser.uid, email: currentUser.email || "", hoTen: adminData.hoTen || "", soDienThoai: adminData.soDienThoai || "", luongCung: adminData.luongCung || 0, thuongChuyenCan: adminData.thuongChuyenCan || 0, role: "admin" });
+            setRole("admin");
+          } else {
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              const data = userSnap.data();
+              setHoSoCuaToi({ id: currentUser.uid, email: data.email || currentUser.email || "", hoTen: data.hoTen || "", soDienThoai: data.soDienThoai || "", luongCung: data.luongCung || 0, thuongChuyenCan: data.thuongChuyenCan || 0, role: data.role === "admin" ? "admin" : "staff" });
+              setRole(data.role === "admin" ? "admin" : "staff");
+            } else { 
+              setHoSoCuaToi(null); 
+              setRole("staff"); 
+            }
+          }
+        } else { 
+          setHoSoCuaToi(null); 
+          setRole("staff"); 
         }
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          setHoSoCuaToi({ id: currentUser.uid, email: data.email || currentUser.email || "", hoTen: data.hoTen || "", soDienThoai: data.soDienThoai || "", luongCung: data.luongCung || 0, thuongChuyenCan: data.thuongChuyenCan || 0, role: data.role === "admin" ? "admin" : "staff" });
-          setRole(data.role === "admin" ? "admin" : "staff");
-        } else { setHoSoCuaToi(null); setRole("staff"); }
-      } else { setHoSoCuaToi(null); setRole("staff"); }
-      setDangTai(false);
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu User:", error);
+        toast.error("Có lỗi đường truyền mạng. Vẫn đang tải giao diện!");
+      } finally {
+        // LUÔN LUÔN thoát khỏi trạng thái loading dù có lỗi mạng hay không
+        setDangTai(false);
+      }
     });
     return () => unsub();
   }, []);
@@ -350,8 +374,8 @@ export default function Home() {
   
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi khi xác nhận"); } };
 
-  if (dangTai) return <div className="min-h-screen flex items-center justify-center">Đang tải...</div>;
-  if (!user) { return ( <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6"><div className="bg-white rounded-lg shadow p-6 w-full max-w-sm"><h1 className="text-2xl font-bold mb-4 text-center">Đăng nhập</h1><div className="grid gap-3"><input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 rounded" /><input type="password" placeholder="Mật khẩu" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="border p-2 rounded" /><button onClick={dangNhap} className="bg-blue-600 text-white p-2 rounded">Đăng nhập</button></div></div></div> ); }
+  if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">⏳ Đang tải dữ liệu...</div>;
+  if (!user) { return ( <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6"><div className="bg-white rounded-lg shadow p-6 w-full max-w-sm"><h1 className="text-2xl font-bold mb-4 text-center">Đăng nhập</h1><div className="grid gap-3"><input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 rounded" /><input type="password" placeholder="Mật khẩu" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="border p-2 rounded" /><button onClick={dangNhap} className="bg-blue-600 text-white p-2 rounded font-bold">Đăng nhập</button></div></div></div> ); }
 
   const nutMenu = [
     { key: "home", label: "🏠 Trang chủ", adminOnly: false }, { key: "lich", label: "📅 Lịch làm việc", adminOnly: false }, { key: "phatSinh", label: "💰 Phát sinh", adminOnly: false },
@@ -361,7 +385,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
-      {/* BẢNG YÊU CẦU CẬP NHẬT APP (Dành cho bản thân người dùng khi có bản mới) */}
       {coBanCapNhat && (
         <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm animate-fade-in z-50 relative">
           <div className="flex items-center gap-3">
@@ -389,7 +412,7 @@ export default function Home() {
           <h1 className="text-3xl font-bold">Suri Wedding</h1>
           <div className="text-sm text-gray-600 mt-1">{user.email} • Quyền: {laAdmin ? "Admin" : "Nhân viên"}</div>
         </div>
-        <button onClick={dangXuat} className="bg-gray-700 text-white px-4 py-2 rounded">Đăng xuất</button>
+        <button onClick={dangXuat} className="bg-gray-700 text-white px-4 py-2 rounded font-bold">Đăng xuất</button>
       </div>
 
       {tab === "home" && (
