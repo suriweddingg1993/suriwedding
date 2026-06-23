@@ -23,6 +23,7 @@ export default function TabPhatSinh({
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
   const [phatSinhDangChon, setPhatSinhDangChon] = useState<any>(null);
   const [tienHoaHong, setTienHoaHong] = useState("");
+  const [tuKhoa, setTuKhoa] = useState(""); // State cho ô tìm kiếm mới
 
   const isThueDo = (loai: string) => (loai || "").toLowerCase().includes("thuê");
 
@@ -51,6 +52,7 @@ export default function TabPhatSinh({
   const goToToday = () => {
     setCurrentMonth(new Date(localToday));
     setSelectedDate(localToday);
+    setTuKhoa(""); // Reset ô tìm kiếm
   };
 
   const xacNhanNhanTien = () => {
@@ -75,66 +77,91 @@ export default function TabPhatSinh({
     setPsTenKhach(""); setPsSoDienThoai(""); setPsLoai(""); setPsNgayTra(""); setPsSoTien(""); setPsGhiChu("");
   };
 
-  const dsGiaoDichNgayNay = phatSinhTheoNgay[selectedDate] || [];
+  // Logic Tìm Kiếm Giao Dịch
+  let dsGiaoDichNgayNay = [];
+  if (tuKhoa.trim()) {
+     const kw = tuKhoa.toLowerCase().trim();
+     dsGiaoDichNgayNay = (danhSachPhatSinh || []).filter((item: any) =>
+        (item.tenKhach || "").toLowerCase().includes(kw) ||
+        (item.soDienThoai || "").includes(kw) ||
+        (item.ghiChu || "").toLowerCase().includes(kw)
+     );
+  } else {
+     dsGiaoDichNgayNay = phatSinhTheoNgay[selectedDate] || [];
+  }
+
   const dsTraDoNgayNay = danhSachPhatSinh.filter((ps: any) => isThueDo(ps.loai) && ps.ngayTra === selectedDate);
 
   return (
     <div className="pb-24 px-2 pt-2">
       
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-6">
-        <div className="flex justify-between items-center mb-6">
-          <button onClick={goToToday} className="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl active:scale-95 transition-all">Hôm nay</button>
-          <div className="flex items-center gap-2">
-            <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">◀</button>
-            <div className="font-black text-gray-800 text-sm uppercase tracking-wide w-28 text-center">Th {month + 1}, {year}</div>
-            <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">▶</button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-y-3 gap-x-1 text-center">
-          {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
-            <div key={d} className="text-[10px] font-black text-gray-400 uppercase mb-2">{d}</div>
-          ))}
-          
-          {daysArray.map((dateStr, idx) => {
-            if (!dateStr) return <div key={idx} className="p-2"></div>;
-            
-            const isToday = dateStr === localToday;
-            const isSelected = dateStr === selectedDate;
-            
-            const dsGiaoDich = phatSinhTheoNgay[dateStr] || [];
-            const hasGiaoDich = dsGiaoDich.length > 0;
-            const hasTraDo = danhSachPhatSinh.some((ps: any) => isThueDo(ps.loai) && ps.ngayTra === dateStr && !ps.daTraDo);
-            
-            return (
-              <div key={dateStr} className="flex flex-col items-center justify-start h-12 relative group">
-                <button 
-                  onClick={() => setSelectedDate(dateStr)}
-                  className={`relative w-10 h-10 flex items-center justify-center rounded-2xl text-sm transition-all
-                    ${isSelected ? "bg-blue-600 text-white font-black shadow-lg shadow-blue-200 scale-105" : 
-                      isToday ? "bg-blue-50 text-blue-700 font-black" : 
-                      "hover:bg-gray-50 text-gray-700 font-bold"}
-                  `}
-                >
-                  {parseInt(dateStr.split('-')[2])}
-                </button>
-
-                <div className="mt-1 flex gap-1 h-1.5 absolute bottom-[-4px]">
-                  {hasGiaoDich && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-300" : "bg-blue-400"}`}></span>}
-                  {hasTraDo && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-300" : "bg-orange-500 shadow-sm shadow-orange-200"}`}></span>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div className="flex gap-5 justify-center mt-6 pt-4 border-t border-gray-100 text-[11px] font-bold text-gray-500">
-           <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span> Thu / Chi</div>
-           <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Cần thu hồi đồ</div>
-        </div>
+      {/* THANH TÌM KIẾM MỚI TẶNG THÊM */}
+      <div className="mb-4">
+        <input 
+          type="text" 
+          placeholder="🔍 Tìm giao dịch bằng Tên, SĐT, Ghi chú..." 
+          value={tuKhoa} 
+          onChange={(e) => setTuKhoa(e.target.value)} 
+          className="w-full bg-white border border-gray-200 p-4 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 outline-none font-bold text-gray-700 transition-all" 
+        />
       </div>
 
-      {dsTraDoNgayNay.length > 0 && (
+      {!tuKhoa.trim() && (
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-6 animate-fade-in">
+          <div className="flex justify-between items-center mb-6">
+            <button onClick={goToToday} className="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl active:scale-95 transition-all">Hôm nay</button>
+            <div className="flex items-center gap-2">
+              <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">◀</button>
+              <div className="font-black text-gray-800 text-sm uppercase tracking-wide w-28 text-center">Th {month + 1}, {year}</div>
+              <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">▶</button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 gap-y-3 gap-x-1 text-center">
+            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
+              <div key={d} className="text-[10px] font-black text-gray-400 uppercase mb-2">{d}</div>
+            ))}
+            
+            {daysArray.map((dateStr, idx) => {
+              if (!dateStr) return <div key={idx} className="p-2"></div>;
+              
+              const isToday = dateStr === localToday;
+              const isSelected = dateStr === selectedDate;
+              
+              const dsGiaoDich = phatSinhTheoNgay[dateStr] || [];
+              const hasGiaoDich = dsGiaoDich.length > 0;
+              const hasTraDo = danhSachPhatSinh.some((ps: any) => isThueDo(ps.loai) && ps.ngayTra === dateStr && !ps.daTraDo);
+              
+              return (
+                <div key={dateStr} className="flex flex-col items-center justify-start h-12 relative group">
+                  <button 
+                    onClick={() => setSelectedDate(dateStr)}
+                    className={`relative w-10 h-10 flex items-center justify-center rounded-2xl text-sm transition-all
+                      ${isSelected ? "bg-blue-600 text-white font-black shadow-lg shadow-blue-200 scale-105" : 
+                        isToday ? "bg-blue-50 text-blue-700 font-black" : 
+                        "hover:bg-gray-50 text-gray-700 font-bold"}
+                    `}
+                  >
+                    {parseInt(dateStr.split('-')[2])}
+                  </button>
+
+                  <div className="mt-1 flex gap-1 h-1.5 absolute bottom-[-4px]">
+                    {hasGiaoDich && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-300" : "bg-blue-400"}`}></span>}
+                    {hasTraDo && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-300" : "bg-orange-500 shadow-sm shadow-orange-200"}`}></span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="flex gap-5 justify-center mt-6 pt-4 border-t border-gray-100 text-[11px] font-bold text-gray-500">
+            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span> Thu / Chi</div>
+            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Cần thu hồi đồ</div>
+          </div>
+        </div>
+      )}
+
+      {dsTraDoNgayNay.length > 0 && !tuKhoa.trim() && (
         <div className="mb-8 animate-fade-in">
           <h3 className="font-black text-gray-800 text-lg mb-3 flex items-center gap-2 px-1">
             <span className="text-xl">🛎️</span> Trả đồ hôm nay
@@ -173,11 +200,13 @@ export default function TabPhatSinh({
 
       <div className="mb-4 flex justify-between items-end px-1 mt-6">
         <div>
-          <h3 className="font-black text-gray-800 text-lg">Giao dịch phát sinh</h3>
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mt-1">Ngày {selectedDate.split("-").reverse().join("/")}</p>
+          <h3 className="font-black text-gray-800 text-lg">{tuKhoa.trim() ? "Kết quả tìm kiếm" : "Giao dịch phát sinh"}</h3>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mt-1">
+             {tuKhoa.trim() ? `Từ khóa: "${tuKhoa}"` : `Ngày ${selectedDate.split("-").reverse().join("/")}`}
+          </p>
         </div>
         <div className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100">
-          {dsGiaoDichNgayNay.length} Giao dịch
+          {dsGiaoDichNgayNay.length} Bản ghi
         </div>
       </div>
 
@@ -185,8 +214,8 @@ export default function TabPhatSinh({
         {dsGiaoDichNgayNay.length === 0 ? (
           <div className="bg-white border border-dashed border-gray-200 rounded-3xl p-10 text-center shadow-sm">
             <div className="text-5xl mb-4 opacity-50 grayscale">🧾</div>
-            <h4 className="text-gray-600 font-bold text-base">Sổ quỹ trống</h4>
-            <p className="text-xs text-gray-400 mt-2">Không có khoản Thu / Chi nào trong ngày.</p>
+            <h4 className="text-gray-600 font-bold text-base">{tuKhoa.trim() ? "Không có kết quả" : "Sổ quỹ trống"}</h4>
+            <p className="text-xs text-gray-400 mt-2">{tuKhoa.trim() ? "Thử tìm bằng SĐT hoặc Tên khác nhé." : "Không có khoản Thu / Chi nào trong ngày."}</p>
           </div>
         ) : (
           [...dsGiaoDichNgayNay].reverse().map((item: any) => {
@@ -205,6 +234,7 @@ export default function TabPhatSinh({
                       {item.loai}
                     </div>
                     {item.tenKhach && <div className="text-base font-black text-gray-900">{item.tenKhach}</div>}
+                    {tuKhoa.trim() && <div className="text-xs font-bold text-blue-600 mt-1">📅 Ngày tạo giao dịch: {item.ngay.split("-").reverse().join("/")}</div>}
                   </div>
                   <div className={`text-xl font-black ${isChi ? "text-red-500" : "text-green-600"}`}>
                     {isChi ? "-" : "+"}{formatTienInput(String(item.soTien || 0))}
@@ -239,6 +269,7 @@ export default function TabPhatSinh({
         +
       </button>
 
+      {/* FORM THÊM GIAO DỊCH PREMIUM */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in border border-white">
@@ -293,6 +324,7 @@ export default function TabPhatSinh({
         </div>
       )}
 
+      {/* FORM NHẬN HOA HỒNG */}
       {showHoaHongModal && phatSinhDangChon && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-fade-in border border-white">
