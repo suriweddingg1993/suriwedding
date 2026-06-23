@@ -24,7 +24,7 @@ export default function TabLich({
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
   const [lichDangChon, setLichDangChon] = useState<any>(null);
   const [tienHoaHong, setTienHoaHong] = useState("");
-  const [vaiTro, setVaiTro] = useState("Chụp ảnh"); // Thêm state quản lý công đoạn
+  const [vaiTro, setVaiTro] = useState("Chụp ảnh"); // State quản lý công đoạn
   
   const [tuKhoa, setTuKhoa] = useState(""); 
 
@@ -186,8 +186,9 @@ export default function TabLich({
               <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md group relative overflow-hidden">
                 <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-blue-500"></div>
                 
+                {/* DÒNG TIÊU ĐỀ (CHỨA THÔNG TIN & GIÁ TIỀN + NÚT SỬA XÓA TRÁNH ĐÈ) */}
                 <div className="flex justify-between items-start pb-4 border-b border-gray-100 mb-4 ml-2">
-                  <div>
+                  <div className="pr-2">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="bg-blue-50 text-blue-600 text-xs font-black px-2.5 py-1 rounded-lg">⏰ {item.gio}</span>
                       <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${trangThaiColors[item.trangThai || "Chưa liên hệ"]}`}>
@@ -198,8 +199,22 @@ export default function TabLich({
                     <div className="text-sm font-bold text-gray-500 mt-1">{item.theLoai} - {item.goiChup}</div>
                     {tuKhoa.trim() && <div className="text-xs font-bold text-blue-600 mt-1">📅 Ngày tạo lịch: {item.ngay.split("-").reverse().join("/")}</div>}
                   </div>
-                  <div className="text-xl font-black text-green-600">
-                    {formatTienInput(String(item.giaTien || 0))}
+                  
+                  {/* CỘT BÊN PHẢI (CHỨA NÚT SỬA XÓA & TIỀN) */}
+                  <div className="flex flex-col items-end gap-3 shrink-0">
+                    <div className="flex gap-2">
+                      {laAdmin && typeof xoaLich === 'function' && (
+                        <button onClick={() => xoaLich(item.id)} className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 rounded-full font-bold transition-all shadow-sm">
+                          🗑
+                        </button>
+                      )}
+                      <button onClick={() => { suaLich(item); setShowModal(true); }} className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 rounded-full font-bold transition-all shadow-sm">
+                        ✏️
+                      </button>
+                    </div>
+                    <div className="text-xl font-black text-green-600 whitespace-nowrap">
+                      {formatTienInput(String(item.giaTien || 0))}
+                    </div>
                   </div>
                 </div>
 
@@ -208,6 +223,7 @@ export default function TabLich({
                   {item.soDienThoai2 && <div className="text-gray-500 font-medium flex items-center gap-2">SĐT 2: <span className="font-bold text-gray-800">{item.soDienThoai2}</span></div>}
                 </div>
 
+                {/* CỤM NÚT TRẠNG THÁI, NHẮC LỊCH, HOA HỒNG */}
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
                   <select
                     value={item.trangThai || "Chưa liên hệ"}
@@ -231,18 +247,7 @@ export default function TabLich({
                     setVaiTro("Chụp ảnh"); // Mặc định khi mở
                     setShowHoaHongModal(true); 
                   }} className="flex-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-2.5 rounded-xl hover:bg-blue-100 transition-colors shadow-sm min-w-[100px]">
-                    🙋‍♂️ Hoa hồng
-                  </button>
-                </div>
-
-                <div className="absolute top-4 right-4 flex gap-2">
-                  {laAdmin && typeof xoaLich === 'function' && (
-                    <button onClick={() => xoaLich(item.id)} className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-full font-bold transition-all opacity-50 group-hover:opacity-100">
-                      🗑
-                    </button>
-                  )}
-                  <button onClick={() => { suaLich(item); setShowModal(true); }} className="w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-500 hover:bg-blue-50 hover:text-blue-600 rounded-full font-bold transition-all opacity-50 group-hover:opacity-100">
-                    ✏️
+                    🙋‍♂️ Báo cáo
                   </button>
                 </div>
 
