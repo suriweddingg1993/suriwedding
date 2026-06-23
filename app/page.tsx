@@ -33,7 +33,7 @@ const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
-const APP_VERSION = "v1.0.3"; // Cập nhật version
+const APP_VERSION = "v1.0.4";
 
 function homNay() { return new Date().toISOString().slice(0, 10); }
 function gioHienTai() { return new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
@@ -105,53 +105,43 @@ export default function Home() {
     return d.toISOString().slice(0, 10);
   }, []);
 
-  // LẮNG NGHE BẢN CẬP NHẬT TỪ FIREBASE (CÓ XỬ LÝ LỖI)
   useEffect(() => {
-    const unsub = onSnapshot(
-      doc(db, "system", "appVersion"), 
-      (snap) => {
-        if (snap.exists()) {
-          const liveVersion = snap.data().version;
-          if (liveVersion && liveVersion !== APP_VERSION) {
-            setCoBanCapNhat(true);
-          } else {
-            setCoBanCapNhat(false);
-          }
-        } else if (laAdmin) {
-          setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION }).catch(e => console.log(e));
+    const unsub = onSnapshot(doc(db, "system", "appVersion"), (snap) => {
+      if (snap.exists()) {
+        const liveVersion = snap.data().version;
+        if (liveVersion && liveVersion !== APP_VERSION) {
+          setCoBanCapNhat(true);
+        } else {
+          setCoBanCapNhat(false);
         }
-      },
-      (error) => {
-        console.error("Lỗi khi kết nối đến System Version:", error);
+      } else if (laAdmin) {
+        setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION }).catch(e => console.log(e));
       }
-    );
+    });
     return () => unsub();
   }, [laAdmin]);
 
   const xacNhanPhatHanh = async () => {
     try {
       await setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION });
-      toast.success("🚀 Đã phát lệnh ép toàn bộ nhân viên cập nhật app!");
+      toast.success("Đã phát lệnh ép toàn bộ nhân viên cập nhật app!");
     } catch (error) {
       toast.error("Lỗi khi phát hành cập nhật");
     }
   };
 
-  // HỆ THỐNG ĐĂNG NHẬP CÓ TRY CATCH (CHỐNG KẸT LOADING)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
       try {
         setUser(currentUser);
         if (currentUser) {
           const userRef = doc(db, "users", currentUser.uid);
-          
           if (currentUser.email === ADMIN_CHINH_EMAIL) {
             try {
               await setDoc(userRef, { email: currentUser.email, role: "admin" }, { merge: true });
             } catch (e) {
               console.warn("Chưa tạo được role trên Firebase, đang duyệt thẳng vào Admin...");
             }
-            
             const adminSnap = await getDoc(userRef);
             const adminData = adminSnap.exists() ? adminSnap.data() : {};
             setHoSoCuaToi({ id: currentUser.uid, email: currentUser.email || "", hoTen: adminData.hoTen || "", soDienThoai: adminData.soDienThoai || "", luongCung: adminData.luongCung || 0, thuongChuyenCan: adminData.thuongChuyenCan || 0, role: "admin" });
@@ -162,20 +152,12 @@ export default function Home() {
               const data = userSnap.data();
               setHoSoCuaToi({ id: currentUser.uid, email: data.email || currentUser.email || "", hoTen: data.hoTen || "", soDienThoai: data.soDienThoai || "", luongCung: data.luongCung || 0, thuongChuyenCan: data.thuongChuyenCan || 0, role: data.role === "admin" ? "admin" : "staff" });
               setRole(data.role === "admin" ? "admin" : "staff");
-            } else { 
-              setHoSoCuaToi(null); 
-              setRole("staff"); 
-            }
+            } else { setHoSoCuaToi(null); setRole("staff"); }
           }
-        } else { 
-          setHoSoCuaToi(null); 
-          setRole("staff"); 
-        }
+        } else { setHoSoCuaToi(null); setRole("staff"); }
       } catch (error) {
-        console.error("Lỗi tải dữ liệu User:", error);
         toast.error("Có lỗi đường truyền mạng. Vẫn đang tải giao diện!");
       } finally {
-        // LUÔN LUÔN thoát khỏi trạng thái loading dù có lỗi mạng hay không
         setDangTai(false);
       }
     });
@@ -326,7 +308,7 @@ export default function Home() {
     if (!user) return; setDangLayViTri(true);
     try {
       const viTri = await layViTri(); setKhoangCach(viTri.distance);
-      if (viTri.distance > BAN_KINH_CHO_PHEP) { toast.error(`Bạn đang cách studio ${viTri.distance}m. Chỉ được chấm công trong bán kính ${BAN_KINH_CHO_PHEP}m.`); return; }
+      if (viTri.distance > BAN_KINH_CHO_PHEP) { toast.error("Bạn đang ở quá xa studio, vui lòng đến đúng vị trí để chấm công."); return; }
       const ngayHomNay = homNay();
       const banGhiHomNay = danhSachChamCong.find((item) => item.uid === user.uid && item.ngay === ngayHomNay);
       const gioHienTaiCheckIn = gioHienTai(); const [gio, phut] = gioHienTaiCheckIn.split(":").map(Number);
@@ -337,14 +319,14 @@ export default function Home() {
         if (banGhiHomNay?.checkIn) { toast.error("Bạn đã Check In hôm nay rồi"); return; }
         if (banGhiHomNay?.id) { await updateDoc(doc(db, "chamCong", banGhiHomNay.id), { checkIn: gioHienTaiCheckIn, checkInLat: viTri.lat, checkInLng: viTri.lng, diMuon, soPhutMuon }); } 
         else { await addDoc(collection(db, "chamCong"), { uid: user.uid, email: user.email || "", ngay: ngayHomNay, checkIn: gioHienTaiCheckIn, checkInLat: viTri.lat, checkInLng: viTri.lng, diMuon, soPhutMuon }); }
-        toast.success("✅ Check In thành công!");
+        toast.success("Check In thành công!");
       }
       if (loai === "checkOut") {
-        if (!banGhiHomNay?.id) { await addDoc(collection(db, "chamCong"), { uid: user.uid, email: user.email || "", ngay: ngayHomNay, checkOut: gioHienTai(), checkOutLat: viTri.lat, checkOutLng: viTri.lng }); toast.success("✅ Check Out thành công!"); return; }
+        if (!banGhiHomNay?.id) { await addDoc(collection(db, "chamCong"), { uid: user.uid, email: user.email || "", ngay: ngayHomNay, checkOut: gioHienTai(), checkOutLat: viTri.lat, checkOutLng: viTri.lng }); toast.success("Check Out thành công!"); return; }
         if (banGhiHomNay.checkOut) { toast.error("Bạn đã Check Out hôm nay rồi"); return; }
-        await updateDoc(doc(db, "chamCong", banGhiHomNay.id), { checkOut: gioHienTai(), checkOutLat: viTri.lat, checkOutLng: viTri.lng }); toast.success("✅ Check Out thành công!");
+        await updateDoc(doc(db, "chamCong", banGhiHomNay.id), { checkOut: gioHienTai(), checkOutLat: viTri.lat, checkOutLng: viTri.lng }); toast.success("Check Out thành công!");
       }
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Không chấm công được"); } finally { setDangLayViTri(false); }
+    } catch (error) { toast.error("Không chấm công được"); } finally { setDangLayViTri(false); }
   };
 
   const danhSachHienThi = lichLamViec.filter((item) => {
@@ -368,13 +350,15 @@ export default function Home() {
   const chamCongHienThi = laAdmin ? danhSachChamCong : danhSachChamCong.filter((item) => item.uid === user?.uid);
   
   const ngayHomNay = new Date().toISOString().split("T")[0];
-  const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") && ps.ngayTra === ngayHomNay);
-  const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") && ps.ngayTra && ps.ngayTra < ngayHomNay);
-  const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && (ps.loai === "Thuê váy" || ps.loai === "Thuê vest") && ps.ngayTra && ps.ngayTra > ngayHomNay);
+  const isThueDoCheck = (loai: string) => loai && loai.toLowerCase().includes("thuê");
+
+  const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra === ngayHomNay);
+  const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNay);
+  const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNay);
   
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi khi xác nhận"); } };
 
-  if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">⏳ Đang tải dữ liệu...</div>;
+  if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">Đang tải dữ liệu...</div>;
   if (!user) { return ( <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6"><div className="bg-white rounded-lg shadow p-6 w-full max-w-sm"><h1 className="text-2xl font-bold mb-4 text-center">Đăng nhập</h1><div className="grid gap-3"><input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 rounded" /><input type="password" placeholder="Mật khẩu" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="border p-2 rounded" /><button onClick={dangNhap} className="bg-blue-600 text-white p-2 rounded font-bold">Đăng nhập</button></div></div></div> ); }
 
   const nutMenu = [
@@ -386,7 +370,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
       {coBanCapNhat && (
-        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm animate-fade-in z-50 relative">
+        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm z-50 relative">
           <div className="flex items-center gap-3">
             <div className="text-3xl drop-shadow-sm">🔄</div> 
             <div>
@@ -397,11 +381,11 @@ export default function Home() {
           <div className="flex gap-2">
             {laAdmin && (
                <button onClick={xacNhanPhatHanh} className="flex-1 md:flex-none bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-green-700 active:scale-95 transition-all">
-                 ✅ Phát hành bản này
+                 Phát hành bản này
                </button>
             )}
             <button onClick={() => window.location.reload()} className="flex-1 md:flex-none bg-yellow-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-yellow-600 active:scale-95 transition-all">
-              🚀 Cập nhật ngay
+              Cập nhật ngay
             </button>
           </div>
         </div>
@@ -416,7 +400,7 @@ export default function Home() {
       </div>
 
       {tab === "home" && (
-        <div className="animate-fade-in">
+        <div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
             <h2 className="font-bold text-lg mb-4 text-gray-800">⚠️ Việc cần chú ý hôm nay</h2>
             <div className="space-y-3 text-sm">
@@ -436,27 +420,27 @@ export default function Home() {
         </div>
       )}
 
-      {/* RENDER CÁC TAB */}
-      <div id="noi-dung-tab"></div>
-      
-      {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} timNgay={timNgay} setTimNgay={setTimNgay} tuKhoa={tuKhoa} setTuKhoa={setTuKhoa} lichTheoNgay={lichTheoNgay} laAdmin={laAdmin} capNhatTrangThai={capNhatTrangThai} suaLich={suaLich} xoaLich={xoaLich} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} />}
-      {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} />}
-      {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
-      {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
-      {tab === "nhanVien" && laAdmin && <TabNhanVien uidNhanVien={uidNhanVien} setUidNhanVien={setUidNhanVien} emailNhanVien={emailNhanVien} setEmailNhanVien={setEmailNhanVien} hoTenNhanVien={hoTenNhanVien} setHoTenNhanVien={setHoTenNhanVien} soDienThoaiNhanVien={soDienThoaiNhanVien} setSoDienThoaiNhanVien={setSoDienThoaiNhanVien} luongCungNhanVien={luongCungNhanVien} setLuongCungNhanVien={setLuongCungNhanVien} thuongChuyenCanNhanVien={thuongChuyenCanNhanVien} setThuongChuyenCanNhanVien={setThuongChuyenCanNhanVien} quyenNhanVien={quyenNhanVien} setQuyenNhanVien={setQuyenNhanVien} taoHoSoNhanVien={taoHoSoNhanVien} dangSuaNhanVien={dangSuaNhanVien} danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} suaHoSoNhanVien={suaHoSoNhanVien} formatTienInput={formatTienInput} />}
-      {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
-      {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}
+      <div id="noi-dung-tab" className="mt-4">
+        {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} />}
+        {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} />}
+        {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
+        {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
+        {tab === "nhanVien" && laAdmin && <TabNhanVien uidNhanVien={uidNhanVien} setUidNhanVien={setUidNhanVien} emailNhanVien={emailNhanVien} setEmailNhanVien={setEmailNhanVien} hoTenNhanVien={hoTenNhanVien} setHoTenNhanVien={setHoTenNhanVien} soDienThoaiNhanVien={soDienThoaiNhanVien} setSoDienThoaiNhanVien={setSoDienThoaiNhanVien} luongCungNhanVien={luongCungNhanVien} setLuongCungNhanVien={setLuongCungNhanVien} thuongChuyenCanNhanVien={thuongChuyenCanNhanVien} setThuongChuyenCanNhanVien={setThuongChuyenCanNhanVien} quyenNhanVien={quyenNhanVien} setQuyenNhanVien={setQuyenNhanVien} taoHoSoNhanVien={taoHoSoNhanVien} dangSuaNhanVien={dangSuaNhanVien} danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} suaHoSoNhanVien={suaHoSoNhanVien} formatTienInput={formatTienInput} />}
+        {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
+        {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}
+      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center pt-2 pb-4 md:pb-2 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 flex justify-around items-center pt-3 pb-6 md:pb-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40">
         {[
           { key: "home", icon: "🏠", label: "Trang chủ" },
-          { key: "lich", icon: "📅", label: "Lịch làm việc" },
-          { key: "phatSinh", icon: "💰", label: "Phát sinh" },
+          { key: "lich", icon: "📅", label: "Lịch chụp" },
+          { key: "phatSinh", icon: "💰", label: "Thu Chi" },
           { key: "chamCong", icon: "⏰", label: "Chấm công" },
         ].map((nav) => (
-          <button key={nav.key} onClick={() => { setTab(nav.key as Tab); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`flex flex-col items-center p-2 w-1/4 transition-colors ${tab === nav.key ? "text-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
-            <span className={`text-2xl mb-1 transition-transform ${tab === nav.key ? "scale-110 drop-shadow-md" : ""}`}>{nav.icon}</span>
-            <span className={`text-[10px] font-semibold ${tab === nav.key ? "text-blue-600" : "text-gray-500"}`}>{nav.label}</span>
+          <button key={nav.key} onClick={() => { setTab(nav.key as Tab); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group">
+            {tab === nav.key && <div className="absolute top-0 w-8 h-1 bg-blue-600 rounded-b-full"></div>}
+            <span className={`text-2xl mb-1 transition-transform ${tab === nav.key ? "scale-110 drop-shadow-md" : "group-hover:scale-110"}`}>{nav.icon}</span>
+            <span className={`text-[10px] font-bold ${tab === nav.key ? "text-blue-600" : "text-gray-500"}`}>{nav.label}</span>
           </button>
         ))}
       </div>

@@ -1,14 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 
 export default function TabLich({
   dangSua, ngay, setNgay, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
-  theLoai, setTheLoai, theLoaiKhac, setTheLoaiKhac, goiChup, setGoiChup, giaTien, setGiaTien, 
-  formatTienInput, themHoacSuaLich, resetForm, lichTheoNgay, suaLich, capNhatTrangThai,
+  theLoai, setTheLoai, theLoaiKhac, setTheLoaiKhac, goiChup, setGoiChup, giaTien, setGiaTien, formatTienInput,
+  themHoacSuaLich, resetForm, lichTheoNgay, suaLich, capNhatTrangThai,
   hoSoCuaToi, themThuHuong
 }: any) {
   
-  // Lấy ngày hiện tại theo giờ Việt Nam
   const getLocalToday = () => {
     const d = new Date();
     const offset = d.getTimezoneOffset() * 60000;
@@ -17,34 +16,18 @@ export default function TabLich({
 
   const localToday = getLocalToday();
 
-  // State Quản lý Lịch
   const [selectedDate, setSelectedDate] = useState(localToday);
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
-
-  // State Modals
   const [showModal, setShowModal] = useState(false);
-  const [showHoanThanhModal, setShowHoanThanhModal] = useState(false);
+  const [showHoaHongModal, setShowHoaHongModal] = useState(false);
   const [lichDangChon, setLichDangChon] = useState<any>(null);
   const [tienHoaHong, setTienHoaHong] = useState("");
-  const [vaiTroJob, setVaiTroJob] = useState("");
 
-  const TRANG_THAI_PIPELINE = [
-    "Chờ chụp",
-    "Đã chụp - Chờ Edit",
-    "Đã Edit - Chờ giao khách",
-    "Hoàn tất (Đóng Job)"
-  ];
-
-  // ==========================================
-  // LOGIC TẠO BẢNG LỊCH THÁNG
-  // ==========================================
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
   const firstDayOfMonth = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  
-  // Tính thứ của ngày đầu tiên (T2 = 0, CN = 6)
   const firstDayIndex = (firstDayOfMonth.getDay() + 6) % 7; 
 
   const daysArray = [];
@@ -61,61 +44,43 @@ export default function TabLich({
     setSelectedDate(localToday);
   };
 
-  // ==========================================
-  // HÀM CHỨC NĂNG CỦA LỊCH
-  // ==========================================
-  const copyNhacLich = (item: any) => {
-    const ngayFormat = item.ngay.split("-").reverse().join("/");
-    const dichVu = item.goiChup || item.theLoai;
-    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach}.\n\nEm nhắn tin nhắc mình có lịch ${dichVu} vào lúc ${item.gio} ngày ${ngayFormat}.\n\nAnh/chị nhớ sắp xếp thời gian qua studio đúng giờ giúp em để ekip chuẩn bị chu đáo nhất nhé!\n\nCần hỗ trợ thêm anh/chị cứ nhắn em ạ.`;
-    navigator.clipboard.writeText(text);
-    toast.success("Đã copy tin nhắn nhắc lịch!");
-  };
-
-  const xacNhanNhanTienKhauCuaToi = () => {
-    if (!vaiTroJob) { toast.error("Vui lòng chọn khâu bạn phụ trách!"); return; }
+  const xacNhanNhanTien = () => {
     if (!tienHoaHong) { toast.error("Vui lòng nhập số tiền hoa hồng!"); return; }
     if (!hoSoCuaToi) { toast.error("Không tìm thấy thông tin tài khoản!"); return; }
+    if (!lichDangChon) return;
 
-    const moTaJob = `[${vaiTroJob}] ${lichDangChon.goiChup || lichDangChon.theLoai} - KH: ${lichDangChon.tenKhach}`;
-    
-    themThuHuong(
-      hoSoCuaToi.id, 
-      hoSoCuaToi.email, 
-      hoSoCuaToi.hoTen, 
-      lichDangChon.ngay, 
-      moTaJob, 
-      tienHoaHong
-    );
-
-    setShowHoanThanhModal(false);
+    const moTaJob = `[Chụp ${lichDangChon.theLoai}] KH: ${lichDangChon.tenKhach}`;
+    themThuHuong(hoSoCuaToi.id, hoSoCuaToi.email, hoSoCuaToi.hoTen, lichDangChon.ngay, moTaJob, tienHoaHong);
+    setShowHoaHongModal(false);
     setTienHoaHong("");
-    setVaiTroJob("");
   };
 
-  // Lấy danh sách lịch của NGÀY ĐANG CHỌN
-  const dsLichHomNay = lichTheoNgay[selectedDate] || [];
+  const openAddModal = () => {
+    resetForm();
+    setNgay(selectedDate);
+    setShowModal(true);
+  };
+
+  const handleLuuLich = async () => {
+    await themHoacSuaLich();
+    setShowModal(false);
+  };
+
+  const dsLichNgayNay = lichTheoNgay[selectedDate] || [];
 
   return (
     <div className="pb-24 px-2 pt-2">
-      
-      {/* ========================================== */}
-      {/* KHU VỰC 1: BẢNG LỊCH THÁNG (CALENDAR GRID) */}
-      {/* ========================================== */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-6">
-        {/* Header Lịch */}
         <div className="flex justify-between items-center mb-6">
-          <button onClick={goToToday} className="text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg active:scale-95 transition-all border border-blue-100">Hôm nay</button>
-          
-          <div className="flex items-center gap-4">
-            <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-full hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">◀</button>
-            <div className="font-black text-gray-800 text-base uppercase tracking-wide w-28 text-center">Tháng {month + 1}, {year}</div>
-            <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-full hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">▶</button>
+          <button onClick={goToToday} className="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl active:scale-95 transition-all">Hôm nay</button>
+          <div className="flex items-center gap-2">
+            <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">◀</button>
+            <div className="font-black text-gray-800 text-sm uppercase tracking-wide w-28 text-center">Th {month + 1}, {year}</div>
+            <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">▶</button>
           </div>
         </div>
 
-        {/* Lưới Lịch */}
-        <div className="grid grid-cols-7 gap-y-2 gap-x-1 text-center">
+        <div className="grid grid-cols-7 gap-y-3 gap-x-1 text-center">
           {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
             <div key={d} className="text-[10px] font-black text-gray-400 uppercase mb-2">{d}</div>
           ))}
@@ -125,27 +90,23 @@ export default function TabLich({
             
             const isToday = dateStr === localToday;
             const isSelected = dateStr === selectedDate;
-            const dsLichNgayNay = lichTheoNgay[dateStr] || [];
-            const hasEvent = dsLichNgayNay.length > 0;
+            const hasLich = (lichTheoNgay[dateStr] || []).length > 0;
             
             return (
-              <div key={dateStr} className="flex flex-col items-center justify-start h-12">
+              <div key={dateStr} className="flex flex-col items-center justify-start h-12 relative group">
                 <button 
                   onClick={() => setSelectedDate(dateStr)}
-                  className={`relative w-9 h-9 flex items-center justify-center rounded-full text-sm transition-all
-                    ${isSelected ? "bg-blue-600 text-white font-black shadow-md shadow-blue-200" : 
-                      isToday ? "bg-blue-50 text-blue-700 font-black border border-blue-200" : 
-                      "hover:bg-gray-100 text-gray-700 font-medium"}
+                  className={`relative w-10 h-10 flex items-center justify-center rounded-2xl text-sm transition-all
+                    ${isSelected ? "bg-blue-600 text-white font-black shadow-lg shadow-blue-200 scale-105" : 
+                      isToday ? "bg-blue-50 text-blue-700 font-black" : 
+                      "hover:bg-gray-50 text-gray-700 font-bold"}
                   `}
                 >
                   {parseInt(dateStr.split('-')[2])}
                 </button>
 
-                {/* Dấu chấm đỏ báo hiệu có lịch */}
-                <div className="mt-1 h-1.5 flex gap-0.5">
-                  {hasEvent && (
-                    <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-600" : "bg-red-500"}`}></span>
-                  )}
+                <div className="mt-1 flex gap-1 h-1.5 absolute bottom-[-4px]">
+                  {hasLich && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-300" : "bg-blue-500 shadow-sm shadow-blue-200"}`}></span>}
                 </div>
               </div>
             )
@@ -153,186 +114,165 @@ export default function TabLich({
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* KHU VỰC 2: DANH SÁCH LỊCH TRONG NGÀY ĐANG CHỌN */}
-      {/* ========================================== */}
-      <div className="mb-4 flex justify-between items-end px-1">
+      <div className="mb-4 flex justify-between items-end px-1 mt-6">
         <div>
-          <h3 className="font-bold text-gray-800 text-lg">Lịch trình chi tiết</h3>
+          <h3 className="font-black text-gray-800 text-lg">Lịch chụp Studio</h3>
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mt-1">Ngày {selectedDate.split("-").reverse().join("/")}</p>
         </div>
-        <div className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
-          {dsLichHomNay.length} Lịch
+        <div className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100">
+          {dsLichNgayNay.length} Ca chụp
         </div>
       </div>
 
       <div className="space-y-4">
-        {dsLichHomNay.length === 0 ? (
-          <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-10 text-center shadow-sm">
-            <div className="text-4xl mb-3 opacity-50">🏝️</div>
-            <h4 className="text-gray-500 font-bold text-sm">Không có lịch trình</h4>
-            <p className="text-xs text-gray-400 mt-1">Ngày này đang trống, bạn có thể nhận thêm khách.</p>
+        {dsLichNgayNay.length === 0 ? (
+          <div className="bg-white border border-dashed border-gray-200 rounded-3xl p-10 text-center shadow-sm">
+            <div className="text-5xl mb-4 opacity-50 grayscale">😴</div>
+            <h4 className="text-gray-600 font-bold text-base">Lịch trống</h4>
+            <p className="text-xs text-gray-400 mt-2">Chưa có lịch hẹn nào được tạo trong ngày này.</p>
           </div>
         ) : (
-          [...dsLichHomNay].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: any) => {
-            const isHoanTat = item.trangThai === "Hoàn tất (Đóng Job)";
-            const currentStatus = item.trangThai && TRANG_THAI_PIPELINE.includes(item.trangThai) ? item.trangThai : "Chờ chụp";
+          [...dsLichNgayNay].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: any) => {
+            
+            const trangThaiColors: Record<string, string> = {
+              "Chưa liên hệ": "bg-gray-100 text-gray-600",
+              "Đã gọi - Chờ": "bg-yellow-100 text-yellow-700",
+              "Đã chốt lịch": "bg-blue-100 text-blue-700",
+              "Đã chụp xong": "bg-green-100 text-green-700",
+              "Hủy lịch": "bg-red-100 text-red-600",
+            };
 
             return (
-              <div key={item.id} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${isHoanTat ? "border-l-gray-300 opacity-70 bg-gray-50" : currentStatus.includes("Edit") ? "border-l-purple-500" : "border-l-blue-500"} border-y border-r border-gray-100 transition-colors animate-fade-in`}>
+              <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md group relative overflow-hidden">
+                <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-blue-500"></div>
                 
-                {/* DẢI TRẠNG THÁI PIPELINE */}
-                <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-100">
-                  <select 
-                    value={currentStatus}
+                <div className="flex justify-between items-start pb-4 border-b border-gray-100 mb-4 ml-2">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="bg-blue-50 text-blue-600 text-xs font-black px-2.5 py-1 rounded-lg">⏰ {item.gio}</span>
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${trangThaiColors[item.trangThai || "Chưa liên hệ"]}`}>
+                        {item.trangThai || "Chưa liên hệ"}
+                      </span>
+                    </div>
+                    <div className="text-lg font-black text-gray-900">{item.tenKhach}</div>
+                    <div className="text-sm font-bold text-gray-500 mt-1">{item.theLoai} - {item.goiChup}</div>
+                  </div>
+                  <div className="text-xl font-black text-green-600">
+                    {formatTienInput(String(item.giaTien || 0))}
+                  </div>
+                </div>
+
+                <div className="grid gap-2 text-sm ml-2">
+                  <div className="text-gray-500 font-medium flex items-center gap-2">SĐT 1: <span className="font-bold text-gray-800">{item.soDienThoai}</span></div>
+                  {item.soDienThoai2 && <div className="text-gray-500 font-medium flex items-center gap-2">SĐT 2: <span className="font-bold text-gray-800">{item.soDienThoai2}</span></div>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-4 ml-2">
+                  <select
+                    value={item.trangThai || "Chưa liên hệ"}
                     onChange={(e) => capNhatTrangThai(item.id, e.target.value)}
-                    className={`text-xs font-bold px-2 py-1 rounded-md outline-none cursor-pointer border ${
-                      currentStatus === "Chờ chụp" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                      currentStatus === "Đã chụp - Chờ Edit" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                      currentStatus === "Đã Edit - Chờ giao khách" ? "bg-orange-50 text-orange-700 border-orange-200" :
-                      "bg-gray-200 text-gray-600 border-gray-300"
-                    }`}
+                    className="bg-slate-50 border border-gray-200 text-gray-700 text-xs font-bold px-3 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-200 outline-none"
                   >
-                    {TRANG_THAI_PIPELINE.map(st => <option key={st} value={st}>{st}</option>)}
+                    <option value="Chưa liên hệ">Chưa liên hệ</option>
+                    <option value="Đã gọi - Chờ">Đã gọi - Chờ</option>
+                    <option value="Đã chốt lịch">Đã chốt lịch</option>
+                    <option value="Đã chụp xong">Đã chụp xong</option>
+                    <option value="Hủy lịch">Hủy lịch</option>
                   </select>
 
-                  <div className="flex gap-2">
-                    {!isHoanTat && <button onClick={() => copyNhacLich(item)} className="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors">💬 Nhắc lịch</button>}
-                    <button onClick={() => { suaLich(item); setShowModal(true); }} className="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600 rounded-lg text-xs font-bold transition-colors">✏️ Sửa</button>
-                  </div>
+                  <button onClick={() => { setLichDangChon(item); setTienHoaHong(""); setShowHoaHongModal(true); }} className="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-2.5 rounded-xl hover:bg-blue-100 transition-colors">
+                    🙋‍♂️ Nhận Hoa hồng
+                  </button>
                 </div>
 
-                {/* THÔNG TIN KHÁCH HÀNG */}
-                <div className="flex items-center gap-4">
-                  <div className="flex flex-col items-center justify-center min-w-[50px]">
-                    <span className={`text-xl font-black leading-none ${isHoanTat ? "text-gray-400" : "text-gray-800"}`}>{item.gio}</span>
-                  </div>
-                  <div className="border-l pl-4 border-gray-100 flex-1">
-                    <div className="font-bold text-gray-800 text-[15px]">{item.tenKhach}</div>
-                    <div className="text-[13px] text-gray-500 font-medium">{item.goiChup || item.theLoai}</div>
-                    
-                    {/* Hiển thị SĐT 1 và SĐT 2 */}
-                    <div className="text-[12px] text-gray-500 mt-0.5 flex flex-wrap gap-1">
-                      <span>📞</span> 
-                      <a href={`tel:${item.soDienThoai}`} className="text-blue-600 font-semibold">{item.soDienThoai}</a>
-                      {item.soDienThoai2 && (
-                        <span className="ml-1"> - <a href={`tel:${item.soDienThoai2}`} className="text-blue-600 font-semibold">{item.soDienThoai2}</a></span>
-                      )}
-                    </div>
-
-                    <div className="text-[13px] font-bold text-blue-800 mt-0.5">
-                      {Number(item.giaTien || 0).toLocaleString("vi-VN")}đ
-                    </div>
-                  </div>
-                </div>
-
-                {/* NÚT KHAI BÁO CÔNG VIỆC CÁ NHÂN */}
-                {!isHoanTat && (
-                  <div className="mt-4 pt-3 border-t border-dashed border-gray-200">
-                    <button 
-                      onClick={() => {
-                        setLichDangChon(item);
-                        setTienHoaHong("");
-                        setVaiTroJob("");
-                        setShowHoanThanhModal(true);
-                      }}
-                      className="w-full bg-green-50 text-green-700 font-bold py-2.5 rounded-lg hover:bg-green-100 border border-green-200 shadow-sm transition-all flex justify-center items-center gap-2"
-                    >
-                      🙋‍♂️ Báo cáo khâu của tôi (Nhận hoa hồng)
-                    </button>
-                  </div>
-                )}
-
+                <button onClick={() => { suaLich(item); setShowModal(true); }} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-50 text-gray-500 hover:bg-blue-50 hover:text-blue-600 rounded-full font-bold transition-all opacity-50 group-hover:opacity-100">
+                  ✏️
+                </button>
               </div>
             );
           })
         )}
       </div>
 
-      {/* Nút thêm mới - Kế thừa tự động lấy ngày đang chọn */}
-      <button onClick={() => { resetForm(); setNgay(selectedDate); setShowModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-3xl z-40 hover:scale-105 active:scale-95 transition-all">+</button>
+      <button onClick={openAddModal} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-200/50 flex items-center justify-center text-3xl z-40 hover:scale-110 active:scale-90 transition-all">
+        +
+      </button>
 
-      {/* ============================================== */}
-      {/* MODAL 1: BÁO CÁO CÔNG VIỆC CÁ NHÂN (NHẬN TIỀN) */}
-      {/* ============================================== */}
-      {showHoanThanhModal && lichDangChon && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-fade-in">
-            <h3 className="text-xl font-black mb-1 text-green-600 text-center">🎯 Báo cáo Job</h3>
-            <p className="text-[11px] text-gray-500 mb-5 text-center font-medium">Nhiều người có thể cùng nhận tiền trên 1 Job này.</p>
+      {/* FORM THÊM / SỬA LỊCH */}
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in border border-white">
+            <h2 className="text-2xl font-black mb-6 text-gray-900">{dangSua ? "✏️ Cập nhật Lịch" : "✨ Thêm Lịch Mới"}</h2>
             
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4">
-              <div className="font-bold text-gray-800 text-sm">KH: {lichDangChon.tenKhach}</div>
-              <div className="text-xs text-blue-700 font-semibold">{lichDangChon.goiChup || lichDangChon.theLoai}</div>
-            </div>
-            
-            <div className="grid gap-3">
-              <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase ml-1 block mb-1">Khâu bạn phụ trách</label>
-                <select value={vaiTroJob} onChange={(e) => setVaiTroJob(e.target.value)} className="border border-gray-200 p-3 rounded-xl w-full bg-white text-gray-900 font-bold focus:ring-2 focus:ring-blue-400 outline-none">
-                  <option value="">-- Chọn vai trò --</option>
-                  <option value="Makeup">💄 Makeup / Làm tóc</option>
-                  <option value="Chụp chính">📸 Thợ Chụp chính</option>
-                  <option value="Quay phim">🎥 Thợ Quay phim</option>
-                  <option value="Phụ đèn">💡 Phụ đèn / Hắt sáng</option>
-                  <option value="Photoshop">💻 Edit / Photoshop</option>
-                  <option value="Sale">🗣 Tư vấn (Sale)</option>
-                </select>
+            <div className="grid gap-4">
+              <div className="flex gap-3">
+                <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Ngày chụp</label><input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+                <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Giờ chụp</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
               </div>
 
+              <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label><input type="text" placeholder="Nhập tên..." value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+              
+              <div className="flex gap-3">
+                <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 1</label><input type="text" placeholder="0987..." value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+                <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 2</label><input type="text" placeholder="Dự phòng..." value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Thể loại</label>
+                  <select value={theLoai} onChange={(e) => setTheLoai(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none">
+                    <option value="">- Chọn -</option><option value="Chụp Cưới">💍 Chụp Cưới</option><option value="Chụp Sự kiện">🎉 Sự kiện</option><option value="Chụp Chân dung">👤 Chân dung</option><option value="Chụp Gia đình">👨‍👩‍👧‍👦 Gia đình</option><option value="Chụp Kỷ yếu">🎓 Kỷ yếu</option><option value="Khác">✨ Khác</option>
+                  </select>
+                </div>
+                {theLoai === "Khác" && (
+                   <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Nhập loại khác</label><input type="text" placeholder="Nhập..." value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+                )}
+              </div>
+
+              <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Gói chụp (Chi tiết)</label><input type="text" placeholder="VD: Gói cao cấp 5tr..." value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase ml-1 block mb-1">Hoa hồng được chia</label>
+                <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Giá tiền (VNĐ)</label>
                 <div className="relative">
-                  <input type="text" inputMode="numeric" placeholder="VD: 300.000" value={tienHoaHong} onChange={(e) => setTienHoaHong(formatTienInput(e.target.value))} className="border border-green-300 bg-green-50 p-3 rounded-xl w-full pr-8 font-black text-green-700 text-xl focus:ring-2 focus:ring-green-500 outline-none placeholder:text-green-300" />
-                  <span className="absolute right-4 top-4 text-green-600 font-bold">đ</span>
+                  <input type="text" inputMode="numeric" placeholder="VD: 5.000.000" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full pr-12 text-green-600 font-black text-xl focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" />
+                  <span className="absolute right-5 top-5 text-gray-400 font-bold">đ</span>
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-3">
-                <button onClick={xacNhanNhanTienKhauCuaToi} className="flex-1 bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 shadow-lg shadow-green-200/50 active:scale-95 transition-all">💰 Nhận tiền</button>
-                <button onClick={() => setShowHoanThanhModal(false)} className="px-5 py-3.5 bg-gray-100 font-bold text-gray-600 rounded-xl hover:bg-gray-200 active:scale-95 transition-all">Đóng</button>
+              <div className="flex gap-3 mt-4">
+                <button onClick={handleLuuLich} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">💾 Lưu Lịch</button>
+                <button onClick={() => setShowModal(false)} className="px-6 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 active:scale-95 transition-all">Hủy</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ============================================== */}
-      {/* MODAL 2: THÊM / SỬA LỊCH */}
-      {/* ============================================== */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">{dangSua ? "✏️ Sửa lịch" : "✨ Thêm lịch mới"}</h2>
-            <div className="grid gap-3">
-              <div className="flex gap-2">
-                <div className="flex-1"><label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Ngày hẹn</label><input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" /></div>
-                <div className="flex-1"><label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Giờ hẹn</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" /></div>
-              </div>
-              <div><label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Tên khách hàng</label><input type="text" placeholder="VD: Cô dâu Thu Thủy" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" /></div>
-              
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">SĐT 1 (Bắt buộc)</label>
-                  <input type="text" placeholder="0987..." value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" />
-                </div>
-                <div className="flex-1">
-                  <label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">SĐT 2 (Tùy chọn)</label>
-                  <input type="text" placeholder="Số phụ..." value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" />
+      {/* FORM NHẬN HOA HỒNG */}
+      {showHoaHongModal && lichDangChon && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-fade-in border border-white">
+            <h3 className="text-2xl font-black mb-2 text-blue-600 text-center tracking-tight">Chốt Hợp Đồng!</h3>
+            <p className="text-xs text-gray-500 mb-6 text-center font-medium">Khai báo hoa hồng cho job chụp ảnh này.</p>
+            
+            <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 mb-5">
+              <div className="text-[10px] text-blue-500 font-black mb-1.5 uppercase tracking-wide">{lichDangChon.theLoai}</div>
+              <div className="font-black text-gray-900 text-base">{lichDangChon.tenKhach}</div>
+              <div className="text-sm text-green-600 font-black mt-1.5">Giá trị: {formatTienInput(String(lichDangChon.giaTien || 0))} đ</div>
+            </div>
+            
+            <div className="grid gap-4">
+              <div>
+                <label className="text-[10px] font-bold text-gray-500 uppercase ml-2 block mb-1.5">Tiền hoa hồng (Sếp chia)</label>
+                <div className="relative">
+                  <input type="text" inputMode="numeric" placeholder="VD: 500.000" value={tienHoaHong} onChange={(e) => setTienHoaHong(formatTienInput(e.target.value))} className="bg-white border border-blue-200 p-4 rounded-2xl w-full pr-10 font-black text-blue-700 text-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-blue-200" autoFocus />
+                  <span className="absolute right-5 top-5 text-blue-600 font-black">đ</span>
                 </div>
               </div>
 
-              <div><label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Dịch vụ (Gói chụp)</label><input type="text" placeholder="VD: Phóng sự cưới, Album Studio..." value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" /></div>
-              <div>
-                 <label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Tổng giá trị hợp đồng</label>
-                 <div className="relative">
-                   <input type="text" inputMode="numeric" placeholder="VD: 5.000.000" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} className="border p-3 rounded-xl w-full pr-10 bg-white text-blue-700 font-bold text-lg focus:ring-2 focus:ring-blue-400 outline-none" />
-                   <span className="absolute right-4 top-3.5 text-gray-400 font-medium">đ</span>
-                 </div>
-              </div>
-              <div className="flex gap-2 pt-4 border-t border-gray-100 mt-2">
-                <button onClick={() => { themHoacSuaLich(); setShowModal(false); }} className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200/50 hover:bg-blue-700 active:scale-95 transition-all">Lưu lịch</button>
-                <button onClick={() => setShowModal(false)} className="px-6 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 active:scale-95 transition-all">Hủy</button>
+              <div className="flex gap-3 mt-2">
+                <button onClick={xacNhanNhanTien} className="flex-1 bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">💰 Nhận Tiền</button>
+                <button onClick={() => setShowHoaHongModal(false)} className="px-6 py-4 bg-gray-100 font-bold text-gray-600 rounded-2xl hover:bg-gray-200 active:scale-95 transition-all">Đóng</button>
               </div>
             </div>
           </div>
