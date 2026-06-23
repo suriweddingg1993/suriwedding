@@ -23,7 +23,7 @@ import TabChamCong from "./components/TabChamCong";
 type Role = "admin" | "staff";
 type Tab = "home" | "lich" | "phatSinh" | "tinhTrangKH" | "chamCong" | "luong" | "nhanVien" | "thongKe";
 
-type Lich = { id?: string; ngay: string; gio: string; tenKhach: string; soDienThoai?: string; theLoai: string; goiChup?: string; giaTien?: number; trangThai?: string; };
+type Lich = { id?: string; ngay: string; gio: string; tenKhach: string; soDienThoai?: string; soDienThoai2?: string; theLoai: string; goiChup?: string; giaTien?: number; trangThai?: string; };
 type TaiKhoan = { id: string; email: string; hoTen?: string; soDienThoai?: string; luongCung?: number; thuongChuyenCan?: number; role: Role; };
 type PhatSinh = { id?: string; ngay: string; tenKhach: string; soDienThoai?: string; loai: string; soTien: number; nguoiGhi: string; ngayTra?: string; daTraDo?: boolean; ghiChu?: string; };
 type ChamCong = { id?: string; uid: string; email: string; ngay: string; checkIn?: string; checkOut?: string; checkInLat?: number; checkInLng?: number; checkOutLat?: number; checkOutLng?: number; diMuon?: boolean; soPhutMuon?: number; loaiGiaiTrinh?: string; lyDoGiaiTrinh?: string; trangThaiGiaiTrinh?: string; };
@@ -69,6 +69,7 @@ export default function Home() {
   const [gio, setGio] = useState("");
   const [tenKhach, setTenKhach] = useState("");
   const [soDienThoai, setSoDienThoai] = useState("");
+  const [soDienThoai2, setSoDienThoai2] = useState("");
   const [theLoai, setTheLoai] = useState("");
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
   const [goiChup, setGoiChup] = useState("");
@@ -164,7 +165,6 @@ export default function Home() {
     return () => unsub();
   }, [user, laAdmin]);
 
-  // HÀM: GỬI GIẢI TRÌNH CHẤM CÔNG
   const guiGiaiTrinh = async (ngayGiaiTrinh: string, loai: string, lyDo: string) => {
     if (!user) return;
     const record = danhSachChamCong.find(cc => cc.uid === user.uid && cc.ngay === ngayGiaiTrinh);
@@ -178,7 +178,6 @@ export default function Home() {
     } catch (e) { toast.error("Có lỗi xảy ra khi gửi đơn."); }
   };
 
-  // HÀM: ADMIN DUYỆT GIẢI TRÌNH
   const duyetGiaiTrinh = async (id: string, isApproved: boolean) => {
     try {
       await updateDoc(doc(db, "chamCong", id), { trangThaiGiaiTrinh: isApproved ? "Đã duyệt" : "Từ chối" });
@@ -207,14 +206,14 @@ export default function Home() {
 
   const dangXuat = async () => { await signOut(auth); };
 
-  const resetForm = () => { setNgay(""); setGio(""); setTenKhach(""); setSoDienThoai(""); setTheLoai(""); setTheLoaiKhac(""); setGoiChup(""); setGiaTien(""); setDangSua(null); };
+  const resetForm = () => { setNgay(""); setGio(""); setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); setTheLoai(""); setTheLoaiKhac(""); setGoiChup(""); setGiaTien(""); setDangSua(null); };
 
   const themHoacSuaLich = async () => {
-    const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : theLoai;
-    if (!ngay || !gio || !tenKhach || !soDienThoai || !theLoaiCuoi || !goiChup || !giaTien) { toast.error("Vui lòng nhập đầy đủ thông tin"); return; }
+    const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
+    if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup || !giaTien) { toast.error("Vui lòng nhập đầy đủ thông tin bắt buộc"); return; }
     const trungLich = lichLamViec.some((item) => item.ngay === ngay && item.gio === gio && item.id !== dangSua);
     if (trungLich) { toast.error("Khung giờ này đã có lịch"); return; }
-    const duLieuLich = { ngay, gio, tenKhach, soDienThoai, theLoai: theLoaiCuoi, goiChup, giaTien: chuyenTienVeSo(giaTien), trangThai: "Chưa liên hệ" };
+    const duLieuLich = { ngay, gio, tenKhach, soDienThoai, soDienThoai2, theLoai: theLoaiCuoi, goiChup, giaTien: chuyenTienVeSo(giaTien), trangThai: "Chưa liên hệ" };
     try {
       if (dangSua) { await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi lịch!"); } 
       else { await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch mới!"); }
@@ -229,7 +228,7 @@ export default function Home() {
   };
 
   const suaLich = (item: Lich) => {
-    setNgay(item.ngay); setGio(item.gio); setTenKhach(item.tenKhach); setSoDienThoai(item.soDienThoai || ""); setTheLoai(item.theLoai || ""); setTheLoaiKhac(""); setGoiChup(item.goiChup || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); setDangSua(item.id || null); setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" });
+    setNgay(item.ngay); setGio(item.gio); setTenKhach(item.tenKhach); setSoDienThoai(item.soDienThoai || ""); setSoDienThoai2(item.soDienThoai2 || ""); setTheLoai(item.theLoai || ""); setTheLoaiKhac(""); setGoiChup(item.goiChup || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); setDangSua(item.id || null); setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const capNhatTrangThai = async (id?: string, trangThai?: string) => {
@@ -377,15 +376,10 @@ export default function Home() {
       {/* RENDER CÁC TAB */}
       <div id="noi-dung-tab"></div>
       
-      {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} timNgay={timNgay} setTimNgay={setTimNgay} tuKhoa={tuKhoa} setTuKhoa={setTuKhoa} lichTheoNgay={lichTheoNgay} laAdmin={laAdmin} capNhatTrangThai={capNhatTrangThai} suaLich={suaLich} xoaLich={xoaLich} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} />}
+      {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} timNgay={timNgay} setTimNgay={setTimNgay} tuKhoa={tuKhoa} setTuKhoa={setTuKhoa} lichTheoNgay={lichTheoNgay} laAdmin={laAdmin} capNhatTrangThai={capNhatTrangThai} suaLich={suaLich} xoaLich={xoaLich} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} />}
       {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} />}
-      
-      {/* TRUYỀN HÀM GIẢI TRÌNH VÀO CHẤM CÔNG */}
       {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
-      
-      {/* TAB LƯƠNG TRUYỀN HOMNAY ĐỂ TÍNH QUÉT NGHỈ KHÔNG PHÉP */}
       {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
-      
       {tab === "nhanVien" && laAdmin && <TabNhanVien uidNhanVien={uidNhanVien} setUidNhanVien={setUidNhanVien} emailNhanVien={emailNhanVien} setEmailNhanVien={setEmailNhanVien} hoTenNhanVien={hoTenNhanVien} setHoTenNhanVien={setHoTenNhanVien} soDienThoaiNhanVien={soDienThoaiNhanVien} setSoDienThoaiNhanVien={setSoDienThoaiNhanVien} luongCungNhanVien={luongCungNhanVien} setLuongCungNhanVien={setLuongCungNhanVien} thuongChuyenCanNhanVien={thuongChuyenCanNhanVien} setThuongChuyenCanNhanVien={setThuongChuyenCanNhanVien} quyenNhanVien={quyenNhanVien} setQuyenNhanVien={setQuyenNhanVien} taoHoSoNhanVien={taoHoSoNhanVien} dangSuaNhanVien={dangSuaNhanVien} danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} suaHoSoNhanVien={suaHoSoNhanVien} formatTienInput={formatTienInput} />}
       {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
       {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}

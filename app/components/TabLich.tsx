@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
 export default function TabLich({
-  dangSua, ngay, setNgay, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, 
+  dangSua, ngay, setNgay, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
   theLoai, setTheLoai, theLoaiKhac, setTheLoaiKhac, goiChup, setGoiChup, giaTien, setGiaTien, 
   formatTienInput, themHoacSuaLich, resetForm, lichTheoNgay, suaLich, capNhatTrangThai,
   hoSoCuaToi, themThuHuong
@@ -210,6 +210,16 @@ export default function TabLich({
                   <div className="border-l pl-4 border-gray-100 flex-1">
                     <div className="font-bold text-gray-800 text-[15px]">{item.tenKhach}</div>
                     <div className="text-[13px] text-gray-500 font-medium">{item.goiChup || item.theLoai}</div>
+                    
+                    {/* Hiển thị SĐT 1 và SĐT 2 */}
+                    <div className="text-[12px] text-gray-500 mt-0.5 flex flex-wrap gap-1">
+                      <span>📞</span> 
+                      <a href={`tel:${item.soDienThoai}`} className="text-blue-600 font-semibold">{item.soDienThoai}</a>
+                      {item.soDienThoai2 && (
+                        <span className="ml-1"> - <a href={`tel:${item.soDienThoai2}`} className="text-blue-600 font-semibold">{item.soDienThoai2}</a></span>
+                      )}
+                    </div>
+
                     <div className="text-[13px] font-bold text-blue-800 mt-0.5">
                       {Number(item.giaTien || 0).toLocaleString("vi-VN")}đ
                     </div>
@@ -300,7 +310,18 @@ export default function TabLich({
                 <div className="flex-1"><label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Giờ hẹn</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" /></div>
               </div>
               <div><label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Tên khách hàng</label><input type="text" placeholder="VD: Cô dâu Thu Thủy" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" /></div>
-              <div><label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Số điện thoại</label><input type="text" placeholder="0987..." value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" /></div>
+              
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">SĐT 1 (Bắt buộc)</label>
+                  <input type="text" placeholder="0987..." value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">SĐT 2 (Tùy chọn)</label>
+                  <input type="text" placeholder="Số phụ..." value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" />
+                </div>
+              </div>
+
               <div><label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Dịch vụ (Gói chụp)</label><input type="text" placeholder="VD: Phóng sự cưới, Album Studio..." value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="border p-3 rounded-xl w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-400 outline-none" /></div>
               <div>
                  <label className="text-[11px] text-gray-500 font-bold ml-1 mb-1 block uppercase">Tổng giá trị hợp đồng</label>
