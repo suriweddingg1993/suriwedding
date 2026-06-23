@@ -33,7 +33,8 @@ const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
-const APP_VERSION = "v1.0.1";
+// ĐÂY LÀ PHIÊN BẢN MỚI
+const APP_VERSION = "v1.0.2"; 
 
 function homNay() { return new Date().toISOString().slice(0, 10); }
 function gioHienTai() { return new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
@@ -105,11 +106,33 @@ export default function Home() {
     return d.toISOString().slice(0, 10);
   }, []);
 
+  // LẮNG NGHE BẢN CẬP NHẬT TỪ FIREBASE
   useEffect(() => {
-    const phienBanDaLuu = localStorage.getItem("suri_app_version");
-    if (phienBanDaLuu && phienBanDaLuu !== APP_VERSION) setCoBanCapNhat(true);
-    localStorage.setItem("suri_app_version", APP_VERSION);
-  }, []);
+    const unsub = onSnapshot(doc(db, "system", "appVersion"), (snap) => {
+      if (snap.exists()) {
+        const liveVersion = snap.data().version;
+        if (liveVersion && liveVersion !== APP_VERSION) {
+          setCoBanCapNhat(true);
+        } else {
+          setCoBanCapNhat(false);
+        }
+      } else if (laAdmin) {
+        // Nếu chưa có bảng version trên Firebase thì admin tạo ra
+        setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION });
+      }
+    });
+    return () => unsub();
+  }, [laAdmin]);
+
+  // HÀM ADMIN PHÁT LỆNH CẬP NHẬT CHUNG
+  const xacNhanPhatHanh = async () => {
+    try {
+      await setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION });
+      toast.success("🚀 Đã phát lệnh ép toàn bộ nhân viên cập nhật app!");
+    } catch (error) {
+      toast.error("Lỗi khi phát hành cập nhật");
+    }
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -338,9 +361,26 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
+      {/* BẢNG YÊU CẦU CẬP NHẬT APP (Dành cho bản thân người dùng khi có bản mới) */}
       {coBanCapNhat && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 p-3 rounded-lg mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div>🔄 Có phiên bản mới của ứng dụng</div><button onClick={() => window.location.reload()} className="bg-yellow-500 text-white px-4 py-2 rounded">Cập nhật</button>
+        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm animate-fade-in z-50 relative">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl drop-shadow-sm">🔄</div> 
+            <div>
+              <div className="font-bold text-yellow-800 text-lg">App có bản cập nhật mới!</div>
+              <div className="text-sm text-yellow-700 font-medium">Vui lòng cập nhật ngay để app hoạt động chuẩn xác nhất.</div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {laAdmin && (
+               <button onClick={xacNhanPhatHanh} className="flex-1 md:flex-none bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-green-700 active:scale-95 transition-all">
+                 ✅ Phát hành bản này
+               </button>
+            )}
+            <button onClick={() => window.location.reload()} className="flex-1 md:flex-none bg-yellow-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-yellow-600 active:scale-95 transition-all">
+              🚀 Cập nhật ngay
+            </button>
+          </div>
         </div>
       )}
 
@@ -377,7 +417,7 @@ export default function Home() {
       <div id="noi-dung-tab"></div>
       
       {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} timNgay={timNgay} setTimNgay={setTimNgay} tuKhoa={tuKhoa} setTuKhoa={setTuKhoa} lichTheoNgay={lichTheoNgay} laAdmin={laAdmin} capNhatTrangThai={capNhatTrangThai} suaLich={suaLich} xoaLich={xoaLich} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} />}
-      {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} />}
+      {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} />}
       {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
       {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
       {tab === "nhanVien" && laAdmin && <TabNhanVien uidNhanVien={uidNhanVien} setUidNhanVien={setUidNhanVien} emailNhanVien={emailNhanVien} setEmailNhanVien={setEmailNhanVien} hoTenNhanVien={hoTenNhanVien} setHoTenNhanVien={setHoTenNhanVien} soDienThoaiNhanVien={soDienThoaiNhanVien} setSoDienThoaiNhanVien={setSoDienThoaiNhanVien} luongCungNhanVien={luongCungNhanVien} setLuongCungNhanVien={setLuongCungNhanVien} thuongChuyenCanNhanVien={thuongChuyenCanNhanVien} setThuongChuyenCanNhanVien={setThuongChuyenCanNhanVien} quyenNhanVien={quyenNhanVien} setQuyenNhanVien={setQuyenNhanVien} taoHoSoNhanVien={taoHoSoNhanVien} dangSuaNhanVien={dangSuaNhanVien} danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} suaHoSoNhanVien={suaHoSoNhanVien} formatTienInput={formatTienInput} />}
