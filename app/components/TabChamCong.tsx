@@ -1,9 +1,31 @@
 import { useMemo, useState } from "react";
-import NutCopy from "./NutCopy";
+import { ChamCong } from "../../types";
+
+interface TabChamCongProps {
+  homNay: () => string;
+  BAN_KINH_CHO_PHEP: number;
+  khoangCach: number | null;
+  chamCongHomNay?: ChamCong;
+  chamCong: (loai: "checkIn" | "checkOut") => void;
+  dangLayViTri: boolean;
+  laAdmin: boolean;
+  chamCongHienThi: ChamCong[];
+  guiGiaiTrinh: (ngay: string, loai: string, lyDo: string) => void;
+  duyetGiaiTrinh: (id: string, isApproved: boolean) => void;
+}
 
 export default function TabChamCong({
-  homNay, BAN_KINH_CHO_PHEP, khoangCach, chamCongHomNay, chamCong, dangLayViTri, laAdmin, chamCongHienThi, guiGiaiTrinh, duyetGiaiTrinh
-}: any) {
+  homNay, 
+  BAN_KINH_CHO_PHEP, 
+  khoangCach, 
+  chamCongHomNay, 
+  chamCong, 
+  dangLayViTri, 
+  laAdmin, 
+  chamCongHienThi, 
+  guiGiaiTrinh, 
+  duyetGiaiTrinh
+}: TabChamCongProps) {
   
   const danhSachDaSapXep = useMemo(() => {
     return [...chamCongHienThi].sort((a, b) => b.ngay.localeCompare(a.ngay));
@@ -21,9 +43,10 @@ export default function TabChamCong({
     if(!gtNgay || !gtLyDo) return alert("Vui lòng điền đủ ngày và lý do!");
     guiGiaiTrinh(gtNgay, gtLoai, gtLyDo);
     setShowModal(false);
+    setGtLyDo(""); // Reset lại lý do sau khi gửi
   };
 
-  const dsChoDuyet = chamCongHienThi.filter((cc: any) => cc.trangThaiGiaiTrinh === "Chờ duyệt");
+  const dsChoDuyet = chamCongHienThi.filter((cc: ChamCong) => cc.trangThaiGiaiTrinh === "Chờ duyệt");
 
   return (
     <div className="pb-24 px-2 pt-4">
@@ -32,14 +55,14 @@ export default function TabChamCong({
         <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-6 shadow-sm">
           <h2 className="text-orange-800 font-bold flex items-center gap-2 mb-3">🚨 Đơn xin phép chờ duyệt ({dsChoDuyet.length})</h2>
           <div className="space-y-3">
-            {dsChoDuyet.map((cc: any) => (
+            {dsChoDuyet.map((cc: ChamCong) => (
               <div key={cc.id} className="bg-white p-3 rounded-xl shadow-sm text-sm">
                 <div className="font-bold text-gray-800">{cc.email.split('@')[0]} - <span className="text-blue-600">{cc.ngay}</span></div>
                 <div className="text-xs font-bold bg-orange-100 text-orange-700 w-fit px-2 py-0.5 rounded mt-1">{cc.loaiGiaiTrinh}</div>
                 <div className="text-gray-600 italic mt-1 pb-2 border-b border-gray-100">" {cc.lyDoGiaiTrinh} "</div>
                 <div className="flex gap-2 mt-2">
-                  <button onClick={() => duyetGiaiTrinh(cc.id, true)} className="flex-1 bg-green-500 text-white font-bold py-1.5 rounded text-xs hover:bg-green-600">✅ Duyệt</button>
-                  <button onClick={() => duyetGiaiTrinh(cc.id, false)} className="flex-1 bg-red-500 text-white font-bold py-1.5 rounded text-xs hover:bg-red-600">❌ Từ chối</button>
+                  <button onClick={() => cc.id && duyetGiaiTrinh(cc.id, true)} className="flex-1 bg-green-500 text-white font-bold py-1.5 rounded text-xs hover:bg-green-600">✅ Duyệt</button>
+                  <button onClick={() => cc.id && duyetGiaiTrinh(cc.id, false)} className="flex-1 bg-red-500 text-white font-bold py-1.5 rounded text-xs hover:bg-red-600">❌ Từ chối</button>
                 </div>
               </div>
             ))}
@@ -76,8 +99,8 @@ export default function TabChamCong({
         </div>
 
         <div className="flex gap-3">
-          <button onClick={() => chamCong("checkIn")} disabled={dangLayViTri || chamCongHomNay?.checkIn} className={`flex-1 py-4 rounded-xl font-bold text-[15px] transition-all ${chamCongHomNay?.checkIn ? "bg-gray-100 text-gray-400" : "bg-green-600 text-white shadow-lg"}`}>{dangLayViTri ? "⏳..." : "👋 CHECK IN"}</button>
-          <button onClick={() => chamCong("checkOut")} disabled={dangLayViTri || !chamCongHomNay?.checkIn || chamCongHomNay?.checkOut} className={`flex-1 py-4 rounded-xl font-bold text-[15px] transition-all ${!chamCongHomNay?.checkIn || chamCongHomNay?.checkOut ? "bg-gray-100 text-gray-400" : "bg-blue-600 text-white shadow-lg"}`}>{dangLayViTri ? "⏳..." : "🏃 CHECK OUT"}</button>
+          <button onClick={() => chamCong("checkIn")} disabled={dangLayViTri || !!chamCongHomNay?.checkIn} className={`flex-1 py-4 rounded-xl font-bold text-[15px] transition-all ${chamCongHomNay?.checkIn ? "bg-gray-100 text-gray-400" : "bg-green-600 text-white shadow-lg"}`}>{dangLayViTri ? "⏳..." : "👋 CHECK IN"}</button>
+          <button onClick={() => chamCong("checkOut")} disabled={dangLayViTri || !chamCongHomNay?.checkIn || !!chamCongHomNay?.checkOut} className={`flex-1 py-4 rounded-xl font-bold text-[15px] transition-all ${!chamCongHomNay?.checkIn || chamCongHomNay?.checkOut ? "bg-gray-100 text-gray-400" : "bg-blue-600 text-white shadow-lg"}`}>{dangLayViTri ? "⏳..." : "🏃 CHECK OUT"}</button>
         </div>
       </div>
 
@@ -94,7 +117,7 @@ export default function TabChamCong({
           {danhSachDaSapXep.length === 0 ? (
             <div className="text-center text-gray-400 py-6 italic bg-gray-50 rounded-xl">Chưa có dữ liệu chấm công</div>
           ) : (
-            danhSachDaSapXep.map((item: any) => (
+            danhSachDaSapXep.map((item: ChamCong) => (
               <div key={item.id} className="p-4 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors bg-slate-50/50">
                 <div className="flex justify-between items-center mb-3 border-b border-gray-100 pb-2">
                   <div className="font-bold text-gray-700 text-sm flex items-center gap-2">📅 {item.ngay.split("-").reverse().join("/")}</div>

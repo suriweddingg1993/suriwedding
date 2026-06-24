@@ -1,7 +1,28 @@
 import NutCopy from "./NutCopy";
+import { Role, TaiKhoan } from "../../types";
 
-// Khai báo kiểu dữ liệu cho quyền nhân viên
-type Role = "admin" | "staff";
+interface TabNhanVienProps {
+  uidNhanVien: string;
+  setUidNhanVien: (val: string) => void;
+  emailNhanVien: string;
+  setEmailNhanVien: (val: string) => void;
+  hoTenNhanVien: string;
+  setHoTenNhanVien: (val: string) => void;
+  soDienThoaiNhanVien: string;
+  setSoDienThoaiNhanVien: (val: string) => void;
+  luongCungNhanVien: string;
+  setLuongCungNhanVien: (val: string) => void;
+  thuongChuyenCanNhanVien: string;
+  setThuongChuyenCanNhanVien: (val: string) => void;
+  quyenNhanVien: Role;
+  setQuyenNhanVien: (val: Role) => void;
+  taoHoSoNhanVien: () => void;
+  dangSuaNhanVien: string | null;
+  danhSachTaiKhoan: TaiKhoan[];
+  laAdmin: boolean;
+  suaHoSoNhanVien: (tk: TaiKhoan) => void;
+  formatTienInput: (val: string) => string;
+}
 
 export default function TabNhanVien({
   uidNhanVien, setUidNhanVien, emailNhanVien, setEmailNhanVien,
@@ -9,7 +30,7 @@ export default function TabNhanVien({
   luongCungNhanVien, setLuongCungNhanVien, thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien,
   quyenNhanVien, setQuyenNhanVien, taoHoSoNhanVien, dangSuaNhanVien,
   danhSachTaiKhoan, laAdmin, suaHoSoNhanVien, formatTienInput
-}: any) {
+}: TabNhanVienProps) {
   return (
     <div className="pb-24 px-2 pt-4">
       
@@ -108,7 +129,7 @@ export default function TabNhanVien({
       {/* DANH SÁCH TÀI KHOẢN (CARD VIEW) */}
       <h3 className="font-bold text-gray-800 mb-4 ml-1">📋 Danh sách nhân sự</h3>
       <div className="space-y-4">
-        {danhSachTaiKhoan.map((tk: any) => (
+        {danhSachTaiKhoan.map((tk: TaiKhoan) => (
           <div key={tk.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md hover:border-blue-200 transition-all">
             
             {/* Header Thẻ nhân viên */}

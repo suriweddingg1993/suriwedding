@@ -1,9 +1,37 @@
 import { useState } from "react";
+import { ChamCong, ThuHuong, TaiKhoan } from "../../types";
+
+// Tạo Type riêng cho bản tính lương sau khi tính toán xong
+interface BangLuong extends TaiKhoan {
+  soNgayNghi: number;
+  soLanMuon: number;
+  tongPhutMuon: number;
+  phatDiMuon: number;
+  phatNghi: number;
+  chuyenCan: boolean;
+  tienChuyenCan: number;
+  tongThuHuong: number;
+  thuHuongThang: ThuHuong[];
+  luongTamTinh: number;
+}
+
+interface TabLuongProps {
+  homNay: () => string;
+  uidCuaToi?: string;
+  hoSoCuaToi: TaiKhoan | null;
+  laAdmin: boolean;
+  danhSachTaiKhoan: TaiKhoan[];
+  danhSachChamCong: ChamCong[];
+  danhSachThuHuong: ThuHuong[];
+  themThuHuong: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
+  xoaThuHuong: (id: string) => Promise<void>;
+  formatTienInput: (val: string) => string;
+}
 
 export default function TabLuong({
   homNay, uidCuaToi, hoSoCuaToi, laAdmin, danhSachTaiKhoan = [], danhSachChamCong = [],
   danhSachThuHuong = [], themThuHuong, xoaThuHuong, formatTienInput
-}: any) {
+}: TabLuongProps) {
 
   const [showModal, setShowModal] = useState(false);
   const [thUid, setThUid] = useState(""); const [thEmail, setThEmail] = useState("");
@@ -14,87 +42,93 @@ export default function TabLuong({
     setThUid(uid); setThEmail(email); setThHoTen(hoTen || email);
     setThNgay(homNay()); setThMoTa(""); setThSoTien(""); setShowModal(true);
   };
-  const xacNhanCapTien = () => { themThuHuong(thUid, thEmail, thHoTen, thNgay, thMoTa, thSoTien); setShowModal(false); };
+  
+  const xacNhanCapTien = () => { 
+    themThuHuong(thUid, thEmail, thHoTen, thNgay, thMoTa, thSoTien); 
+    setShowModal(false); 
+  };
 
   // ==========================================
-  // THUẬT TOÁN QUÉT NGÀY TỰ ĐỘNG
+  // THUẬT TOÁN QUÉT NGÀY TỰ ĐỘNG - ĐÃ TỐI ƯU O(1)
   // ==========================================
   const homNayStr = homNay();
   const thangHienTai = homNayStr.slice(0, 7);
   const currentDayNum = parseInt(homNayStr.slice(8, 10));
 
-  // Tạo mảng các ngày đã trôi qua trong tháng (Từ ngày 1 đến ngày Hôm qua)
   const pastDates: string[] = [];
   for (let i = 1; i < currentDayNum; i++) {
     const d = i < 10 ? `0${i}` : `${i}`;
     pastDates.push(`${thangHienTai}-${d}`);
   }
 
-  // Hàm tính toán chi tiết cho 1 nhân viên
-  const tinhLuongNhanVien = (tk: any) => {
-    const chamCongThang = danhSachChamCong.filter((cc: any) => cc.uid === tk.id && cc.ngay.startsWith(thangHienTai));
+  const tinhLuongNhanVien = (tk: TaiKhoan): BangLuong => {
+    const chamCongThang = danhSachChamCong.filter((cc) => cc.uid === tk.id && cc.ngay.startsWith(thangHienTai));
     
-    let soNgayNghi = 0; // Số ngày nghỉ (Cả có phép & không phép để check quota 2 ngày)
-    let soNgayTruLuong = 0; // Ngày bị trừ tiền
+    // TỐI ƯU HÓA: Biến mảng thành "Từ điển" để tra cứu siêu tốc trong vòng lặp bên dưới
+    const chamCongMap: Record<string, ChamCong> = {};
+    chamCongThang.forEach(cc => { chamCongMap[cc.ngay] = cc; });
+
+    let soNgayNghi = 0; 
+    let soNgayTruLuong = 0; 
     let soLanMuon = 0;
     let tongPhutMuon = 0;
 
     // Quét từng ngày trong quá khứ
     pastDates.forEach(date => {
-      const record = chamCongThang.find((cc: any) => cc.ngay === date);
+      // Gọi thẳng từ Map thay vì dùng hàm .find() lặp đi lặp lại
+      const record = chamCongMap[date]; 
       
       if (!record) {
-        // Không có dữ liệu chấm công -> Nghỉ không phép
         soNgayNghi++;
         soNgayTruLuong++;
       } else {
         if (record.trangThaiGiaiTrinh === "Đã duyệt") {
-          // Nếu đơn được duyệt
           if (record.loaiGiaiTrinh === "Xin nghỉ phép") { soNgayNghi++; }
-          // Nếu "Quên chấm công" hoặc "Xin đi muộn", coi như đi làm đủ, ko phạt
         } else {
-          // Chưa làm đơn hoặc Đơn bị Sếp từ chối
           if (!record.checkIn || !record.checkOut) {
-            soNgayNghi++; soNgayTruLuong++; // Bỏ về giữa chừng hoặc ko check in = Nghỉ
+            soNgayNghi++; soNgayTruLuong++;
           } else if (record.diMuon) {
             soLanMuon++;
-            tongPhutMuon += (record.soPhutMuon || 0); // Cộng dồn phút muộn
+            tongPhutMuon += (record.soPhutMuon || 0);
           }
         }
       }
     });
 
-    // TÍNH TOÁN TIỀN PHẠT TỶ LỆ
     const luongCung = tk.luongCung || 0;
     const luongNgay = luongCung / 30;
-    const luongPhut = luongNgay / 8 / 60; // Lương tính theo từng phút
+    const luongPhut = luongNgay / 8 / 60; 
 
-    // 1. Phạt đi muộn (Nhân số phút với lương/phút)
     const phatDiMuon = Math.round(tongPhutMuon * luongPhut);
-    
-    // 2. Phạt nghỉ (Trừ đi 2 ngày phép mặc định, số còn dư đem trừ tiền)
     const soNghiKhongPhep = Math.max(0, soNgayNghi - 2) + soNgayTruLuong; 
-    // Logic an toàn: Nếu soNgayTruLuong đã có thì phạt luôn. Nếu dùng quá 2 ngày phép thì phạt thêm.
-    // Đơn giản hóa: Cứ tổng ngày nghỉ > 2 thì phạt những ngày dư ra.
     const soNgayPhatThucTe = Math.max(0, soNgayNghi - 2); 
     const phatNghi = Math.round(soNgayPhatThucTe * luongNgay);
 
-    // 3. Tiền chuyên cần (Không nghỉ ngày nào & đi muộn <= 3 lần)
     const chuyenCan = soNgayNghi === 0 && soLanMuon <= 3;
     const tienChuyenCan = chuyenCan ? (tk.thuongChuyenCan || 0) : 0;
 
-    // 4. Hoa hồng thụ hưởng
-    const thuHuongThang = danhSachThuHuong.filter((th: any) => th.uid === tk.id && th.ngay.startsWith(thangHienTai));
-    const tongThuHuong = thuHuongThang.reduce((sum: number, th: any) => sum + Number(th.soTien || 0), 0);
+    const thuHuongThang = danhSachThuHuong.filter((th) => th.uid === tk.id && th.ngay.startsWith(thangHienTai));
+    const tongThuHuong = thuHuongThang.reduce((sum, th) => sum + Number(th.soTien || 0), 0);
 
     const luongTamTinh = luongCung - phatDiMuon - phatNghi + tienChuyenCan + tongThuHuong;
 
-    return { ...tk, soNgayNghi, soLanMuon, tongPhutMuon, phatDiMuon, phatNghi, chuyenCan, tienChuyenCan, tongThuHuong, thuHuongThang, luongTamTinh };
+    return { 
+      ...tk, 
+      soNgayNghi, 
+      soLanMuon, 
+      tongPhutMuon, 
+      phatDiMuon, 
+      phatNghi, 
+      chuyenCan, 
+      tienChuyenCan, 
+      tongThuHuong, 
+      thuHuongThang, 
+      luongTamTinh 
+    };
   };
 
-  // Tính lương Admin / Staff
-  const bangLuongNhanVien = laAdmin ? danhSachTaiKhoan.filter((tk: any) => tk.role !== "admin").map(tinhLuongNhanVien) : [];
-  const tongQuyLuong = laAdmin ? bangLuongNhanVien.reduce((sum: number, nv: any) => sum + nv.luongTamTinh, 0) : 0;
+  const bangLuongNhanVien: BangLuong[] = laAdmin ? danhSachTaiKhoan.filter((tk) => tk.role !== "admin").map(tinhLuongNhanVien) : [];
+  const tongQuyLuong = laAdmin ? bangLuongNhanVien.reduce((sum, nv) => sum + nv.luongTamTinh, 0) : 0;
   const luongCuaToi = !laAdmin && hoSoCuaToi ? tinhLuongNhanVien(hoSoCuaToi) : null;
 
   return (
@@ -112,7 +146,7 @@ export default function TabLuong({
           </div>
 
           <div className="space-y-4">
-            {bangLuongNhanVien.map((nv: any) => (
+            {bangLuongNhanVien.map((nv: BangLuong) => (
               <div key={nv.id} className="border border-gray-100 bg-slate-50 rounded-xl p-4 flex flex-col gap-2 shadow-sm">
                 <div className="flex justify-between items-center border-b border-gray-200 pb-2">
                   <div className="font-bold text-blue-700">{nv.hoTen || nv.email.split('@')[0]}</div>
@@ -123,21 +157,19 @@ export default function TabLuong({
                   <div className="text-gray-500">L.Cứng: {formatTienInput(String(nv.luongCung || 0))}đ</div>
                   <div className={nv.chuyenCan ? "text-green-600 text-right" : "text-red-400 line-through text-right"}>C.Cần: +{formatTienInput(String(nv.thuongChuyenCan || 0))}đ</div>
                   
-                  {/* Hiển thị chi tiết Phạt */}
                   <div className={nv.phatNghi > 0 ? "text-red-600" : "text-gray-500"}>Nghỉ: {nv.soNgayNghi} ngày (Phạt -{formatTienInput(String(nv.phatNghi))}đ)</div>
                   <div className={nv.phatDiMuon > 0 ? "text-orange-600 text-right" : "text-gray-500 text-right"}>Muộn: {nv.tongPhutMuon}p (Phạt -{formatTienInput(String(nv.phatDiMuon))}đ)</div>
                 </div>
 
-                {/* Phần thụ hưởng */}
                 <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3">
                   <div className="flex justify-between items-center mb-2">
                     <div className="text-[11px] font-bold text-gray-600 uppercase">Hoa hồng Job: <span className="text-green-600">+{formatTienInput(String(nv.tongThuHuong))}đ</span></div>
-                    <button onClick={() => moModalThuHuong(nv.id, nv.email, nv.hoTen)} className="bg-gray-100 px-2 py-1 rounded text-xs font-bold">+ Thêm</button>
+                    <button onClick={() => moModalThuHuong(nv.id, nv.email, nv.hoTen || "")} className="bg-gray-100 px-2 py-1 rounded text-xs font-bold">+ Thêm</button>
                   </div>
-                  {nv.thuHuongThang.map((th: any) => (
+                  {nv.thuHuongThang.map((th: ThuHuong) => (
                     <div key={th.id} className="flex justify-between items-center text-xs bg-gray-50 p-1.5 rounded border border-dashed border-gray-200 mt-1">
                       <div className="truncate max-w-[150px]"><span className="text-gray-400 mr-1">{th.ngay.slice(8,10)}/{th.ngay.slice(5,7)}:</span> {th.moTa}</div>
-                      <div className="flex items-center gap-2"><span className="font-bold text-green-600">+{formatTienInput(String(th.soTien))}</span><button onClick={() => xoaThuHuong(th.id)} className="text-red-400 hover:text-red-600">🗑</button></div>
+                      <div className="flex items-center gap-2"><span className="font-bold text-green-600">+{formatTienInput(String(th.soTien))}</span><button onClick={() => th.id && xoaThuHuong(th.id)} className="text-red-400 hover:text-red-600">🗑</button></div>
                     </div>
                   ))}
                 </div>
@@ -163,14 +195,12 @@ export default function TabLuong({
                 <div className="text-lg font-black">{formatTienInput(String(luongCuaToi.luongCung))}đ</div>
               </div>
 
-              {/* BÁO CÁO PHẠT ĐI MUỘN */}
               <div className={`border rounded-xl p-4 flex flex-col justify-center ${luongCuaToi.phatDiMuon > 0 ? "bg-orange-50 border-orange-200" : "bg-slate-50 border-slate-100"}`}>
                 <div className={`text-[11px] font-bold uppercase mb-1 ${luongCuaToi.phatDiMuon > 0 ? "text-orange-600" : "text-gray-500"}`}>Đi muộn ({luongCuaToi.soLanMuon} lần)</div>
                 <div className="text-lg font-black text-gray-800">{luongCuaToi.tongPhutMuon} <span className="text-sm font-medium text-gray-400">phút</span></div>
                 {luongCuaToi.phatDiMuon > 0 && <div className="text-xs font-bold text-red-500 mt-1">Phạt: -{formatTienInput(String(luongCuaToi.phatDiMuon))}đ</div>}
               </div>
 
-              {/* BÁO CÁO PHẠT NGHỈ */}
               <div className={`border rounded-xl p-4 flex flex-col justify-center ${luongCuaToi.phatNghi > 0 ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-100"}`}>
                 <div className={`text-[11px] font-bold uppercase mb-1 ${luongCuaToi.phatNghi > 0 ? "text-red-600" : "text-gray-500"}`}>Vắng mặt</div>
                 <div className="text-lg font-black text-gray-800">{luongCuaToi.soNgayNghi} <span className="text-sm font-medium text-gray-400">/ 2 ngày phép</span></div>
@@ -186,17 +216,16 @@ export default function TabLuong({
               <div className={`text-lg font-black ${luongCuaToi.chuyenCan ? "text-green-700" : "text-red-400 line-through opacity-70"}`}>+{formatTienInput(String(luongCuaToi.tienChuyenCan))}đ</div>
             </div>
 
-            {/* THỤ HƯỞNG */}
             <div className="border border-blue-200 bg-blue-50/50 rounded-xl p-4">
               <div className="flex justify-between items-center border-b border-blue-200 pb-3 mb-3">
                 <div><h3 className="font-bold text-blue-800 uppercase text-xs">🏆 Hoa hồng Job</h3><div className="font-black text-green-600 text-xl">+{formatTienInput(String(luongCuaToi.tongThuHuong))}đ</div></div>
-                <button onClick={() => moModalThuHuong(uidCuaToi, hoSoCuaToi?.email, hoSoCuaToi?.hoTen)} className="bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-md">+ Báo cáo Job</button>
+                <button onClick={() => hoSoCuaToi && uidCuaToi && moModalThuHuong(uidCuaToi, hoSoCuaToi.email, hoSoCuaToi.hoTen || "")} className="bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-md">+ Báo cáo Job</button>
               </div>
               <div className="space-y-2 mt-3">
-                {luongCuaToi.thuHuongThang.map((th: any) => (
+                {luongCuaToi.thuHuongThang.map((th: ThuHuong) => (
                   <div key={th.id} className="flex justify-between items-center bg-white p-3 rounded-lg border shadow-sm text-sm">
                     <div className="flex flex-col"><span className="font-bold">{th.moTa}</span><span className="text-[10px] text-gray-400">Ngày: {th.ngay.split("-").reverse().join("/")}</span></div>
-                    <div className="flex items-center gap-3"><span className="font-black text-green-600">+{formatTienInput(String(th.soTien))}đ</span><button onClick={() => xoaThuHuong(th.id)} className="text-gray-300 hover:text-red-500">🗑</button></div>
+                    <div className="flex items-center gap-3"><span className="font-black text-green-600">+{formatTienInput(String(th.soTien))}đ</span><button onClick={() => th.id && xoaThuHuong(th.id)} className="text-gray-300 hover:text-red-500">🗑</button></div>
                   </div>
                 ))}
               </div>

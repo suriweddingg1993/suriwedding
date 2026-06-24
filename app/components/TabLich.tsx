@@ -1,12 +1,38 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { Lich, TaiKhoan } from "../../types";
+
+// ĐỊNH NGHĨA PROPS CHO TAB LỊCH ĐỂ XÓA BỎ 'any'
+interface TabLichProps {
+  dangSua: string | null;
+  ngay: string; setNgay: (val: string) => void;
+  gio: string; setGio: (val: string) => void;
+  tenKhach: string; setTenKhach: (val: string) => void;
+  soDienThoai: string; setSoDienThoai: (val: string) => void;
+  soDienThoai2: string; setSoDienThoai2: (val: string) => void;
+  theLoai: string; setTheLoai: (val: string) => void;
+  theLoaiKhac: string; setTheLoaiKhac: (val: string) => void;
+  goiChup: string; setGoiChup: (val: string) => void;
+  giaTien: string; setGiaTien: (val: string) => void;
+  formatTienInput: (val: string) => string;
+  themHoacSuaLich: () => Promise<void>;
+  resetForm: () => void;
+  lichTheoNgay: Record<string, Lich[]>;
+  suaLich: (item: Lich) => void;
+  capNhatTrangThai: (id: string, trangThai: string) => Promise<void>;
+  hoSoCuaToi: TaiKhoan | null;
+  themThuHuong: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
+  laAdmin: boolean;
+  xoaLich: (id: string) => Promise<void>;
+  lichLamViec: Lich[];
+}
 
 export default function TabLich({
   dangSua, ngay, setNgay, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
   theLoai, setTheLoai, theLoaiKhac, setTheLoaiKhac, goiChup, setGoiChup, giaTien, setGiaTien, formatTienInput,
   themHoacSuaLich, resetForm, lichTheoNgay, suaLich, capNhatTrangThai,
   hoSoCuaToi, themThuHuong, laAdmin, xoaLich, lichLamViec
-}: any) {
+}: TabLichProps) {
   
   const getLocalToday = () => {
     const d = new Date();
@@ -22,9 +48,9 @@ export default function TabLich({
   
   // States cho phần Thụ Hưởng
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
-  const [lichDangChon, setLichDangChon] = useState<any>(null);
+  const [lichDangChon, setLichDangChon] = useState<Lich | null>(null);
   const [tienHoaHong, setTienHoaHong] = useState("");
-  const [vaiTro, setVaiTro] = useState("Chụp ảnh"); // State quản lý công đoạn
+  const [vaiTro, setVaiTro] = useState("Chụp ảnh");
   
   const [tuKhoa, setTuKhoa] = useState(""); 
 
@@ -35,7 +61,7 @@ export default function TabLich({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayIndex = (firstDayOfMonth.getDay() + 6) % 7; 
 
-  const daysArray = [];
+  const daysArray: (string | null)[] = [];
   for (let i = 0; i < firstDayIndex; i++) { daysArray.push(null); }
   for (let i = 1; i <= daysInMonth; i++) {
     const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
@@ -55,15 +81,14 @@ export default function TabLich({
     if (!hoSoCuaToi) { toast.error("Không tìm thấy thông tin tài khoản!"); return; }
     if (!lichDangChon) return;
 
-    // Ghi rõ công đoạn vào mô tả job để Admin dễ kiểm soát bảng lương
     const moTaJob = `[${vaiTro}] KH: ${lichDangChon.tenKhach} (${lichDangChon.theLoai})`;
-    themThuHuong(hoSoCuaToi.id, hoSoCuaToi.email, hoSoCuaToi.hoTen, lichDangChon.ngay, moTaJob, tienHoaHong);
+    themThuHuong(hoSoCuaToi.id, hoSoCuaToi.email, hoSoCuaToi.hoTen || "", lichDangChon.ngay, moTaJob, tienHoaHong);
     setShowHoaHongModal(false);
     setTienHoaHong("");
     setVaiTro("Chụp ảnh");
   };
 
-  const copyNhacLich = (item: any) => {
+  const copyNhacLich = (item: Lich) => {
     const ngayChup = item.ngay.split('-').reverse().join('/');
     const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\n\nEm nhắn tin báo mình có lịch hẹn (${item.theLoai} - ${item.goiChup || ""}) vào lúc ⏰ ${item.gio} ngày ${ngayChup}.\n\nAnh/chị nhớ sắp xếp thời gian đến đúng giờ để có những bức ảnh đẹp nhất nhé. Em cảm ơn ạ!`;
     navigator.clipboard.writeText(text);
@@ -81,10 +106,10 @@ export default function TabLich({
     setShowModal(false);
   };
 
-  let dsLichNgayNay = [];
+  let dsLichNgayNay: Lich[] = [];
   if (tuKhoa.trim()) {
      const kw = tuKhoa.toLowerCase().trim();
-     dsLichNgayNay = (lichLamViec || []).filter((item: any) =>
+     dsLichNgayNay = (lichLamViec || []).filter((item: Lich) =>
         (item.tenKhach || "").toLowerCase().includes(kw) ||
         (item.soDienThoai || "").includes(kw) ||
         (item.soDienThoai2 || "").includes(kw)
@@ -172,7 +197,7 @@ export default function TabLich({
             <p className="text-xs text-gray-400 mt-2">{tuKhoa.trim() ? "Vui lòng kiểm tra lại tên hoặc SĐT." : "Chưa có lịch hẹn nào được tạo trong ngày này."}</p>
           </div>
         ) : (
-          [...dsLichNgayNay].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: any) => {
+          [...dsLichNgayNay].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: Lich) => {
             
             const trangThaiColors: Record<string, string> = {
               "Chưa liên hệ": "bg-gray-100 text-gray-600",
@@ -186,7 +211,6 @@ export default function TabLich({
               <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md group relative overflow-hidden">
                 <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-blue-500"></div>
                 
-                {/* DÒNG TIÊU ĐỀ (CHỨA THÔNG TIN & GIÁ TIỀN + NÚT SỬA XÓA TRÁNH ĐÈ) */}
                 <div className="flex justify-between items-start pb-4 border-b border-gray-100 mb-4 ml-2">
                   <div className="pr-2">
                     <div className="flex items-center gap-2 mb-2">
@@ -200,11 +224,10 @@ export default function TabLich({
                     {tuKhoa.trim() && <div className="text-xs font-bold text-blue-600 mt-1">📅 Ngày tạo lịch: {item.ngay.split("-").reverse().join("/")}</div>}
                   </div>
                   
-                  {/* CỘT BÊN PHẢI (CHỨA NÚT SỬA XÓA & TIỀN) */}
                   <div className="flex flex-col items-end gap-3 shrink-0">
                     <div className="flex gap-2">
-                      {laAdmin && typeof xoaLich === 'function' && (
-                        <button onClick={() => xoaLich(item.id)} className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 rounded-full font-bold transition-all shadow-sm">
+                      {laAdmin && item.id && (
+                        <button onClick={() => xoaLich(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 rounded-full font-bold transition-all shadow-sm">
                           🗑
                         </button>
                       )}
@@ -223,11 +246,10 @@ export default function TabLich({
                   {item.soDienThoai2 && <div className="text-gray-500 font-medium flex items-center gap-2">SĐT 2: <span className="font-bold text-gray-800">{item.soDienThoai2}</span></div>}
                 </div>
 
-                {/* CỤM NÚT TRẠNG THÁI, NHẮC LỊCH, HOA HỒNG */}
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
                   <select
                     value={item.trangThai || "Chưa liên hệ"}
-                    onChange={(e) => capNhatTrangThai(item.id, e.target.value)}
+                    onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)}
                     className="flex-1 bg-slate-50 border border-gray-200 text-gray-700 text-xs font-bold px-2 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-200 outline-none min-w-[110px]"
                   >
                     <option value="Chưa liên hệ">Chưa liên hệ</option>
@@ -244,7 +266,7 @@ export default function TabLich({
                   <button onClick={() => { 
                     setLichDangChon(item); 
                     setTienHoaHong(""); 
-                    setVaiTro("Chụp ảnh"); // Mặc định khi mở
+                    setVaiTro("Chụp ảnh"); 
                     setShowHoaHongModal(true); 
                   }} className="flex-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-2.5 rounded-xl hover:bg-blue-100 transition-colors shadow-sm min-w-[100px]">
                     🙋‍♂️ Báo cáo
@@ -311,7 +333,7 @@ export default function TabLich({
         </div>
       )}
 
-      {/* FORM NHẬN HOA HỒNG (ĐÃ SỬA THEO CÔNG ĐOẠN) */}
+      {/* FORM NHẬN HOA HỒNG */}
       {showHoaHongModal && lichDangChon && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-fade-in border border-white">

@@ -1,12 +1,32 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { PhatSinh, TaiKhoan } from "../../types";
+
+// ĐỊNH NGHĨA KIỂU DỮ LIỆU ĐỂ BẢO VỆ FORM THU CHI
+interface TabPhatSinhProps {
+  psNgay: string; setPsNgay: (val: string) => void;
+  psTenKhach: string; setPsTenKhach: (val: string) => void;
+  psSoDienThoai: string; setPsSoDienThoai: (val: string) => void;
+  psLoai: string; setPsLoai: (val: string) => void;
+  psNgayTra: string; setPsNgayTra: (val: string) => void;
+  psSoTien: string; setPsSoTien: (val: string) => void;
+  psGhiChu: string; setPsGhiChu: (val: string) => void;
+  formatTienInput: (val: string) => string;
+  themPhatSinh: () => Promise<void>;
+  danhSachPhatSinh: PhatSinh[];
+  laAdmin: boolean;
+  xoaPhatSinh: (id: string) => Promise<void>;
+  hoSoCuaToi: TaiKhoan | null;
+  themThuHuong: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
+  danhDauDaTraDo: (id: string) => Promise<void>;
+}
 
 export default function TabPhatSinh({
   psNgay, setPsNgay, psTenKhach, setPsTenKhach, psSoDienThoai, setPsSoDienThoai, 
   psLoai, setPsLoai, psNgayTra, setPsNgayTra, psSoTien, setPsSoTien, psGhiChu, setPsGhiChu, 
   formatTienInput, themPhatSinh, danhSachPhatSinh, laAdmin, xoaPhatSinh,
   hoSoCuaToi, themThuHuong, danhDauDaTraDo
-}: any) {
+}: TabPhatSinhProps) {
 
   const getLocalToday = () => {
     const d = new Date();
@@ -21,13 +41,14 @@ export default function TabPhatSinh({
 
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
-  const [phatSinhDangChon, setPhatSinhDangChon] = useState<any>(null);
+  const [phatSinhDangChon, setPhatSinhDangChon] = useState<PhatSinh | null>(null);
   const [tienHoaHong, setTienHoaHong] = useState("");
-  const [tuKhoa, setTuKhoa] = useState(""); // State cho ô tìm kiếm mới
+  const [tuKhoa, setTuKhoa] = useState("");
 
   const isThueDo = (loai: string) => (loai || "").toLowerCase().includes("thuê");
 
-  const phatSinhTheoNgay = danhSachPhatSinh.reduce((acc: any, item: any) => {
+  // Gom nhóm dữ liệu theo ngày với Type rõ ràng
+  const phatSinhTheoNgay = danhSachPhatSinh.reduce((acc: Record<string, PhatSinh[]>, item) => {
     if (!acc[item.ngay]) acc[item.ngay] = [];
     acc[item.ngay].push(item);
     return acc;
@@ -40,7 +61,7 @@ export default function TabPhatSinh({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayIndex = (firstDayOfMonth.getDay() + 6) % 7; 
 
-  const daysArray = [];
+  const daysArray: (string | null)[] = [];
   for (let i = 0; i < firstDayIndex; i++) { daysArray.push(null); }
   for (let i = 1; i <= daysInMonth; i++) {
     const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
@@ -52,7 +73,7 @@ export default function TabPhatSinh({
   const goToToday = () => {
     setCurrentMonth(new Date(localToday));
     setSelectedDate(localToday);
-    setTuKhoa(""); // Reset ô tìm kiếm
+    setTuKhoa("");
   };
 
   const xacNhanNhanTien = () => {
@@ -61,13 +82,14 @@ export default function TabPhatSinh({
     if (!phatSinhDangChon) return; 
 
     const moTaJob = `[Tư vấn ${phatSinhDangChon.loai}] KH: ${phatSinhDangChon.tenKhach || "Khách vãng lai"}`;
-    themThuHuong(hoSoCuaToi.id, hoSoCuaToi.email, hoSoCuaToi.hoTen, phatSinhDangChon.ngay, moTaJob, tienHoaHong);
+    themThuHuong(hoSoCuaToi.id, hoSoCuaToi.email, hoSoCuaToi.hoTen || "", phatSinhDangChon.ngay, moTaJob, tienHoaHong);
     setShowHoaHongModal(false);
     setTienHoaHong("");
   };
 
-  const copyNhacTraDo = (item: any) => {
-    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\n\nEm nhắn tin báo mình có lịch trả đồ (${item.loai}) vào ngày hôm nay (${item.ngayTra.split('-').reverse().join('/')}).\n\nAnh/chị nhớ sắp xếp thời gian gửi lại đồ cho studio giúp em nhé. Em cảm ơn ạ!`;
+  const copyNhacTraDo = (item: PhatSinh) => {
+    const ngayTra = item.ngayTra ? item.ngayTra.split('-').reverse().join('/') : "";
+    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\n\nEm nhắn tin báo mình có lịch trả đồ (${item.loai}) vào ngày hôm nay (${ngayTra}).\n\nAnh/chị nhớ sắp xếp thời gian gửi lại đồ cho studio giúp em nhé. Em cảm ơn ạ!`;
     navigator.clipboard.writeText(text);
     toast.success("Đã copy tin nhắn nhắc trả đồ!");
   };
@@ -77,11 +99,10 @@ export default function TabPhatSinh({
     setPsTenKhach(""); setPsSoDienThoai(""); setPsLoai(""); setPsNgayTra(""); setPsSoTien(""); setPsGhiChu("");
   };
 
-  // Logic Tìm Kiếm Giao Dịch
-  let dsGiaoDichNgayNay = [];
+  let dsGiaoDichNgayNay: PhatSinh[] = [];
   if (tuKhoa.trim()) {
      const kw = tuKhoa.toLowerCase().trim();
-     dsGiaoDichNgayNay = (danhSachPhatSinh || []).filter((item: any) =>
+     dsGiaoDichNgayNay = (danhSachPhatSinh || []).filter((item: PhatSinh) =>
         (item.tenKhach || "").toLowerCase().includes(kw) ||
         (item.soDienThoai || "").includes(kw) ||
         (item.ghiChu || "").toLowerCase().includes(kw)
@@ -90,12 +111,11 @@ export default function TabPhatSinh({
      dsGiaoDichNgayNay = phatSinhTheoNgay[selectedDate] || [];
   }
 
-  const dsTraDoNgayNay = danhSachPhatSinh.filter((ps: any) => isThueDo(ps.loai) && ps.ngayTra === selectedDate);
+  const dsTraDoNgayNay = danhSachPhatSinh.filter((ps: PhatSinh) => isThueDo(ps.loai) && ps.ngayTra === selectedDate);
 
   return (
     <div className="pb-24 px-2 pt-2">
       
-      {/* THANH TÌM KIẾM MỚI TẶNG THÊM */}
       <div className="mb-4">
         <input 
           type="text" 
@@ -130,7 +150,7 @@ export default function TabPhatSinh({
               
               const dsGiaoDich = phatSinhTheoNgay[dateStr] || [];
               const hasGiaoDich = dsGiaoDich.length > 0;
-              const hasTraDo = danhSachPhatSinh.some((ps: any) => isThueDo(ps.loai) && ps.ngayTra === dateStr && !ps.daTraDo);
+              const hasTraDo = danhSachPhatSinh.some((ps: PhatSinh) => isThueDo(ps.loai) && ps.ngayTra === dateStr && !ps.daTraDo);
               
               return (
                 <div key={dateStr} className="flex flex-col items-center justify-start h-12 relative group">
@@ -167,7 +187,7 @@ export default function TabPhatSinh({
             <span className="text-xl">🛎️</span> Trả đồ hôm nay
           </h3>
           <div className="space-y-3">
-            {dsTraDoNgayNay.map((item: any) => (
+            {dsTraDoNgayNay.map((item: PhatSinh) => (
               <div key={`tra-${item.id}`} className={`p-5 rounded-3xl border shadow-sm transition-all ${item.daTraDo ? "bg-gray-50/50 border-gray-200 opacity-60" : "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 hover:shadow-md"}`}>
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -187,7 +207,7 @@ export default function TabPhatSinh({
                     <button onClick={() => copyNhacTraDo(item)} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95">
                       💬 Nhắc khách
                     </button>
-                    <button onClick={() => danhDauDaTraDo(item.id)} className="flex-1 py-2 bg-green-500 text-white hover:bg-green-600 rounded-xl text-sm font-black transition-all shadow-md shadow-green-200 active:scale-95">
+                    <button onClick={() => item.id && danhDauDaTraDo(item.id)} className="flex-1 py-2 bg-green-500 text-white hover:bg-green-600 rounded-xl text-sm font-black transition-all shadow-md shadow-green-200 active:scale-95">
                       ✅ Đã nhận lại đồ
                     </button>
                   </div>
@@ -218,7 +238,7 @@ export default function TabPhatSinh({
             <p className="text-xs text-gray-400 mt-2">{tuKhoa.trim() ? "Thử tìm bằng SĐT hoặc Tên khác nhé." : "Không có khoản Thu / Chi nào trong ngày."}</p>
           </div>
         ) : (
-          [...dsGiaoDichNgayNay].reverse().map((item: any) => {
+          [...dsGiaoDichNgayNay].reverse().map((item: PhatSinh) => {
             const isChi = item.loai?.includes("Chi");
             const isThue = isThueDo(item.loai);
 
@@ -253,8 +273,8 @@ export default function TabPhatSinh({
                     </button>
                   ) : <div></div>}
 
-                  {laAdmin && typeof xoaPhatSinh === 'function' && (
-                    <button onClick={() => xoaPhatSinh(item.id)} className="w-9 h-9 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl font-bold transition-all opacity-50 group-hover:opacity-100">
+                  {laAdmin && item.id && (
+                    <button onClick={() => xoaPhatSinh(item.id as string)} className="w-9 h-9 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl font-bold transition-all opacity-50 group-hover:opacity-100">
                       🗑
                     </button>
                   )}
