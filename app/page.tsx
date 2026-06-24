@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import toast from "react-hot-toast";
 
 import {
-  collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc, setDoc, query, where
+  collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDoc, setDoc
 } from "firebase/firestore";
 
 import {
@@ -14,7 +14,11 @@ import {
 import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 
-// Áp dụng Lazy Load: Chỉ tải code của các Tab khi người dùng bấm vào
+// 1. IMPORT HOOK VÀ TYPES CHÚNG TA VỪA TẠO
+import { useAppData } from "../hooks/useAppData";
+import { Role, TabType, Lich, TaiKhoan, PhatSinh, ChamCong, ThuHuong } from "../types";
+
+// Lazy Load các Tab
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
 const TabThongKe = dynamic(() => import("./components/TabThongKe"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
@@ -23,21 +27,13 @@ const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading:
 const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
 const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
 
-type Role = "admin" | "staff";
-type Tab = "home" | "lich" | "phatSinh" | "tinhTrangKH" | "chamCong" | "luong" | "nhanVien" | "thongKe";
-
-type Lich = { id?: string; ngay: string; gio: string; tenKhach: string; soDienThoai?: string; soDienThoai2?: string; theLoai: string; goiChup?: string; giaTien?: number; trangThai?: string; };
-type TaiKhoan = { id: string; email: string; hoTen?: string; soDienThoai?: string; luongCung?: number; thuongChuyenCan?: number; role: Role; };
-type PhatSinh = { id?: string; ngay: string; tenKhach: string; soDienThoai?: string; loai: string; soTien: number; nguoiGhi: string; ngayTra?: string; daTraDo?: boolean; ghiChu?: string; };
-type ChamCong = { id?: string; uid: string; email: string; ngay: string; checkIn?: string; checkOut?: string; checkInLat?: number; checkInLng?: number; checkOutLat?: number; checkOutLng?: number; diMuon?: boolean; soPhutMuon?: number; loaiGiaiTrinh?: string; lyDoGiaiTrinh?: string; trangThaiGiaiTrinh?: string; };
-type ThuHuong = { id?: string; uid: string; email: string; hoTen: string; ngay: string; moTa: string; soTien: number; };
-
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
 const APP_VERSION = "v1.0.4";
 
+// CÁC HÀM TIỆN ÍCH
 function homNay() { return new Date().toISOString().slice(0, 10); }
 function gioHienTai() { return new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
 function formatTienInput(value: string) { const so = value.replace(/\D/g, ""); return so.replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
@@ -58,16 +54,16 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [matKhau, setMatKhau] = useState("");
   const [role, setRole] = useState<Role>("staff");
-  const [tab, setTab] = useState<Tab>("home");
+  const [tab, setTab] = useState<TabType>("home");
   const [coBanCapNhat, setCoBanCapNhat] = useState(false);
-
-  const [lichLamViec, setLichLamViec] = useState<Lich[]>([]);
-  const [danhSachTaiKhoan, setDanhSachTaiKhoan] = useState<TaiKhoan[]>([]);
   const [hoSoCuaToi, setHoSoCuaToi] = useState<TaiKhoan | null>(null);
-  const [danhSachPhatSinh, setDanhSachPhatSinh] = useState<PhatSinh[]>([]);
-  const [danhSachChamCong, setDanhSachChamCong] = useState<ChamCong[]>([]);
-  const [danhSachThuHuong, setDanhSachThuHuong] = useState<ThuHuong[]>([]);
 
+  const laAdmin = role === "admin";
+
+  // 2. SỬ DỤNG TRẠM BƠM DỮ LIỆU ĐÃ TẠO (Thay thế cho 6 cái useEffect cũ)
+  const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan } = useAppData(user, laAdmin);
+
+  // States quản lý Form
   const [ngay, setNgay] = useState("");
   const [gio, setGio] = useState("");
   const [tenKhach, setTenKhach] = useState("");
@@ -102,12 +98,7 @@ export default function Home() {
   const [dangLayViTri, setDangLayViTri] = useState(false);
   const [khoangCach, setKhoangCach] = useState<number | null>(null);
 
-  const laAdmin = role === "admin";
-  const mocThoiGian = useMemo(() => {
-    const d = new Date(); d.setMonth(d.getMonth() - 6);
-    return d.toISOString().slice(0, 10);
-  }, []);
-
+  // Lắng nghe cập nhật phiên bản App
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "system", "appVersion"), (snap) => {
       if (snap.exists()) {
@@ -133,6 +124,7 @@ export default function Home() {
     }
   };
 
+  // Logic xác thực người dùng
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
       try {
@@ -166,36 +158,6 @@ export default function Home() {
     });
     return () => unsub();
   }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const unsub = onSnapshot(query(collection(db, "lichStudio"), where("ngay", ">=", mocThoiGian)), (snapshot) => setLichLamViec(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Lich[]));
-    return () => unsub();
-  }, [user, mocThoiGian]);
-
-  useEffect(() => {
-    if (!user) return;
-    const unsub = onSnapshot(query(collection(db, "phatSinh"), where("ngay", ">=", mocThoiGian)), (snapshot) => setDanhSachPhatSinh(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as PhatSinh[]));
-    return () => unsub();
-  }, [user, mocThoiGian]);
-
-  useEffect(() => {
-    if (!user) return;
-    const unsub = onSnapshot(query(collection(db, "chamCong"), where("ngay", ">=", mocThoiGian)), (snapshot) => setDanhSachChamCong(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as ChamCong[]));
-    return () => unsub();
-  }, [user, mocThoiGian]);
-
-  useEffect(() => {
-    if (!user) return;
-    const unsub = onSnapshot(query(collection(db, "thuHuong"), where("ngay", ">=", mocThoiGian)), (snapshot) => setDanhSachThuHuong(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as ThuHuong[]));
-    return () => unsub();
-  }, [user, mocThoiGian]);
-
-  useEffect(() => {
-    if (!user || !laAdmin) return;
-    const unsub = onSnapshot(collection(db, "users"), (snapshot) => setDanhSachTaiKhoan(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as TaiKhoan[]));
-    return () => unsub();
-  }, [user, laAdmin]);
 
   const guiGiaiTrinh = async (ngayGiaiTrinh: string, loai: string, lyDo: string) => {
     if (!user) return;
@@ -362,7 +324,20 @@ export default function Home() {
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi khi xác nhận"); } };
 
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">Đang tải dữ liệu...</div>;
-  if (!user) { return ( <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6"><div className="bg-white rounded-lg shadow p-6 w-full max-w-sm"><h1 className="text-2xl font-bold mb-4 text-center">Đăng nhập</h1><div className="grid gap-3"><input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 rounded" /><input type="password" placeholder="Mật khẩu" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="border p-2 rounded" /><button onClick={dangNhap} className="bg-blue-600 text-white p-2 rounded font-bold">Đăng nhập</button></div></div></div> ); }
+  if (!user) { 
+    return ( 
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+        <div className="bg-white rounded-lg shadow p-6 w-full max-w-sm">
+          <h1 className="text-2xl font-bold mb-4 text-center">Đăng nhập</h1>
+          <div className="grid gap-3">
+            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 rounded" />
+            <input type="password" placeholder="Mật khẩu" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="border p-2 rounded" />
+            <button onClick={dangNhap} className="bg-blue-600 text-white p-2 rounded font-bold">Đăng nhập</button>
+          </div>
+        </div>
+      </div> 
+    ); 
+  }
 
   const nutMenu = [
     { key: "home", label: "🏠 Trang chủ", adminOnly: false }, { key: "lich", label: "📅 Lịch làm việc", adminOnly: false }, { key: "phatSinh", label: "💰 Phát sinh", adminOnly: false },
@@ -394,12 +369,25 @@ export default function Home() {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+      <div className="flex justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Suri Wedding</h1>
-          <div className="text-sm text-gray-600 mt-1">{user.email} • Quyền: {laAdmin ? "Admin" : "Nhân viên"}</div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Suri Wedding</h1>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="w-8 h-8 bg-blue-50 text-blue-600 flex items-center justify-center rounded-full shadow-sm hover:bg-blue-100 active:scale-75 transition-all text-sm"
+              title="Làm mới dữ liệu"
+            >
+              🔄
+            </button>
+          </div>
+          <div className="text-sm text-gray-500 font-medium mt-1">
+            {user.email} • Quyền: <span className={laAdmin ? "text-blue-600 font-bold" : "text-gray-700 font-bold"}>{laAdmin ? "Admin" : "Nhân viên"}</span>
+          </div>
         </div>
-        <button onClick={dangXuat} className="bg-gray-700 text-white px-4 py-2 rounded font-bold">Đăng xuất</button>
+        <button onClick={dangXuat} className="bg-white border border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-100 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-sm">
+          Đăng xuất
+        </button>
       </div>
 
       {tab === "home" && (
@@ -417,14 +405,14 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-4">
             {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
                 const [icon, ...textParts] = item.label.split(" "); const text = textParts.join(" ");
-                return ( <button key={item.key} onClick={() => { setTab(item.key); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center justify-center gap-3 transition hover:shadow-md active:scale-95"><div className="text-4xl mb-1 drop-shadow-sm">{icon}</div><div className="font-semibold text-center text-sm text-gray-700">{text}</div></button> );
+                return ( <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center justify-center gap-3 transition hover:shadow-md active:scale-95"><div className="text-4xl mb-1 drop-shadow-sm">{icon}</div><div className="font-semibold text-center text-sm text-gray-700">{text}</div></button> );
             })}
           </div>
         </div>
       )}
 
       <div id="noi-dung-tab" className="mt-4">
-        {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} />}
+        {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} />}
         {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} />}
         {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
@@ -440,7 +428,7 @@ export default function Home() {
           { key: "phatSinh", icon: "💰", label: "Thu Chi" },
           { key: "chamCong", icon: "⏰", label: "Chấm công" },
         ].map((nav) => (
-          <button key={nav.key} onClick={() => { setTab(nav.key as Tab); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group">
+          <button key={nav.key} onClick={() => { setTab(nav.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group">
             {tab === nav.key && <div className="absolute top-0 w-8 h-1 bg-blue-600 rounded-b-full"></div>}
             <span className={`text-2xl mb-1 transition-transform ${tab === nav.key ? "scale-110 drop-shadow-md" : "group-hover:scale-110"}`}>{nav.icon}</span>
             <span className={`text-[10px] font-bold ${tab === nav.key ? "text-blue-600" : "text-gray-500"}`}>{nav.label}</span>
