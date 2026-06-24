@@ -2,7 +2,6 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { PhatSinh, TaiKhoan } from "../../types";
 
-// ĐỊNH NGHĨA KIỂU DỮ LIỆU ĐỂ BẢO VỆ FORM THU CHI
 interface TabPhatSinhProps {
   psNgay: string; setPsNgay: (val: string) => void;
   psTenKhach: string; setPsTenKhach: (val: string) => void;
@@ -47,7 +46,6 @@ export default function TabPhatSinh({
 
   const isThueDo = (loai: string) => (loai || "").toLowerCase().includes("thuê");
 
-  // Gom nhóm dữ liệu theo ngày với Type rõ ràng
   const phatSinhTheoNgay = danhSachPhatSinh.reduce((acc: Record<string, PhatSinh[]>, item) => {
     if (!acc[item.ngay]) acc[item.ngay] = [];
     acc[item.ngay].push(item);
@@ -193,7 +191,14 @@ export default function TabPhatSinh({
                   <div>
                     <div className="font-black text-gray-900 text-lg">{item.tenKhach || "Khách lẻ"}</div>
                     <div className="text-xs font-bold text-orange-700 bg-orange-100/50 px-2 py-1 rounded-md w-fit mt-1">{item.loai}</div>
-                    {item.soDienThoai && <a href={`tel:${item.soDienThoai}`} className="text-sm text-blue-600 font-bold inline-block mt-2">📞 {item.soDienThoai}</a>}
+                    
+                    {/* Thêm Cả nút bấm ở đây cho phần Đồ thuê */}
+                    {item.soDienThoai && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <a href={`tel:${item.soDienThoai}`} className="text-sm text-blue-600 font-bold hover:underline">{item.soDienThoai}</a>
+                        <a href={`tel:${item.soDienThoai}`} className="w-6 h-6 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm" title="Gọi ngay">📞</a>
+                      </div>
+                    )}
                   </div>
                   {item.daTraDo ? (
                     <span className="bg-green-100 text-green-700 text-[10px] font-black px-3 py-1.5 rounded-lg">ĐÃ TRẢ ĐỒ</span>
@@ -261,8 +266,15 @@ export default function TabPhatSinh({
                   </div>
                 </div>
 
+                {/* KHU VỰC SĐT CỦA THU CHI ĐÃ CÓ NÚT GỌI NHANH */}
                 <div className="grid gap-2 text-sm ml-2">
-                  {item.soDienThoai && <div className="text-gray-500 font-medium flex items-center gap-2">SĐT: <span className="font-bold text-gray-800">{item.soDienThoai}</span></div>}
+                  {item.soDienThoai && (
+                    <div className="text-gray-500 font-medium flex items-center gap-2">
+                      SĐT: 
+                      <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a>
+                      <a href={`tel:${item.soDienThoai}`} className="w-7 h-7 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm ml-1" title="Gọi ngay">📞</a>
+                    </div>
+                  )}
                   {item.ghiChu && <div className="text-gray-600 italic bg-slate-50 p-3 rounded-xl text-xs border border-gray-100 mt-1">" {item.ghiChu} "</div>}
                 </div>
 

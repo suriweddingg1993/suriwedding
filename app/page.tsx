@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 import {
@@ -14,24 +14,30 @@ import {
 import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 
-// 1. IMPORT HOOK VÀ TYPES CHÚNG TA VỪA TẠO
+// 1. IMPORT HOOK VÀ TYPES CHUẨN
 import { useAppData } from "../hooks/useAppData";
-import { Role, TabType, Lich, TaiKhoan, PhatSinh, ChamCong, ThuHuong } from "../types";
+import { Role, TabType, Lich, TaiKhoan } from "../types";
+
+// 2. IMPORT BỘ ICON CAO CẤP (Premium UI)
+import { 
+  Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, 
+  BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, CheckCircle2 
+} from "lucide-react";
 
 // Lazy Load các Tab
-const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabThongKe = dynamic(() => import("./components/TabThongKe"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-gray-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabThongKe = dynamic(() => import("./components/TabThongKe"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
-const APP_VERSION = "v1.0.4";
+const APP_VERSION = "v1.0.5"; // Phiên bản Premium UI
 
 // CÁC HÀM TIỆN ÍCH
 function homNay() { return new Date().toISOString().slice(0, 10); }
@@ -48,7 +54,7 @@ function tinhKhoangCachMet(lat1: number, lng1: number, lat2: number, lng2: numbe
   return Math.round(R * c);
 }
 
-export default function Home() {
+export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [dangTai, setDangTai] = useState(true);
   const [email, setEmail] = useState("");
@@ -60,10 +66,10 @@ export default function Home() {
 
   const laAdmin = role === "admin";
 
-  // 2. SỬ DỤNG TRẠM BƠM DỮ LIỆU ĐÃ TẠO (Thay thế cho 6 cái useEffect cũ)
+  // Sử dụng Hook Kéo Dữ Liệu
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan } = useAppData(user, laAdmin);
 
-  // States quản lý Form
+  // States quản lý Form Lịch
   const [ngay, setNgay] = useState("");
   const [gio, setGio] = useState("");
   const [tenKhach, setTenKhach] = useState("");
@@ -78,6 +84,7 @@ export default function Home() {
   const [thangThongKe, setThangThongKe] = useState("");
   const [dangSua, setDangSua] = useState<string | null>(null);
 
+  // States Nhân viên
   const [uidNhanVien, setUidNhanVien] = useState("");
   const [emailNhanVien, setEmailNhanVien] = useState("");
   const [hoTenNhanVien, setHoTenNhanVien] = useState("");
@@ -87,6 +94,7 @@ export default function Home() {
   const [luongCungNhanVien, setLuongCungNhanVien] = useState("3.000.000");
   const [thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien] = useState("300.000");
 
+  // States Thu Chi
   const [psNgay, setPsNgay] = useState(homNay());
   const [psTenKhach, setPsTenKhach] = useState("");
   const [psSoDienThoai, setPsSoDienThoai] = useState("");
@@ -95,19 +103,16 @@ export default function Home() {
   const [psSoTien, setPsSoTien] = useState("");
   const [psGhiChu, setPsGhiChu] = useState("");
 
+  // States GPS
   const [dangLayViTri, setDangLayViTri] = useState(false);
   const [khoangCach, setKhoangCach] = useState<number | null>(null);
 
-  // Lắng nghe cập nhật phiên bản App
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "system", "appVersion"), (snap) => {
       if (snap.exists()) {
         const liveVersion = snap.data().version;
-        if (liveVersion && liveVersion !== APP_VERSION) {
-          setCoBanCapNhat(true);
-        } else {
-          setCoBanCapNhat(false);
-        }
+        if (liveVersion && liveVersion !== APP_VERSION) setCoBanCapNhat(true);
+        else setCoBanCapNhat(false);
       } else if (laAdmin) {
         setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION }).catch(e => console.log(e));
       }
@@ -119,12 +124,9 @@ export default function Home() {
     try {
       await setDoc(doc(db, "system", "appVersion"), { version: APP_VERSION });
       toast.success("Đã phát lệnh ép toàn bộ nhân viên cập nhật app!");
-    } catch (error) {
-      toast.error("Lỗi khi phát hành cập nhật");
-    }
+    } catch (error) { toast.error("Lỗi khi phát hành cập nhật"); }
   };
 
-  // Logic xác thực người dùng
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
       try {
@@ -132,11 +134,7 @@ export default function Home() {
         if (currentUser) {
           const userRef = doc(db, "users", currentUser.uid);
           if (currentUser.email === ADMIN_CHINH_EMAIL) {
-            try {
-              await setDoc(userRef, { email: currentUser.email, role: "admin" }, { merge: true });
-            } catch (e) {
-              console.warn("Chưa tạo được role trên Firebase, đang duyệt thẳng vào Admin...");
-            }
+            try { await setDoc(userRef, { email: currentUser.email, role: "admin" }, { merge: true }); } catch (e) { }
             const adminSnap = await getDoc(userRef);
             const adminData = adminSnap.exists() ? adminSnap.data() : {};
             setHoSoCuaToi({ id: currentUser.uid, email: currentUser.email || "", hoTen: adminData.hoTen || "", soDienThoai: adminData.soDienThoai || "", luongCung: adminData.luongCung || 0, thuongChuyenCan: adminData.thuongChuyenCan || 0, role: "admin" });
@@ -152,9 +150,7 @@ export default function Home() {
         } else { setHoSoCuaToi(null); setRole("staff"); }
       } catch (error) {
         toast.error("Có lỗi đường truyền mạng. Vẫn đang tải giao diện!");
-      } finally {
-        setDangTai(false);
-      }
+      } finally { setDangTai(false); }
     });
     return () => unsub();
   }, []);
@@ -163,20 +159,14 @@ export default function Home() {
     if (!user) return;
     const record = danhSachChamCong.find(cc => cc.uid === user.uid && cc.ngay === ngayGiaiTrinh);
     try {
-      if (record && record.id) {
-        await updateDoc(doc(db, "chamCong", record.id), { loaiGiaiTrinh: loai, lyDoGiaiTrinh: lyDo, trangThaiGiaiTrinh: "Chờ duyệt" });
-      } else {
-        await addDoc(collection(db, "chamCong"), { uid: user.uid, email: user.email, ngay: ngayGiaiTrinh, loaiGiaiTrinh: loai, lyDoGiaiTrinh: lyDo, trangThaiGiaiTrinh: "Chờ duyệt" });
-      }
+      if (record && record.id) { await updateDoc(doc(db, "chamCong", record.id), { loaiGiaiTrinh: loai, lyDoGiaiTrinh: lyDo, trangThaiGiaiTrinh: "Chờ duyệt" }); } 
+      else { await addDoc(collection(db, "chamCong"), { uid: user.uid, email: user.email, ngay: ngayGiaiTrinh, loaiGiaiTrinh: loai, lyDoGiaiTrinh: lyDo, trangThaiGiaiTrinh: "Chờ duyệt" }); }
       toast.success("Đã gửi đơn giải trình thành công!");
     } catch (e) { toast.error("Có lỗi xảy ra khi gửi đơn."); }
   };
 
   const duyetGiaiTrinh = async (id: string, isApproved: boolean) => {
-    try {
-      await updateDoc(doc(db, "chamCong", id), { trangThaiGiaiTrinh: isApproved ? "Đã duyệt" : "Từ chối" });
-      toast.success(isApproved ? "Đã duyệt đơn!" : "Đã từ chối đơn!");
-    } catch (e) { toast.error("Không thể xử lý thao tác."); }
+    try { await updateDoc(doc(db, "chamCong", id), { trangThaiGiaiTrinh: isApproved ? "Đã duyệt" : "Từ chối" }); toast.success(isApproved ? "Đã duyệt đơn!" : "Đã từ chối đơn!"); } catch (e) { toast.error("Không thể xử lý thao tác."); }
   };
 
   const themThuHuong = async (uid: string, email: string, hoTen: string, ngayThuHuong: string, moTa: string, soTienStr: string) => {
@@ -189,8 +179,7 @@ export default function Home() {
 
   const xoaThuHuong = async (id: string) => {
     if (!confirm("Xóa khoản tiền này khỏi bảng lương?")) return;
-    await deleteDoc(doc(db, "thuHuong", id));
-    toast.success("Đã xóa khoản thụ hưởng");
+    await deleteDoc(doc(db, "thuHuong", id)); toast.success("Đã xóa khoản thụ hưởng");
   };
 
   const dangNhap = async () => {
@@ -323,95 +312,142 @@ export default function Home() {
   
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi khi xác nhận"); } };
 
-  if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">Đang tải dữ liệu...</div>;
+  if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
+  
+  // GIAO DIỆN ĐĂNG NHẬP PREMIUM
   if (!user) { 
     return ( 
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-        <div className="bg-white rounded-lg shadow p-6 w-full max-w-sm">
-          <h1 className="text-2xl font-bold mb-4 text-center">Đăng nhập</h1>
-          <div className="grid gap-3">
-            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 rounded" />
-            <input type="password" placeholder="Mật khẩu" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="border p-2 rounded" />
-            <button onClick={dangNhap} className="bg-blue-600 text-white p-2 rounded font-bold">Đăng nhập</button>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-100/50 p-8 w-full max-w-sm border border-white">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Users size={32} strokeWidth={2} />
+          </div>
+          <h1 className="text-2xl font-black mb-2 text-center text-slate-800 tracking-tight">Suri Wedding</h1>
+          <p className="text-slate-500 text-sm font-medium text-center mb-8">Đăng nhập hệ thống quản lý</p>
+          <div className="grid gap-4">
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5 block">Email</label>
+              <input type="email" placeholder="Nhập email..." value={email} onChange={(e) => setEmail(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-xl w-full text-slate-900 font-bold focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 outline-none transition-all" />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5 block">Mật khẩu</label>
+              <input type="password" placeholder="Nhập mật khẩu..." value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-xl w-full text-slate-900 font-bold focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 outline-none transition-all" />
+            </div>
+            <button onClick={dangNhap} className="bg-blue-600 text-white p-4 rounded-xl font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all mt-2">ĐĂNG NHẬP</button>
           </div>
         </div>
       </div> 
     ); 
   }
 
+  // MENU PREMIUM THAY THẾ EMOJI
   const nutMenu = [
-    { key: "home", label: "🏠 Trang chủ", adminOnly: false }, { key: "lich", label: "📅 Lịch làm việc", adminOnly: false }, { key: "phatSinh", label: "💰 Phát sinh", adminOnly: false },
-    { key: "tinhTrangKH", label: "📋 Tình trạng KH", adminOnly: false }, { key: "chamCong", label: "⏰ Chấm công", adminOnly: false }, { key: "luong", label: "💰 Bảng Lương", adminOnly: false },
-    { key: "nhanVien", label: "👥 Nhân sự", adminOnly: true }, { key: "thongKe", label: "📊 Thống kê", adminOnly: true },
+    { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
+    { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
+    { key: "phatSinh", icon: Wallet, label: "Thu / Chi", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
+    { key: "tinhTrangKH", icon: ClipboardList, label: "Trạng thái đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
+    { key: "chamCong", icon: Clock, label: "Chấm công", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
+    { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
+    { key: "nhanVien", icon: Users, label: "Nhân sự", color: "text-pink-600", bg: "bg-pink-50", adminOnly: true },
+    { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
   ] as const;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-28">
       {coBanCapNhat && (
-        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm z-50 relative">
-          <div className="flex items-center gap-3">
-            <div className="text-3xl drop-shadow-sm">🔄</div> 
+        <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm z-50 relative">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-200 text-amber-700 rounded-full flex items-center justify-center animate-pulse"><RefreshCw size={24} /></div> 
             <div>
-              <div className="font-bold text-yellow-800 text-lg">App có bản cập nhật mới!</div>
-              <div className="text-sm text-yellow-700 font-medium">Vui lòng cập nhật ngay để app hoạt động chuẩn xác nhất.</div>
+              <div className="font-black text-amber-800 text-lg">App có bản cập nhật mới!</div>
+              <div className="text-sm text-amber-700 font-medium mt-0.5">Vui lòng cập nhật ngay để app hoạt động chuẩn xác nhất.</div>
             </div>
           </div>
           <div className="flex gap-2">
             {laAdmin && (
-               <button onClick={xacNhanPhatHanh} className="flex-1 md:flex-none bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-green-700 active:scale-95 transition-all">
+               <button onClick={xacNhanPhatHanh} className="flex-1 md:flex-none bg-emerald-600 text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md shadow-emerald-200 hover:bg-emerald-700 active:scale-95 transition-all">
                  Phát hành bản này
                </button>
             )}
-            <button onClick={() => window.location.reload()} className="flex-1 md:flex-none bg-yellow-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-yellow-600 active:scale-95 transition-all">
+            <button onClick={() => window.location.reload()} className="flex-1 md:flex-none bg-amber-500 text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md shadow-amber-200 hover:bg-amber-600 active:scale-95 transition-all">
               Cập nhật ngay
             </button>
           </div>
         </div>
       )}
 
-      <div className="flex justify-between items-start md:items-center gap-4 mb-6">
+      {/* HEADER TỐI GIẢN CAO CẤP */}
+      <div className="flex justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Suri Wedding</h1>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Suri Wedding</h1>
             <button 
               onClick={() => window.location.reload()} 
-              className="w-8 h-8 bg-blue-50 text-blue-600 flex items-center justify-center rounded-full shadow-sm hover:bg-blue-100 active:scale-75 transition-all text-sm"
+              className="w-9 h-9 bg-white border border-slate-200 text-slate-600 flex items-center justify-center rounded-full shadow-sm hover:bg-slate-50 active:scale-75 transition-all"
               title="Làm mới dữ liệu"
             >
-              🔄
+              <RefreshCw size={16} strokeWidth={2.5} />
             </button>
           </div>
-          <div className="text-sm text-gray-500 font-medium mt-1">
-            {user.email} • Quyền: <span className={laAdmin ? "text-blue-600 font-bold" : "text-gray-700 font-bold"}>{laAdmin ? "Admin" : "Nhân viên"}</span>
+          <div className="text-sm text-slate-500 font-medium mt-1">
+            {user.email} • Quyền: <span className={laAdmin ? "text-blue-600 font-bold" : "text-slate-700 font-bold"}>{laAdmin ? "Admin" : "Nhân viên"}</span>
           </div>
         </div>
-        <button onClick={dangXuat} className="bg-white border border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-100 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-sm">
-          Đăng xuất
+        <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-sm flex items-center gap-2">
+          <LogOut size={16} strokeWidth={2.5} />
+          <span className="hidden sm:inline">Đăng xuất</span>
         </button>
       </div>
 
       {tab === "home" && (
-        <div>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
-            <h2 className="font-bold text-lg mb-4 text-gray-800">⚠️ Việc cần chú ý hôm nay</h2>
+        <div className="animate-fade-in">
+          
+          {/* KHỐI NHẮC NHỞ HÔM NAY - PREMIUM UI */}
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 mb-8">
+            <h2 className="font-black text-lg mb-4 text-slate-800 flex items-center gap-2">
+              <AlertCircle size={20} className="text-rose-500" /> Cần xử lý hôm nay
+            </h2>
             <div className="space-y-3 text-sm">
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-3 bg-red-50 rounded-xl hover:bg-red-100 active:scale-[0.98] transition-all"><span className="text-red-700 font-medium">🔴 Khách quá hạn trả đồ</span><b className="text-red-700 text-lg">{quaHan.length}</b></button>
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-3 bg-yellow-50 rounded-xl hover:bg-yellow-100 active:scale-[0.98] transition-all"><span className="text-yellow-700 font-medium">🟡 Khách trả hôm nay</span><b className="text-yellow-700 text-lg">{canTraHomNay.length}</b></button>
-              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-3 bg-blue-50 rounded-xl hover:bg-blue-100 active:scale-[0.98] transition-all"><span className="text-blue-700 font-medium">📅 Lịch hôm nay</span><b className="text-blue-700 text-lg">{lichLamViec.filter((item) => item.ngay === homNay()).length}</b></button>
-              <button onClick={() => { setTab("chamCong"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-3 bg-green-50 rounded-xl hover:bg-green-100 active:scale-[0.98] transition-all"><span className="text-green-700 font-medium">⏰ Chấm công hôm nay</span><b className="text-green-700">{chamCongHomNay?.checkIn ? "Đã Check-in" : "Chưa Check-in"}</b></button>
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-4 bg-rose-50 rounded-2xl hover:bg-rose-100 active:scale-[0.98] transition-all group">
+                <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse"></div><span className="text-rose-700 font-semibold">Khách quá hạn trả đồ</span></div>
+                <b className="text-rose-700 text-lg bg-white/50 px-3 py-1 rounded-lg group-hover:bg-white/80 transition-colors">{quaHan.length}</b>
+              </button>
+              
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-4 bg-amber-50 rounded-2xl hover:bg-amber-100 active:scale-[0.98] transition-all group">
+                <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></div><span className="text-amber-700 font-semibold">Khách trả đồ hôm nay</span></div>
+                <b className="text-amber-700 text-lg bg-white/50 px-3 py-1 rounded-lg group-hover:bg-white/80 transition-colors">{canTraHomNay.length}</b>
+              </button>
+
+              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-4 bg-indigo-50 rounded-2xl hover:bg-indigo-100 active:scale-[0.98] transition-all group">
+                <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div><span className="text-indigo-700 font-semibold">Lịch chụp hôm nay</span></div>
+                <b className="text-indigo-700 text-lg bg-white/50 px-3 py-1 rounded-lg group-hover:bg-white/80 transition-colors">{lichLamViec.filter((item) => item.ngay === homNay()).length}</b>
+              </button>
+
+              <button onClick={() => { setTab("chamCong"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-4 bg-emerald-50 rounded-2xl hover:bg-emerald-100 active:scale-[0.98] transition-all">
+                <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div><span className="text-emerald-700 font-semibold">Chấm công hôm nay</span></div>
+                <b className="text-emerald-700 bg-white/50 px-3 py-1 rounded-lg flex items-center gap-1.5">{chamCongHomNay?.checkIn ? <><CheckCircle2 size={16}/> Đã Check-in</> : "Chưa Check-in"}</b>
+              </button>
             </div>
           </div>
-          <h2 className="font-bold text-lg mb-3 text-gray-800 ml-1">Cửa sổ tính năng</h2>
+
+          <h2 className="font-black text-lg mb-4 text-slate-800 ml-1">Cửa sổ chức năng</h2>
           <div className="grid grid-cols-2 gap-4">
             {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
-                const [icon, ...textParts] = item.label.split(" "); const text = textParts.join(" ");
-                return ( <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col items-center justify-center gap-3 transition hover:shadow-md active:scale-95"><div className="text-4xl mb-1 drop-shadow-sm">{icon}</div><div className="font-semibold text-center text-sm text-gray-700">{text}</div></button> );
+                const IconComponent = item.icon;
+                return ( 
+                  <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col items-center justify-center gap-4 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group">
+                    <div className={`p-4 rounded-2xl ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-300`}>
+                      <IconComponent size={28} strokeWidth={2} />
+                    </div>
+                    <div className="font-bold text-center text-sm text-slate-700">{item.label}</div>
+                  </button> 
+                );
             })}
           </div>
         </div>
       )}
 
-      <div id="noi-dung-tab" className="mt-4">
+      <div id="noi-dung-tab" className="mt-2">
         {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} />}
         {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} />}
         {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
@@ -421,19 +457,43 @@ export default function Home() {
         {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-200 flex justify-around items-center pt-3 pb-6 md:pb-3 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-40">
+      {/* THANH ĐIỀU HƯỚNG DƯỚI ĐÁY CAO CẤP */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-2xl border-t border-slate-200/50 flex justify-around items-end pt-2 pb-6 md:pb-4 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] z-40">
         {[
-          { key: "home", icon: "🏠", label: "Trang chủ" },
-          { key: "lich", icon: "📅", label: "Lịch chụp" },
-          { key: "phatSinh", icon: "💰", label: "Thu Chi" },
-          { key: "chamCong", icon: "⏰", label: "Chấm công" },
-        ].map((nav) => (
-          <button key={nav.key} onClick={() => { setTab(nav.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group">
-            {tab === nav.key && <div className="absolute top-0 w-8 h-1 bg-blue-600 rounded-b-full"></div>}
-            <span className={`text-2xl mb-1 transition-transform ${tab === nav.key ? "scale-110 drop-shadow-md" : "group-hover:scale-110"}`}>{nav.icon}</span>
-            <span className={`text-[10px] font-bold ${tab === nav.key ? "text-blue-600" : "text-gray-500"}`}>{nav.label}</span>
-          </button>
-        ))}
+          { key: "home", icon: Home, label: "Trang chủ" },
+          { key: "lich", icon: CalendarDays, label: "Lịch chụp" },
+          { key: "phatSinh", icon: Wallet, label: "Thu / Chi" },
+          { key: "chamCong", icon: Clock, label: "Chấm công" },
+        ].map((nav) => {
+          const IconComponent = nav.icon;
+          const isActive = tab === nav.key;
+          
+          return (
+            <button 
+              key={nav.key} 
+              onClick={() => { setTab(nav.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} 
+              className="flex flex-col items-center p-2 w-1/4 relative group transition-all duration-300"
+            >
+              {isActive && (
+                <span className="absolute -top-3 w-1.5 h-1.5 bg-blue-600 rounded-full animate-fade-in shadow-sm shadow-blue-300"></span>
+              )}
+              
+              <div className={`transition-all duration-300 ${isActive ? "-translate-y-1" : "group-hover:-translate-y-0.5"}`}>
+                 <IconComponent 
+                   size={24} 
+                   strokeWidth={isActive ? 2.5 : 2} 
+                   className={isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"} 
+                 />
+              </div>
+              
+              <span className={`text-[10px] mt-1.5 transition-all duration-300 ${
+                isActive ? "font-bold text-blue-600" : "font-semibold text-slate-400 group-hover:text-slate-600"
+              }`}>
+                {nav.label}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </div>
   );

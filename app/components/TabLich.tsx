@@ -2,7 +2,6 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { Lich, TaiKhoan } from "../../types";
 
-// ĐỊNH NGHĨA PROPS CHO TAB LỊCH ĐỂ XÓA BỎ 'any'
 interface TabLichProps {
   dangSua: string | null;
   ngay: string; setNgay: (val: string) => void;
@@ -46,7 +45,6 @@ export default function TabLich({
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
   const [showModal, setShowModal] = useState(false);
   
-  // States cho phần Thụ Hưởng
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
   const [lichDangChon, setLichDangChon] = useState<Lich | null>(null);
   const [tienHoaHong, setTienHoaHong] = useState("");
@@ -241,9 +239,22 @@ export default function TabLich({
                   </div>
                 </div>
 
+                {/* KHU VỰC SĐT ĐÃ ĐƯỢC THÊM NÚT GỌI ĐIỆN NHANH */}
                 <div className="grid gap-2 text-sm ml-2">
-                  <div className="text-gray-500 font-medium flex items-center gap-2">SĐT 1: <span className="font-bold text-gray-800">{item.soDienThoai}</span></div>
-                  {item.soDienThoai2 && <div className="text-gray-500 font-medium flex items-center gap-2">SĐT 2: <span className="font-bold text-gray-800">{item.soDienThoai2}</span></div>}
+                  {item.soDienThoai && (
+                    <div className="text-gray-500 font-medium flex items-center gap-2">
+                      SĐT 1: 
+                      <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a>
+                      <a href={`tel:${item.soDienThoai}`} className="w-7 h-7 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm ml-1" title="Gọi ngay">📞</a>
+                    </div>
+                  )}
+                  {item.soDienThoai2 && (
+                    <div className="text-gray-500 font-medium flex items-center gap-2">
+                      SĐT 2: 
+                      <a href={`tel:${item.soDienThoai2}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai2}</a>
+                      <a href={`tel:${item.soDienThoai2}`} className="w-7 h-7 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm ml-1" title="Gọi ngay">📞</a>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
