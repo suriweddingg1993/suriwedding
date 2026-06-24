@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { Lich, TaiKhoan } from "../../types";
 
 interface TabLichProps {
+  homNay: () => string;
   dangSua: string | null;
   ngay: string; setNgay: (val: string) => void;
   gio: string; setGio: (val: string) => void;
@@ -27,7 +28,7 @@ interface TabLichProps {
 }
 
 export default function TabLich({
-  dangSua, ngay, setNgay, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
+  homNay, dangSua, ngay, setNgay, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
   theLoai, setTheLoai, theLoaiKhac, setTheLoaiKhac, goiChup, setGoiChup, giaTien, setGiaTien, formatTienInput,
   themHoacSuaLich, resetForm, lichTheoNgay, suaLich, capNhatTrangThai,
   hoSoCuaToi, themThuHuong, laAdmin, xoaLich, lichLamViec
@@ -51,6 +52,9 @@ export default function TabLich({
   const [vaiTro, setVaiTro] = useState("Chụp ảnh");
   
   const [tuKhoa, setTuKhoa] = useState(""); 
+  
+  // STATE CHO HÓA ĐƠN ĐIỆN TỬ
+  const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -119,6 +123,15 @@ export default function TabLich({
   return (
     <div className="pb-24 px-2 pt-2">
       
+      {/* THÊM STYLE ẨN MỌI THỨ KHI IN (Chỉ in Hóa đơn) */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #invoice-content, #invoice-content * { visibility: visible; }
+          #invoice-content { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+      `}</style>
+
       <div className="mb-4">
         <input 
           type="text" 
@@ -198,18 +211,18 @@ export default function TabLich({
           [...dsLichNgayNay].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: Lich) => {
             
             const trangThaiColors: Record<string, string> = {
-              "Chưa liên hệ": "bg-gray-100 text-gray-600",
-              "Đã gọi - Chờ": "bg-yellow-100 text-yellow-700",
+              "Chưa liên hệ": "bg-slate-100 text-slate-600",
+              "Đã gọi - Chờ": "bg-amber-100 text-amber-700",
               "Đã chốt lịch": "bg-blue-100 text-blue-700",
-              "Đã chụp xong": "bg-green-100 text-green-700",
-              "Hủy lịch": "bg-red-100 text-red-600",
+              "Đã chụp xong": "bg-emerald-100 text-emerald-700",
+              "Hủy lịch": "bg-rose-100 text-rose-600",
             };
 
             return (
-              <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md group relative overflow-hidden">
+              <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-md group relative overflow-hidden">
                 <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-blue-500"></div>
                 
-                <div className="flex justify-between items-start pb-4 border-b border-gray-100 mb-4 ml-2">
+                <div className="flex justify-between items-start pb-4 border-b border-slate-100 mb-4 ml-2">
                   <div className="pr-2">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="bg-blue-50 text-blue-600 text-xs font-black px-2.5 py-1 rounded-lg">⏰ {item.gio}</span>
@@ -217,51 +230,51 @@ export default function TabLich({
                         {item.trangThai || "Chưa liên hệ"}
                       </span>
                     </div>
-                    <div className="text-lg font-black text-gray-900">{item.tenKhach}</div>
-                    <div className="text-sm font-bold text-gray-500 mt-1">{item.theLoai} - {item.goiChup}</div>
+                    <div className="text-lg font-black text-slate-900">{item.tenKhach}</div>
+                    <div className="text-sm font-bold text-slate-500 mt-1">{item.theLoai} - {item.goiChup}</div>
                     {tuKhoa.trim() && <div className="text-xs font-bold text-blue-600 mt-1">📅 Ngày tạo lịch: {item.ngay.split("-").reverse().join("/")}</div>}
                   </div>
                   
                   <div className="flex flex-col items-end gap-3 shrink-0">
                     <div className="flex gap-2">
                       {laAdmin && item.id && (
-                        <button onClick={() => xoaLich(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-600 rounded-full font-bold transition-all shadow-sm">
+                        <button onClick={() => xoaLich(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-full font-bold transition-all shadow-sm">
                           🗑
                         </button>
                       )}
-                      <button onClick={() => { suaLich(item); setShowModal(true); }} className="w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 rounded-full font-bold transition-all shadow-sm">
+                      <button onClick={() => { suaLich(item); setShowModal(true); }} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-full font-bold transition-all shadow-sm">
                         ✏️
                       </button>
                     </div>
-                    <div className="text-xl font-black text-green-600 whitespace-nowrap">
+                    <div className="text-xl font-black text-emerald-600 whitespace-nowrap">
                       {formatTienInput(String(item.giaTien || 0))}
                     </div>
                   </div>
                 </div>
 
-                {/* KHU VỰC SĐT ĐÃ ĐƯỢC THÊM NÚT GỌI ĐIỆN NHANH */}
                 <div className="grid gap-2 text-sm ml-2">
                   {item.soDienThoai && (
-                    <div className="text-gray-500 font-medium flex items-center gap-2">
+                    <div className="text-slate-500 font-medium flex items-center gap-2">
                       SĐT 1: 
                       <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a>
-                      <a href={`tel:${item.soDienThoai}`} className="w-7 h-7 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm ml-1" title="Gọi ngay">📞</a>
+                      <a href={`tel:${item.soDienThoai}`} className="w-7 h-7 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-100 shadow-sm ml-1" title="Gọi ngay">📞</a>
                     </div>
                   )}
                   {item.soDienThoai2 && (
-                    <div className="text-gray-500 font-medium flex items-center gap-2">
+                    <div className="text-slate-500 font-medium flex items-center gap-2">
                       SĐT 2: 
                       <a href={`tel:${item.soDienThoai2}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai2}</a>
-                      <a href={`tel:${item.soDienThoai2}`} className="w-7 h-7 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm ml-1" title="Gọi ngay">📞</a>
+                      <a href={`tel:${item.soDienThoai2}`} className="w-7 h-7 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-100 shadow-sm ml-1" title="Gọi ngay">📞</a>
                     </div>
                   )}
                 </div>
 
+                {/* HÀNG NÚT CÔNG CỤ */}
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
                   <select
                     value={item.trangThai || "Chưa liên hệ"}
                     onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)}
-                    className="flex-1 bg-slate-50 border border-gray-200 text-gray-700 text-xs font-bold px-2 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-200 outline-none min-w-[110px]"
+                    className="flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-200 outline-none min-w-[110px]"
                   >
                     <option value="Chưa liên hệ">Chưa liên hệ</option>
                     <option value="Đã gọi - Chờ">Đã gọi - Chờ</option>
@@ -270,8 +283,12 @@ export default function TabLich({
                     <option value="Hủy lịch">Hủy lịch</option>
                   </select>
 
-                  <button onClick={() => copyNhacLich(item)} className="flex-1 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold px-2 py-2.5 rounded-xl transition-all shadow-sm min-w-[100px]">
-                    💬 Nhắc lịch
+                  <button onClick={() => setHoaDonData(item)} className="bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">
+                    🧾 Xuất HĐ
+                  </button>
+
+                  <button onClick={() => copyNhacLich(item)} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">
+                    💬 Nhắc khách
                   </button>
 
                   <button onClick={() => { 
@@ -298,46 +315,46 @@ export default function TabLich({
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in border border-white">
-            <h2 className="text-2xl font-black mb-6 text-gray-900">{dangSua ? "✏️ Cập nhật Lịch" : "✨ Thêm Lịch Mới"}</h2>
+            <h2 className="text-2xl font-black mb-6 text-slate-900">{dangSua ? "✏️ Cập nhật Lịch" : "✨ Thêm Lịch Mới"}</h2>
             
             <div className="grid gap-4">
               <div className="flex gap-3">
-                <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Ngày chụp</label><input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
-                <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Giờ chụp</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+                <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Ngày chụp</label><input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+                <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Giờ chụp</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
               </div>
 
-              <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label><input type="text" placeholder="Nhập tên..." value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+              <div><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label><input type="text" placeholder="Nhập tên..." value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
               
               <div className="flex gap-3">
-                <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 1</label><input type="text" placeholder="0987..." value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
-                <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 2</label><input type="text" placeholder="Dự phòng..." value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+                <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 1</label><input type="text" placeholder="0987..." value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+                <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 2</label><input type="text" placeholder="Dự phòng..." value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
               </div>
 
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Thể loại</label>
-                  <select value={theLoai} onChange={(e) => setTheLoai(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none">
+                  <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Thể loại</label>
+                  <select value={theLoai} onChange={(e) => setTheLoai(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none">
                     <option value="">- Chọn -</option><option value="Chụp Cưới">💍 Chụp Cưới</option><option value="Chụp Sự kiện">🎉 Sự kiện</option><option value="Chụp Chân dung">👤 Chân dung</option><option value="Chụp Gia đình">👨‍👩‍👧‍👦 Gia đình</option><option value="Chụp Kỷ yếu">🎓 Kỷ yếu</option><option value="Khác">✨ Khác</option>
                   </select>
                 </div>
                 {theLoai === "Khác" && (
-                   <div className="flex-1"><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Nhập loại khác</label><input type="text" placeholder="Nhập..." value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+                   <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Nhập loại khác</label><input type="text" placeholder="Nhập..." value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
                 )}
               </div>
 
-              <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Gói chụp (Chi tiết)</label><input type="text" placeholder="VD: Gói cao cấp 5tr..." value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
+              <div><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Gói chụp (Chi tiết)</label><input type="text" placeholder="VD: Gói cao cấp 5tr..." value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" /></div>
 
               <div>
-                <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Giá tiền (VNĐ)</label>
+                <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Giá tiền (VNĐ)</label>
                 <div className="relative">
-                  <input type="text" inputMode="numeric" placeholder="VD: 5.000.000" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full pr-12 text-green-600 font-black text-xl focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" />
-                  <span className="absolute right-5 top-5 text-gray-400 font-bold">đ</span>
+                  <input type="text" inputMode="numeric" placeholder="VD: 5.000.000" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full pr-12 text-emerald-600 font-black text-xl focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none" />
+                  <span className="absolute right-5 top-5 text-slate-400 font-bold">đ</span>
                 </div>
               </div>
 
               <div className="flex gap-3 mt-4">
                 <button onClick={handleLuuLich} className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">💾 Lưu Lịch</button>
-                <button onClick={() => setShowModal(false)} className="px-6 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 active:scale-95 transition-all">Hủy</button>
+                <button onClick={() => setShowModal(false)} className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 active:scale-95 transition-all">Hủy</button>
               </div>
             </div>
           </div>
@@ -349,18 +366,18 @@ export default function TabLich({
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-fade-in border border-white">
             <h3 className="text-2xl font-black mb-2 text-blue-600 text-center tracking-tight">Hoàn Thành!</h3>
-            <p className="text-xs text-gray-500 mb-6 text-center font-medium">Báo cáo công đoạn bạn đã làm để nhận lương.</p>
+            <p className="text-xs text-slate-500 mb-6 text-center font-medium">Báo cáo công đoạn bạn đã làm để nhận lương.</p>
             
             <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 mb-5">
               <div className="text-[10px] text-blue-500 font-black mb-1.5 uppercase tracking-wide">{lichDangChon.theLoai}</div>
-              <div className="font-black text-gray-900 text-base">{lichDangChon.tenKhach}</div>
-              <div className="text-sm text-green-600 font-black mt-1.5">Tổng HĐ: {formatTienInput(String(lichDangChon.giaTien || 0))} đ</div>
+              <div className="font-black text-slate-900 text-base">{lichDangChon.tenKhach}</div>
+              <div className="text-sm text-emerald-600 font-black mt-1.5">Tổng HĐ: {formatTienInput(String(lichDangChon.giaTien || 0))} đ</div>
             </div>
             
             <div className="grid gap-4">
               <div>
-                <label className="text-[10px] font-bold text-gray-500 uppercase ml-2 block mb-1.5">Công đoạn của bạn</label>
-                <select value={vaiTro} onChange={(e) => setVaiTro(e.target.value)} className="bg-white border border-blue-200 p-4 rounded-2xl w-full font-black text-gray-700 text-sm focus:ring-4 focus:ring-blue-100 outline-none transition-all">
+                <label className="text-[10px] font-bold text-slate-500 uppercase ml-2 block mb-1.5">Công đoạn của bạn</label>
+                <select value={vaiTro} onChange={(e) => setVaiTro(e.target.value)} className="bg-white border border-blue-200 p-4 rounded-2xl w-full font-black text-slate-700 text-sm focus:ring-4 focus:ring-blue-100 outline-none transition-all">
                   <option value="Make-up">💄 Make-up</option>
                   <option value="Chụp ảnh">📸 Chụp ảnh</option>
                   <option value="Chỉnh sửa (Photoshop)">💻 Chỉnh sửa (Photoshop)</option>
@@ -369,7 +386,7 @@ export default function TabLich({
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-gray-500 uppercase ml-2 block mb-1.5">Tiền công / Hoa hồng</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase ml-2 block mb-1.5">Tiền công / Hoa hồng</label>
                 <div className="relative">
                   <input type="text" inputMode="numeric" placeholder="VD: 300.000" value={tienHoaHong} onChange={(e) => setTienHoaHong(formatTienInput(e.target.value))} className="bg-white border border-blue-200 p-4 rounded-2xl w-full pr-10 font-black text-blue-700 text-xl focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-blue-200" />
                   <span className="absolute right-5 top-5 text-blue-600 font-black">đ</span>
@@ -378,12 +395,68 @@ export default function TabLich({
 
               <div className="flex gap-3 mt-2">
                 <button onClick={xacNhanNhanTien} className="flex-1 bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">💰 Báo Cáo</button>
-                <button onClick={() => setShowHoaHongModal(false)} className="px-6 py-4 bg-gray-100 font-bold text-gray-600 rounded-2xl hover:bg-gray-200 active:scale-95 transition-all">Đóng</button>
+                <button onClick={() => setShowHoaHongModal(false)} className="px-6 py-4 bg-slate-100 font-bold text-slate-600 rounded-2xl hover:bg-slate-200 active:scale-95 transition-all">Đóng</button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* MODAL HÓA ĐƠN ĐIỆN TỬ */}
+      {hoaDonData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:bg-white print:p-0">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative print:shadow-none print:p-2 animate-fade-in border border-white">
+            
+            {/* Nút đóng (Sẽ ẩn khi in) */}
+            <div className="print:hidden flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+              <h3 className="font-black text-lg text-slate-800">Hóa đơn Dịch vụ</h3>
+              <button onClick={() => setHoaDonData(null)} className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 rounded-full font-bold transition-all">
+                ✕
+              </button>
+            </div>
+
+            {/* PHẦN NỘI DUNG SẼ ĐƯỢC IN RA */}
+            <div id="invoice-content" className="text-slate-800 bg-white">
+              <div className="text-center mb-6 pt-2">
+                <h1 className="text-3xl font-black tracking-widest text-slate-900">SURI WEDDING</h1>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Lưu giữ khoảnh khắc hạnh phúc</p>
+                <div className="text-[10px] text-slate-500 mt-2 font-medium">SĐT: 09xx.xxx.xxx - ĐC: Thuận Châu, Sơn La</div>
+              </div>
+
+              <div className="text-center border-y border-dashed border-slate-300 py-3 mb-6 bg-slate-50/50">
+                <h2 className="text-base font-black uppercase">Phiếu Thanh Toán</h2>
+                <div className="flex justify-center gap-4 mt-1 text-[11px] font-semibold text-slate-500">
+                  <p>Mã: #{hoaDonData.id?.slice(-6).toUpperCase() || "HD-001"}</p>
+                  <p>Ngày lập: {homNay().split('-').reverse().join('/')}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-sm mb-6 px-1">
+                <div className="flex justify-between border-b border-slate-100 pb-2"><span className="text-slate-500 font-medium">Khách hàng:</span><span className="font-black text-slate-800">{hoaDonData.tenKhach}</span></div>
+                <div className="flex justify-between border-b border-slate-100 pb-2"><span className="text-slate-500 font-medium">Điện thoại:</span><span className="font-black text-slate-800">{hoaDonData.soDienThoai}</span></div>
+                <div className="flex justify-between pt-1"><span className="text-slate-500 font-medium">Dịch vụ:</span><span className="font-black text-slate-800 text-right">{hoaDonData.theLoai}<br/><span className="text-[11px] font-bold text-blue-600">{hoaDonData.goiChup}</span></span></div>
+              </div>
+
+              <div className="border-t border-slate-800 pt-4 flex justify-between items-end mb-8 px-1">
+                <span className="font-black text-slate-600 text-sm">TỔNG CỘNG:</span>
+                <span className="text-2xl font-black text-slate-900">{formatTienInput(String(hoaDonData.giaTien || 0))}đ</span>
+              </div>
+
+              <div className="text-center text-[11px] text-slate-500 font-medium">
+                Cảm ơn quý khách đã tin tưởng và sử dụng dịch vụ!<br/>Hẹn gặp lại quý khách.
+              </div>
+            </div>
+
+            {/* Các nút hành động (Sẽ ẩn khi in) */}
+            <div className="print:hidden mt-8 flex gap-3">
+              <button onClick={() => window.print()} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-slate-300 hover:bg-slate-800 active:scale-95 transition-all">
+                🖨️ In Hóa Đơn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

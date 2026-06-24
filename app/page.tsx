@@ -35,7 +35,7 @@ const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
-const APP_VERSION = "v1.0.6"; 
+const APP_VERSION = "v1.0.7"; 
 
 function homNay() { return new Date().toISOString().slice(0, 10); }
 function gioHienTai() { return new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
@@ -342,6 +342,9 @@ export default function HomePage() {
     { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
   ] as const;
 
+  // Lấy thứ hiện tại để hiển thị cho đẹp
+  const thuTrongTuan = new Date().getDay() === 0 ? "Chủ nhật" : `Thứ ${new Date().getDay() + 1}`;
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-28 font-sans">
       {coBanCapNhat && (
@@ -366,85 +369,107 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* HEADER TỐI GIẢN CAO CẤP */}
-      <div className="flex justify-between items-start md:items-center gap-4 mb-8">
+      {/* HEADER TỐI GIẢN */}
+      <div className="flex justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">Suri Wedding</h1>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="w-9 h-9 bg-white border border-slate-200 text-slate-600 flex items-center justify-center rounded-full shadow-sm hover:bg-slate-50 active:scale-75 transition-all"
-              title="Làm mới dữ liệu"
-            >
-              <RefreshCw size={16} strokeWidth={2.5} />
-            </button>
-          </div>
-          <div className="text-sm text-slate-500 font-medium mt-1">
-            {user.email} • Quyền: <span className={laAdmin ? "text-blue-600 font-bold" : "text-slate-700 font-bold"}>{laAdmin ? "Admin" : "Nhân viên"}</span>
           </div>
         </div>
-        <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-sm flex items-center gap-2">
-          <LogOut size={16} strokeWidth={2.5} />
-          <span className="hidden sm:inline">Đăng xuất</span>
+        <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm" title="Đăng xuất">
+          <LogOut size={18} strokeWidth={2.5} />
         </button>
       </div>
 
       {tab === "home" && (
         <div className="animate-fade-in space-y-6">
           
-          {/* KHỐI TỔNG QUAN HÔM NAY - Gọn gàng (2x2 Grid) */}
+          {/* 1. HERO BANNER - LỜI CHÀO & CHẤM CÔNG */}
+          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-800 rounded-[2rem] p-6 text-white shadow-xl shadow-blue-200/50 relative overflow-hidden">
+            <div className="absolute -right-6 -top-6 opacity-10 transform rotate-12 pointer-events-none">
+              <CalendarDays size={140} strokeWidth={1} />
+            </div>
+            
+            <div className="relative z-10">
+              <div className="text-blue-100 font-bold text-[11px] uppercase tracking-widest mb-1.5 opacity-90">
+                 {thuTrongTuan}, {homNay().split('-').reverse().join('/')}
+              </div>
+              <h2 className="text-2xl font-black mb-6 tracking-tight">Xin chào, {user.email?.split('@')[0]}! 👋</h2>
+              
+              <button 
+                onClick={() => { setTab("chamCong"); window.scrollTo({ top: 0, behavior: "smooth" }); }} 
+                className={`w-full sm:w-auto px-5 py-3.5 rounded-2xl text-sm font-bold flex items-center justify-center sm:justify-start gap-3 transition-all active:scale-95 ${
+                  chamCongHomNay?.checkIn 
+                    ? 'bg-white/20 text-white border border-white/30 backdrop-blur-md' 
+                    : 'bg-white text-blue-600 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {chamCongHomNay?.checkIn ? (
+                  <><CheckCircle2 size={20} className="text-emerald-400" /> Đã chấm công ({chamCongHomNay.checkIn})</>
+                ) : (
+                  <><Clock size={20} className="animate-pulse" /> Bấm để Chấm công ngay</>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* 2. BENTO BOX - TÌNH TRẠNG KINH DOANH */}
           <div>
-            <h2 className="font-black text-lg mb-3 text-slate-800 flex items-center gap-2 px-1">
-               Tổng quan hôm nay
-            </h2>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng công việc</h2>
+            </div>
+            
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                  <CalendarDays size={24} strokeWidth={2} />
-                </div>
-                <div className="text-left">
-                  <div className="text-2xl font-black text-slate-800 leading-none mb-1">{lichLamViec.filter((item) => item.ngay === homNay()).length}</div>
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Lịch chụp</div>
-                </div>
-              </button>
-
-              <button onClick={() => { setTab("chamCong"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${chamCongHomNay?.checkIn ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"}`}>
-                  {chamCongHomNay?.checkIn ? <CheckCircle2 size={24} strokeWidth={2} /> : <Clock size={24} strokeWidth={2} />}
-                </div>
-                <div className="text-left">
-                  <div className={`text-sm font-black leading-tight mb-0.5 ${chamCongHomNay?.checkIn ? "text-emerald-600" : "text-slate-500"}`}>
-                    {chamCongHomNay?.checkIn ? "Hoàn tất" : "Trống"}
+              {/* Thẻ Lịch chụp */}
+              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="col-span-2 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-between group relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500 rounded-l-3xl"></div>
+                
+                <div className="flex items-center gap-4 ml-2">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <CalendarDays size={28} strokeWidth={1.5} />
                   </div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Chấm công</div>
+                  <div className="text-left">
+                    <div className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">Lịch chụp hôm nay</div>
+                    <div className="text-2xl font-black text-slate-800 leading-none">
+                      {lichLamViec.filter((item) => item.ngay === homNay()).length > 0 
+                        ? <span className="text-indigo-600">{lichLamViec.filter((item) => item.ngay === homNay()).length} <span className="text-lg text-slate-600 font-semibold tracking-tight">khách hàng</span></span> 
+                        : <span className="text-slate-400 text-lg tracking-tight">Lịch trống</span>}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </div>
               </button>
 
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-4 rounded-3xl border shadow-sm transition-all active:scale-95 flex items-center gap-4 ${canTraHomNay.length > 0 ? "bg-amber-50 border-amber-200" : "bg-white border-slate-100"}`}>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
+              {/* Thẻ Khách trả đồ */}
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-5 rounded-3xl border shadow-sm transition-all active:scale-95 flex flex-col gap-4 ${canTraHomNay.length > 0 ? "bg-gradient-to-b from-amber-50 to-orange-50 border-amber-200" : "bg-white border-slate-100"}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
                   <ClipboardList size={24} strokeWidth={2} />
                 </div>
                 <div className="text-left">
-                  <div className={`text-2xl font-black leading-none mb-1 ${canTraHomNay.length > 0 ? "text-amber-700" : "text-slate-800"}`}>{canTraHomNay.length}</div>
-                  <div className={`text-[10px] font-bold uppercase tracking-wide ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-500"}`}>Khách trả đồ</div>
+                  <div className={`text-3xl font-black leading-none mb-1.5 ${canTraHomNay.length > 0 ? "text-amber-700" : "text-slate-800"}`}>{canTraHomNay.length}</div>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-400"}`}>Trả đồ hôm nay</div>
                 </div>
               </button>
 
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-4 rounded-3xl border shadow-sm transition-all active:scale-95 flex items-center gap-4 ${quaHan.length > 0 ? "bg-rose-50 border-rose-200" : "bg-white border-slate-100"}`}>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${quaHan.length > 0 ? "bg-rose-100 text-rose-600 animate-pulse" : "bg-slate-50 text-slate-400"}`}>
+              {/* Thẻ Quá hạn */}
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-5 rounded-3xl border shadow-sm transition-all active:scale-95 flex flex-col gap-4 ${quaHan.length > 0 ? "bg-gradient-to-b from-rose-50 to-red-50 border-rose-200" : "bg-white border-slate-100"}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${quaHan.length > 0 ? "bg-rose-100 text-rose-600 animate-pulse" : "bg-slate-50 text-slate-400"}`}>
                   <AlertCircle size={24} strokeWidth={2} />
                 </div>
                 <div className="text-left">
-                  <div className={`text-2xl font-black leading-none mb-1 ${quaHan.length > 0 ? "text-rose-700" : "text-slate-800"}`}>{quaHan.length}</div>
-                  <div className={`text-[10px] font-bold uppercase tracking-wide ${quaHan.length > 0 ? "text-rose-600" : "text-slate-500"}`}>Lố hạn trả</div>
+                  <div className={`text-3xl font-black leading-none mb-1.5 ${quaHan.length > 0 ? "text-rose-700" : "text-slate-800"}`}>{quaHan.length}</div>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${quaHan.length > 0 ? "text-rose-600" : "text-slate-400"}`}>Quá hạn trả</div>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* MENU TÍNH NĂNG CHÍNH - Gọn gàng thanh lịch */}
+          {/* 3. MENU TÍNH NĂNG CHÍNH */}
           <div>
-            <h2 className="font-black text-lg mb-3 text-slate-800 ml-1">Tính năng quản lý</h2>
+            <h2 className="font-black text-lg mb-3 text-slate-800 ml-1 tracking-tight">Tính năng quản lý</h2>
             <div className="grid grid-cols-2 gap-3">
               {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
                   const IconComponent = item.icon;
@@ -462,8 +487,9 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* 4. KHU VỰC RENDER CÁC TAB */}
       <div id="noi-dung-tab" className="mt-2">
-        {tab === "lich" && <TabLich dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} />}
+        {tab === "lich" && <TabLich homNay={homNay} dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} />}
         {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} />}
         {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
@@ -472,21 +498,21 @@ export default function HomePage() {
         {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}
       </div>
 
-      {/* THANH ĐIỀU HƯỚNG DƯỚI ĐÁY CAO CẤP */}
+      {/* 5. THANH ĐIỀU HƯỚNG DƯỚI ĐÁY CAO CẤP (4 NÚT) */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-2xl border-t border-slate-200/50 flex justify-around items-end pt-2 pb-6 md:pb-4 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] z-40">
         {[
           { key: "home", icon: Home, label: "Trang chủ" },
           { key: "lich", icon: CalendarDays, label: "Lịch chụp" },
           { key: "phatSinh", icon: Wallet, label: "Thu / Chi" },
-          { key: "chamCong", icon: Clock, label: "Chấm công" },
+          { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
         ].map((nav) => {
           const IconComponent = nav.icon;
-          const isActive = tab === nav.key;
+          const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "nhanVien" || tab === "thongKe" || tab === "tinhTrangKH"));
           
           return (
             <button 
               key={nav.key} 
-              onClick={() => { setTab(nav.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} 
+              onClick={() => { setTab(nav.key === "luong" ? "luong" : (nav.key as TabType)); window.scrollTo({ top: 0, behavior: "smooth" }); }} 
               className="flex flex-col items-center p-2 w-1/4 relative group transition-all duration-300"
             >
               {isActive && (
