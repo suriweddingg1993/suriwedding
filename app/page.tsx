@@ -14,32 +14,29 @@ import {
 import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 
-// 1. IMPORT HOOK VÀ TYPES CHUẨN
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, Lich, TaiKhoan } from "../types";
 
-// 2. IMPORT BỘ ICON CAO CẤP (Premium UI)
 import { 
   Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, 
   BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, CheckCircle2 
 } from "lucide-react";
 
 // Lazy Load các Tab
-const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabThongKe = dynamic(() => import("./components/TabThongKe"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
-const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải chức năng...</div> });
+const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabThongKe = dynamic(() => import("./components/TabThongKe"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
 const CUA_HANG_LNG = 103.68803473004635;
 const BAN_KINH_CHO_PHEP = 500;
-const APP_VERSION = "v1.0.5"; // Phiên bản Premium UI
+const APP_VERSION = "v1.0.6"; 
 
-// CÁC HÀM TIỆN ÍCH
 function homNay() { return new Date().toISOString().slice(0, 10); }
 function gioHienTai() { return new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
 function formatTienInput(value: string) { const so = value.replace(/\D/g, ""); return so.replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
@@ -66,10 +63,8 @@ export default function HomePage() {
 
   const laAdmin = role === "admin";
 
-  // Sử dụng Hook Kéo Dữ Liệu
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan } = useAppData(user, laAdmin);
 
-  // States quản lý Form Lịch
   const [ngay, setNgay] = useState("");
   const [gio, setGio] = useState("");
   const [tenKhach, setTenKhach] = useState("");
@@ -84,7 +79,6 @@ export default function HomePage() {
   const [thangThongKe, setThangThongKe] = useState("");
   const [dangSua, setDangSua] = useState<string | null>(null);
 
-  // States Nhân viên
   const [uidNhanVien, setUidNhanVien] = useState("");
   const [emailNhanVien, setEmailNhanVien] = useState("");
   const [hoTenNhanVien, setHoTenNhanVien] = useState("");
@@ -94,7 +88,6 @@ export default function HomePage() {
   const [luongCungNhanVien, setLuongCungNhanVien] = useState("3.000.000");
   const [thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien] = useState("300.000");
 
-  // States Thu Chi
   const [psNgay, setPsNgay] = useState(homNay());
   const [psTenKhach, setPsTenKhach] = useState("");
   const [psSoDienThoai, setPsSoDienThoai] = useState("");
@@ -103,7 +96,6 @@ export default function HomePage() {
   const [psSoTien, setPsSoTien] = useState("");
   const [psGhiChu, setPsGhiChu] = useState("");
 
-  // States GPS
   const [dangLayViTri, setDangLayViTri] = useState(false);
   const [khoangCach, setKhoangCach] = useState<number | null>(null);
 
@@ -314,7 +306,6 @@ export default function HomePage() {
 
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
   
-  // GIAO DIỆN ĐĂNG NHẬP PREMIUM
   if (!user) { 
     return ( 
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -340,12 +331,11 @@ export default function HomePage() {
     ); 
   }
 
-  // MENU PREMIUM THAY THẾ EMOJI
   const nutMenu = [
     { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
     { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
     { key: "phatSinh", icon: Wallet, label: "Thu / Chi", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
-    { key: "tinhTrangKH", icon: ClipboardList, label: "Trạng thái đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
+    { key: "tinhTrangKH", icon: ClipboardList, label: "Kho đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
     { key: "chamCong", icon: Clock, label: "Chấm công", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
     { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
     { key: "nhanVien", icon: Users, label: "Nhân sự", color: "text-pink-600", bg: "bg-pink-50", adminOnly: true },
@@ -353,7 +343,7 @@ export default function HomePage() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-28">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-28 font-sans">
       {coBanCapNhat && (
         <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm z-50 relative">
           <div className="flex items-center gap-4">
@@ -400,49 +390,74 @@ export default function HomePage() {
       </div>
 
       {tab === "home" && (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in space-y-6">
           
-          {/* KHỐI NHẮC NHỞ HÔM NAY - PREMIUM UI */}
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 mb-8">
-            <h2 className="font-black text-lg mb-4 text-slate-800 flex items-center gap-2">
-              <AlertCircle size={20} className="text-rose-500" /> Cần xử lý hôm nay
+          {/* KHỐI TỔNG QUAN HÔM NAY - Gọn gàng (2x2 Grid) */}
+          <div>
+            <h2 className="font-black text-lg mb-3 text-slate-800 flex items-center gap-2 px-1">
+               Tổng quan hôm nay
             </h2>
-            <div className="space-y-3 text-sm">
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-4 bg-rose-50 rounded-2xl hover:bg-rose-100 active:scale-[0.98] transition-all group">
-                <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse"></div><span className="text-rose-700 font-semibold">Khách quá hạn trả đồ</span></div>
-                <b className="text-rose-700 text-lg bg-white/50 px-3 py-1 rounded-lg group-hover:bg-white/80 transition-colors">{quaHan.length}</b>
-              </button>
-              
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-4 bg-amber-50 rounded-2xl hover:bg-amber-100 active:scale-[0.98] transition-all group">
-                <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></div><span className="text-amber-700 font-semibold">Khách trả đồ hôm nay</span></div>
-                <b className="text-amber-700 text-lg bg-white/50 px-3 py-1 rounded-lg group-hover:bg-white/80 transition-colors">{canTraHomNay.length}</b>
-              </button>
-
-              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-4 bg-indigo-50 rounded-2xl hover:bg-indigo-100 active:scale-[0.98] transition-all group">
-                <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div><span className="text-indigo-700 font-semibold">Lịch chụp hôm nay</span></div>
-                <b className="text-indigo-700 text-lg bg-white/50 px-3 py-1 rounded-lg group-hover:bg-white/80 transition-colors">{lichLamViec.filter((item) => item.ngay === homNay()).length}</b>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <CalendarDays size={24} strokeWidth={2} />
+                </div>
+                <div className="text-left">
+                  <div className="text-2xl font-black text-slate-800 leading-none mb-1">{lichLamViec.filter((item) => item.ngay === homNay()).length}</div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Lịch chụp</div>
+                </div>
               </button>
 
-              <button onClick={() => { setTab("chamCong"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex justify-between items-center p-4 bg-emerald-50 rounded-2xl hover:bg-emerald-100 active:scale-[0.98] transition-all">
-                <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div><span className="text-emerald-700 font-semibold">Chấm công hôm nay</span></div>
-                <b className="text-emerald-700 bg-white/50 px-3 py-1 rounded-lg flex items-center gap-1.5">{chamCongHomNay?.checkIn ? <><CheckCircle2 size={16}/> Đã Check-in</> : "Chưa Check-in"}</b>
+              <button onClick={() => { setTab("chamCong"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${chamCongHomNay?.checkIn ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"}`}>
+                  {chamCongHomNay?.checkIn ? <CheckCircle2 size={24} strokeWidth={2} /> : <Clock size={24} strokeWidth={2} />}
+                </div>
+                <div className="text-left">
+                  <div className={`text-sm font-black leading-tight mb-0.5 ${chamCongHomNay?.checkIn ? "text-emerald-600" : "text-slate-500"}`}>
+                    {chamCongHomNay?.checkIn ? "Hoàn tất" : "Trống"}
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Chấm công</div>
+                </div>
+              </button>
+
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-4 rounded-3xl border shadow-sm transition-all active:scale-95 flex items-center gap-4 ${canTraHomNay.length > 0 ? "bg-amber-50 border-amber-200" : "bg-white border-slate-100"}`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
+                  <ClipboardList size={24} strokeWidth={2} />
+                </div>
+                <div className="text-left">
+                  <div className={`text-2xl font-black leading-none mb-1 ${canTraHomNay.length > 0 ? "text-amber-700" : "text-slate-800"}`}>{canTraHomNay.length}</div>
+                  <div className={`text-[10px] font-bold uppercase tracking-wide ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-500"}`}>Khách trả đồ</div>
+                </div>
+              </button>
+
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-4 rounded-3xl border shadow-sm transition-all active:scale-95 flex items-center gap-4 ${quaHan.length > 0 ? "bg-rose-50 border-rose-200" : "bg-white border-slate-100"}`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${quaHan.length > 0 ? "bg-rose-100 text-rose-600 animate-pulse" : "bg-slate-50 text-slate-400"}`}>
+                  <AlertCircle size={24} strokeWidth={2} />
+                </div>
+                <div className="text-left">
+                  <div className={`text-2xl font-black leading-none mb-1 ${quaHan.length > 0 ? "text-rose-700" : "text-slate-800"}`}>{quaHan.length}</div>
+                  <div className={`text-[10px] font-bold uppercase tracking-wide ${quaHan.length > 0 ? "text-rose-600" : "text-slate-500"}`}>Lố hạn trả</div>
+                </div>
               </button>
             </div>
           </div>
 
-          <h2 className="font-black text-lg mb-4 text-slate-800 ml-1">Cửa sổ chức năng</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
-                const IconComponent = item.icon;
-                return ( 
-                  <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col items-center justify-center gap-4 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group">
-                    <div className={`p-4 rounded-2xl ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-300`}>
-                      <IconComponent size={28} strokeWidth={2} />
-                    </div>
-                    <div className="font-bold text-center text-sm text-slate-700">{item.label}</div>
-                  </button> 
-                );
-            })}
+          {/* MENU TÍNH NĂNG CHÍNH - Gọn gàng thanh lịch */}
+          <div>
+            <h2 className="font-black text-lg mb-3 text-slate-800 ml-1">Tính năng quản lý</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
+                  const IconComponent = item.icon;
+                  return ( 
+                    <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group">
+                      <div className={`p-2.5 rounded-xl bg-slate-50 group-hover:${item.bg} ${item.color} transition-colors duration-300 shrink-0`}>
+                        <IconComponent size={20} strokeWidth={2} />
+                      </div>
+                      <div className="font-bold text-sm text-slate-700 text-left leading-tight">{item.label}</div>
+                    </button> 
+                  );
+              })}
+            </div>
           </div>
         </div>
       )}
