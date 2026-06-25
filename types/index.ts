@@ -13,6 +13,14 @@ export interface TaiKhoan {
   role: Role;
 }
 
+// Chuẩn hóa cho Gói Dịch Vụ (MỚI THÊM)
+export interface GoiDichVu {
+  id?: string;
+  tenGoi: string;
+  chiTiet: string;
+  giaTien: number;
+}
+
 // Chuẩn hóa cho Lịch chụp
 export interface Lich {
   id?: string;
@@ -24,6 +32,7 @@ export interface Lich {
   theLoai: string;
   goiChup?: string;
   giaTien?: number;
+  tienCoc?: number; // MỚI THÊM: Tính tiền cọc
   trangThai?: string;
 }
 
@@ -48,9 +57,9 @@ export interface ChamCong {
   email: string;
   ngay: string;
   checkIn?: string;
-  checkOut?: string;
   checkInLat?: number;
   checkInLng?: number;
+  checkOut?: string;
   checkOutLat?: number;
   checkOutLng?: number;
   diMuon?: boolean;
@@ -60,7 +69,7 @@ export interface ChamCong {
   trangThaiGiaiTrinh?: string;
 }
 
-// Chuẩn hóa cho Thụ hưởng / Hoa hồng
+// Chuẩn hóa cho Thụ hưởng (Hoa hồng)
 export interface ThuHuong {
   id?: string;
   uid: string;
