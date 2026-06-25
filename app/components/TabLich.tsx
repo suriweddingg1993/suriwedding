@@ -67,31 +67,36 @@ export default function TabLich({
   const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
   const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
   const [hdDiaChi, setHdDiaChi] = useState("");
+  
+  // STATE ĐỂ CHỜ KHI IN PDF TRÁNH BỊ ĐƠ APP
+  const [dangIn, setDangIn] = useState(false);
 
   // ========================================================
-  // XỬ LÝ TRIỆT ĐỂ: KHÓA SCROLL BLEED TRÊN iPHONE / ANDROID
+  // XỬ LÝ TRIỆT ĐỂ: KHÓA XÔ DỊCH SANG 2 BÊN
   // ========================================================
   useEffect(() => {
     if (showModal || showGoiModal || showHoaHongModal || hoaDonData) {
-      // Khi bảng mở lên: Lưu lại tọa độ cuộn hiện tại & Ép cố định Body
-      const scrollY = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = "0";
+      document.body.style.left = "0";
+      document.body.style.width = "100%";
+      document.body.style.height = "100%";
     } else {
-      // Khi bảng đóng lại: Nhả cố định & Cuộn về lại đúng tọa độ cũ
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
-      }
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.width = "";
+      document.body.style.height = "";
     }
     return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.width = "";
+      document.body.style.height = "";
     };
   }, [showModal, showGoiModal, showHoaHongModal, hoaDonData]);
 
@@ -144,6 +149,16 @@ export default function TabLich({
     
     navigator.clipboard.writeText(text);
     toast.success("Đã copy Hợp đồng! Mở Zalo dán ngay cho khách nhé.");
+  };
+
+  // MƯỢT MÀ HÓA QUÁ TRÌNH TẠO PDF
+  const xuLyInHopDong = () => {
+    setDangIn(true);
+    // Tạo độ trễ 500ms để React kịp vẽ ra chữ "Đang tạo PDF..." cho nút bấm
+    setTimeout(() => {
+      window.print();
+      setDangIn(false);
+    }, 500);
   };
 
   const openAddModal = () => { 
@@ -237,26 +252,17 @@ export default function TabLich({
 
   return (
     <div className="pb-24 px-2 pt-2">
-      {/* CSS CĂN CHỈNH TRANG IN: Xóa Margin để mất Link Web & Ép vửa 1 trang */}
+      {/* CĂN CHỈNH BẢN IN PDF A5 */}
       <style>{`
         @media print { 
-          @page { 
-            size: A5 portrait; 
-            margin: 0; /* Quan trọng: margin 0 sẽ xóa Header/Footer của trình duyệt */
-          }
+          @page { size: A5 portrait; margin: 0; }
           body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           body * { visibility: hidden; } 
           #invoice-content, #invoice-content * { visibility: visible; } 
           #invoice-content { 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            width: 100vw; 
-            height: 100vh; /* Ép cố định không cho tràn sang trang 2 */
-            padding: 12mm 15mm !important; /* Tạo lề giấy bên trong */
-            box-sizing: border-box; 
-            color: #000;
-            overflow: hidden; /* Cắt phần thừa nếu lỡ quá dài */
+            position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; 
+            padding: 12mm 15mm !important; box-sizing: border-box; 
+            color: #000; overflow: hidden; 
           } 
         }
       `}</style>
@@ -357,10 +363,10 @@ export default function TabLich({
 
       {/* FORM THÊM / SỬA LỊCH */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in border border-white" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-x-hidden overflow-y-auto overscroll-contain border border-white">
             <h2 className="text-2xl font-black mb-6 text-slate-900">{dangSua ? "✏️ Cập nhật Lịch" : "✨ Thêm Lịch Mới"}</h2>
-            <div className="grid gap-4">
+            <div className="grid gap-4 w-full">
               
               <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100 mb-2">
                 <div className="flex justify-between items-end mb-1.5">
@@ -380,41 +386,41 @@ export default function TabLich({
                 </select>
               </div>
 
-              <div className="flex gap-3">
-                <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Ngày chụp</label><input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.ngay ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
-                <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Giờ chụp</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.gio ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
+              <div className="flex gap-3 w-full">
+                <div className="flex-1 min-w-0"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Ngày chụp</label><input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.ngay ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
+                <div className="flex-1 min-w-0"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Giờ chụp</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.gio ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
               </div>
               
               <div><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label><input type="text" placeholder="Nhập tên..." value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.tenKhach ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
               
-              <div className="flex gap-3">
-                <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 1 (Bắt buộc 10 số)</label><input type="text" placeholder="0987..." value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${errors.soDienThoai ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
-                <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 2 (Nếu có)</label><input type="text" placeholder="Dự phòng..." value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${errors.soDienThoai2 ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
+              <div className="flex gap-3 w-full">
+                <div className="flex-1 min-w-0"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 1 (Bắt buộc)</label><input type="text" placeholder="0987..." value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${errors.soDienThoai ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
+                <div className="flex-1 min-w-0"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 2 (Nếu có)</label><input type="text" placeholder="Dự phòng..." value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${errors.soDienThoai2 ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
               </div>
 
-              <div className="flex gap-3">
-                <div className="flex-1">
+              <div className="flex gap-3 w-full">
+                <div className="flex-1 min-w-0">
                   <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Thể loại</label>
                   <select value={theLoai} onChange={(e) => setTheLoai(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 border border-transparent outline-none">
                     <option value="">- Chọn -</option><option value="Chụp Cưới">💍 Chụp Cưới</option><option value="Chụp Sự kiện">🎉 Sự kiện</option><option value="Chụp Chân dung">👤 Chân dung</option><option value="Chụp Gia đình">👨‍👩‍👧‍👦 Gia đình</option><option value="Chụp Kỷ yếu">🎓 Kỷ yếu</option><option value="Khác">✨ Khác</option>
                   </select>
                 </div>
                 {theLoai === "Khác" && (
-                   <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Nhập loại khác</label><input type="text" placeholder="Nhập..." value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold border border-transparent outline-none" /></div>
+                   <div className="flex-1 min-w-0"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Nhập loại khác</label><input type="text" placeholder="Nhập..." value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold border border-transparent outline-none" /></div>
                 )}
               </div>
               
               <div><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Gói chụp (Ghi chú chi tiết váy/vest)</label><input type="text" placeholder="VD: 2 váy, 1 vest..." value={goiChup} onChange={(e) => setGoiChup(e.target.value)} className="bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold border border-transparent outline-none" /></div>
               
-              <div className="flex gap-3">
-                <div className="flex-1">
+              <div className="flex gap-3 w-full">
+                <div className="flex-1 min-w-0">
                   <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Giá Hợp Đồng</label>
                   <div className="relative">
                     <input type="text" inputMode="numeric" placeholder="0" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} className={`bg-slate-50 p-4 rounded-2xl w-full pr-8 text-emerald-600 font-black text-xl focus:bg-white focus:ring-4 outline-none ${errors.giaTien ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} />
                     <span className="absolute right-3 top-5 text-slate-400 font-bold">đ</span>
                   </div>
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Khách Đã Cọc</label>
                   <div className="relative">
                     <input type="text" inputMode="numeric" placeholder="0" value={tienCoc} onChange={(e) => setTienCoc(formatTienInput(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full pr-8 text-orange-600 font-black text-xl focus:bg-white focus:ring-4 border border-transparent outline-none" />
@@ -435,9 +441,9 @@ export default function TabLich({
       {/* MODAL QUẢN LÝ GÓI DỊCH VỤ (CHỈ DÀNH CHO ADMIN) */}
       {showGoiModal && laAdmin && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden overscroll-contain">
             <h2 className="text-xl font-black mb-4 text-slate-900">⚙️ Quản lý Gói Dịch Vụ Mẫu</h2>
-            <div className="bg-blue-50/50 p-4 rounded-xl mb-5 border border-blue-100">
+            <div className="bg-blue-50/50 p-4 rounded-xl mb-5 border border-blue-100 w-full">
               <h3 className="font-bold text-sm mb-3 text-blue-800">{dangSuaGoi ? "Sửa thông tin gói" : "Tạo gói mới"}</h3>
               <input type="text" placeholder="Tên gói (VD: Gói Cưới Premium)" value={tenGoiMoi} onChange={(e) => setTenGoiMoi(e.target.value)} className="w-full mb-3 p-3 rounded-xl border border-blue-200 font-bold outline-none focus:ring-2 focus:ring-blue-300" />
               <textarea placeholder="Chi tiết gồm những gì? (VD: 2 Váy, 1 Vest...)" value={chiTietGoiMoi} onChange={(e) => setChiTietGoiMoi(e.target.value)} className="w-full mb-3 p-3 rounded-xl border border-blue-200 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-300" rows={3}></textarea>
@@ -451,15 +457,15 @@ export default function TabLich({
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 w-full">
               <h4 className="font-bold text-slate-600 text-sm mb-2">Danh sách Gói đang có:</h4>
               {danhSachGoiDichVu.map(g => (
                 <div key={g.id} className="flex justify-between items-center p-4 border border-slate-100 bg-slate-50 rounded-xl">
-                  <div>
-                    <div className="font-bold text-slate-800">{g.tenGoi} <span className="text-emerald-600 text-sm ml-2 font-black">{formatTienInput(String(g.giaTien))}đ</span></div>
-                    <div className="text-xs text-slate-500 mt-1">{g.chiTiet}</div>
+                  <div className="min-w-0 pr-2">
+                    <div className="font-bold text-slate-800 break-words">{g.tenGoi} <span className="text-emerald-600 text-sm ml-2 font-black">{formatTienInput(String(g.giaTien))}đ</span></div>
+                    <div className="text-xs text-slate-500 mt-1 line-clamp-2">{g.chiTiet}</div>
                   </div>
-                  <div className="flex gap-2 shrink-0 ml-3">
+                  <div className="flex gap-2 shrink-0 ml-1">
                     <button onClick={() => {setDangSuaGoi(g.id!); setTenGoiMoi(g.tenGoi); setChiTietGoiMoi(g.chiTiet); setGiaGoiMoi(formatTienInput(String(g.giaTien)))}} className="text-blue-600 font-bold text-sm px-3 py-2 bg-blue-100 rounded-lg">Sửa</button>
                     <button onClick={() => xoaGoiDichVu(g.id!)} className="text-red-500 font-bold text-sm px-3 py-2 bg-red-100 rounded-lg">Xóa</button>
                   </div>
@@ -474,7 +480,7 @@ export default function TabLich({
 
       {/* FORM NHẬN HOA HỒNG */}
       {showHoaHongModal && lichDangChon && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-fade-in border border-white">
             <h3 className="text-2xl font-black mb-2 text-blue-600 text-center tracking-tight">Hoàn Thành!</h3>
             <p className="text-xs text-slate-500 mb-6 text-center font-medium">Báo cáo công đoạn bạn đã làm để nhận lương.</p>
@@ -482,7 +488,7 @@ export default function TabLich({
               <div className="text-[10px] text-blue-500 font-black mb-1.5 uppercase tracking-wide">{lichDangChon.theLoai}</div>
               <div className="font-black text-slate-900 text-base">{lichDangChon.tenKhach}</div>
             </div>
-            <div className="grid gap-4">
+            <div className="grid gap-4 w-full">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase ml-2 block mb-1.5">Công đoạn của bạn</label>
                 <select value={vaiTro} onChange={(e) => setVaiTro(e.target.value)} className="bg-white border border-blue-200 p-4 rounded-2xl w-full font-black text-slate-700 text-sm focus:ring-4 focus:ring-blue-100 outline-none transition-all">
@@ -505,12 +511,12 @@ export default function TabLich({
         </div>
       )}
 
-      {/* MODAL HỢP ĐỒNG IN */}
+      {/* MODAL HỢP ĐỒNG MỚI (IN KHÔNG LỖI) */}
       {hoaDonData && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:bg-white print:p-0">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative print:shadow-none print:p-0 print:max-w-full print:overflow-visible" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-x-hidden overflow-y-auto overscroll-contain p-6 shadow-2xl relative print:shadow-none print:p-0 print:max-w-full print:overflow-visible">
             
-            <div className="print:hidden mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div className="print:hidden mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200 w-full">
               <h3 className="font-black text-blue-600 mb-3 text-sm uppercase">Thông tin bổ sung Hợp đồng</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
@@ -525,8 +531,7 @@ export default function TabLich({
               </div>
             </div>
 
-            {/* BẢN IN HỢP ĐỒNG ĐƯỢC THIẾT KẾ LẠI GỌN GÀNG, ĐẸP MẮT */}
-            <div id="invoice-content" className="text-gray-900 bg-white p-2 sm:p-6 max-w-3xl mx-auto">
+            <div id="invoice-content" className="text-gray-900 bg-white p-2 sm:p-6 max-w-3xl mx-auto w-full">
               <div className="flex justify-between items-start mb-4 print:mb-2 border-b border-gray-300 pb-3 print:pb-2">
                 <div>
                   <h1 className="text-base sm:text-lg font-black uppercase tracking-tight">Ảnh Viện SURI WEDDING</h1>
@@ -613,9 +618,12 @@ export default function TabLich({
               <button onClick={copyHopDongZalo} className="flex-1 bg-green-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 active:scale-95 transition-all">
                 💬 COPY TEXT GỬI ZALO
               </button>
-              <button onClick={() => window.print()} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-slate-300 hover:bg-slate-800 active:scale-95 transition-all">
-                🖨️ LƯU PDF / IN BẢN CỨNG
+              
+              {/* NÚT IN MƯỢT MÀ */}
+              <button onClick={xuLyInHopDong} disabled={dangIn} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-slate-300 hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center">
+                {dangIn ? "⏳ ĐANG TẠO PDF..." : "🖨️ LƯU PDF / IN BẢN CỨNG"}
               </button>
+              
               <button onClick={() => setHoaDonData(null)} className="px-6 py-3.5 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 active:scale-95 transition-all">
                 Đóng
               </button>
