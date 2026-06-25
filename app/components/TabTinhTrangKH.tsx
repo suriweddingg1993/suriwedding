@@ -23,9 +23,18 @@ export default function TabTinhTrangKH({
     toast.success("Đã copy tin nhắn nhắc trả đồ!");
   };
 
-  const xacNhanTraDo = (id: string, tenKhach: string) => {
-    const dongY = confirm(`Khách hàng ${tenKhach} đã gửi lại đồ nguyên vẹn?`);
-    if (dongY) {
+  const xacNhanTraDoNangCao = (id: string, tenKhach: string, ngayTra: string | undefined) => {
+    const today = new Date().toISOString().slice(0, 10);
+    let canhBao = `Xác nhận khách hàng ${tenKhach} đã gửi lại đồ nguyên vẹn?`;
+    
+    // TÍNH TOÁN NGÀY TRỄ NẾU CÓ
+    if (ngayTra && ngayTra < today) {
+       const diffTime = Math.abs(new Date(today).getTime() - new Date(ngayTra).getTime());
+       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+       canhBao = `⚠️ KHÁCH TRẢ TRỄ ${diffDays} NGÀY!\n\nXác nhận khách hàng ${tenKhach} đã gửi lại đồ?`;
+    }
+    
+    if (confirm(canhBao)) {
       danhDauDaTraDo(id);
     }
   };
@@ -94,7 +103,7 @@ export default function TabTinhTrangKH({
                   </div>
 
                   <button 
-                    onClick={() => ps.id && xacNhanTraDo(ps.id, ps.tenKhach)}
+                    onClick={() => ps.id && xacNhanTraDoNangCao(ps.id, ps.tenKhach, ps.ngayTra)}
                     className="w-full mt-3 bg-red-50 text-red-600 font-bold py-2.5 rounded-lg border border-red-200 hover:bg-red-500 hover:text-white transition-colors flex justify-center items-center gap-2"
                   >
                     ✓ Đã nhận lại đồ
@@ -136,7 +145,7 @@ export default function TabTinhTrangKH({
                   </div>
 
                   <button 
-                    onClick={() => ps.id && xacNhanTraDo(ps.id, ps.tenKhach)}
+                    onClick={() => ps.id && xacNhanTraDoNangCao(ps.id, ps.tenKhach, ps.ngayTra)}
                     className="w-full mt-3 bg-orange-50 text-orange-600 font-bold py-2.5 rounded-lg border border-orange-200 hover:bg-orange-500 hover:text-white transition-colors flex justify-center items-center gap-2"
                   >
                     ✓ Đã nhận lại đồ

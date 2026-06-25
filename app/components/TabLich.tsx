@@ -4,7 +4,9 @@ import { Lich, TaiKhoan, GoiDichVu } from "../../types";
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
-function chuyenTienVeSo(value: string) { return Number(value.replace(/\./g, "")); }
+function chuyenTienVeSo(value: string) { 
+  return Number(value.replace(/\./g, "")); 
+}
 
 interface TabLichProps {
   homNay: () => string;
@@ -39,14 +41,14 @@ export default function TabLich({
 }: TabLichProps) {
   
   const getLocalToday = () => {
-    const d = new Date();
-    const offset = d.getTimezoneOffset() * 60000;
+    const d = new Date(); const offset = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - offset).toISOString().slice(0, 10);
   };
 
   const localToday = getLocalToday();
   const [selectedDate, setSelectedDate] = useState(localToday);
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
+  
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
   const [lichDangChon, setLichDangChon] = useState<Lich | null>(null);
@@ -54,14 +56,27 @@ export default function TabLich({
   const [vaiTro, setVaiTro] = useState("Chụp ảnh");
   const [tuKhoa, setTuKhoa] = useState(""); 
   
-  // STATE MỚI CHO GÓI DỊCH VỤ, VALIDATE, VÀ CỌC
+  // STATE CHO VALIDATE LỖI (NHÁY ĐỎ)
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  
+  // STATE CHO TIỀN CỌC
+  const [tienCoc, setTienCoc] = useState("");
+  
+  // STATE CHO GÓI DỊCH VỤ
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]);
   const [showGoiModal, setShowGoiModal] = useState(false);
-  const [tenGoiMoi, setTenGoiMoi] = useState(""); const [chiTietGoiMoi, setChiTietGoiMoi] = useState("");
-  const [giaGoiMoi, setGiaGoiMoi] = useState(""); const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
-  
-  const [tienCoc, setTienCoc] = useState("");
-  const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [tenGoiMoi, setTenGoiMoi] = useState("");
+  const [chiTietGoiMoi, setChiTietGoiMoi] = useState("");
+  const [giaGoiMoi, setGiaGoiMoi] = useState("");
+  const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
+
+  // KÉO DỮ LIỆU GÓI DỊCH VỤ VỀ
+  useEffect(() => {
+    const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => {
+      setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]);
+    });
+    return () => unsubGoi();
+  }, []);
 
   const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
   const [hdDiaChi, setHdDiaChi] = useState("");
@@ -70,14 +85,10 @@ export default function TabLich({
   const [isDrawing, setIsDrawing] = useState(false);
   const [chuKy, setChuKy] = useState<string | null>(null);
 
-  useEffect(() => {
-    const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]));
-    return () => unsubGoi();
-  }, []);
-
   const year = currentMonth.getFullYear(); const month = currentMonth.getMonth();
   const firstDayOfMonth = new Date(year, month, 1); const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayIndex = (firstDayOfMonth.getDay() + 6) % 7; 
+
   const daysArray: (string | null)[] = [];
   for (let i = 0; i < firstDayIndex; i++) { daysArray.push(null); }
   for (let i = 1; i <= daysInMonth; i++) { daysArray.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`); }
@@ -97,33 +108,50 @@ export default function TabLich({
 
   const copyNhacLich = (item: Lich) => {
     const ngayChup = item.ngay.split('-').reverse().join('/');
-    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\n\nEm nhắn tin báo mình có lịch hẹn (${item.theLoai} - ${item.goiChup || ""}) vào lúc ⏰ ${item.gio} ngày ${ngayChup}.\n\nAnh/chị nhớ sắp xếp thời gian đến đúng giờ để có những bức ảnh đẹp nhất nhé. Em cảm ơn ạ!`;
+    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\\n\\nEm nhắn tin báo mình có lịch hẹn (${item.theLoai} - ${item.goiChup || ""}) vào lúc ⏰ ${item.gio} ngày ${ngayChup}.\\n\\nAnh/chị nhớ sắp xếp thời gian đến đúng giờ để có những bức ảnh đẹp nhất nhé. Em cảm ơn ạ!`;
     navigator.clipboard.writeText(text); toast.success("Đã copy tin nhắn nhắc khách!");
   };
 
-  // OVERRIDE FORM OPENER ĐỂ XÓA LỖI VÀ XÓA CỌC
-  const openAddModal = () => { resetForm(); setNgay(selectedDate); setTienCoc(""); setErrors({}); setShowModal(true); };
-  const suaLichNangCao = (item: Lich) => { suaLich(item); setTienCoc(formatTienInput(String(item.tienCoc || 0))); setErrors({}); setShowModal(true); };
+  // OVERRIDE MỞ FORM LỊCH (Xóa các ô đỏ báo lỗi)
+  const openAddModal = () => { 
+    resetForm(); 
+    setNgay(selectedDate); 
+    setTienCoc(""); 
+    setErrors({}); 
+    setShowModal(true); 
+  };
+  
+  const suaLichNangCao = (item: Lich) => { 
+    suaLich(item); 
+    setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
+    setErrors({}); 
+    setShowModal(true); 
+  };
 
-  // LOGIC LƯU LỊCH THÔNG MINH (VALIDATE + CHỐNG TRÙNG)
+  // ===============================================
+  // LOGIC LƯU LỊCH THÔNG MINH (VALIDATE VÀ CẢNH BÁO)
+  // ===============================================
   const handleLuuLichThongMinh = async () => {
+    // 1. Kiểm tra Validate (nháy đỏ các ô thiếu/sai)
     const newErrors: Record<string, boolean> = {};
-    if (!ngay) newErrors.ngay = true; if (!gio) newErrors.gio = true;
-    if (!tenKhach) newErrors.tenKhach = true; if (!giaTien) newErrors.giaTien = true;
+    if (!ngay) newErrors.ngay = true; 
+    if (!gio) newErrors.gio = true;
+    if (!tenKhach) newErrors.tenKhach = true; 
     
+    // Kiểm tra số điện thoại (chỉ số, 10-11 ký tự)
     const phoneRegex = /^[0-9]{10,11}$/;
-    if (!soDienThoai || !phoneRegex.test(soDienThoai)) newErrors.soDienThoai = true;
-    if (soDienThoai2 && !phoneRegex.test(soDienThoai2)) newErrors.soDienThoai2 = true;
+    if (!soDienThoai || !phoneRegex.test(soDienThoai.replace(/\\s/g, ""))) newErrors.soDienThoai = true;
+    if (soDienThoai2 && !phoneRegex.test(soDienThoai2.replace(/\\s/g, ""))) newErrors.soDienThoai2 = true;
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error("Vui lòng điền đủ thông tin và đảm bảo SĐT đúng 10-11 số!");
-      return; // Cố tình không đóng Form, để user sửa lại chỗ bị bôi viền đỏ
+      toast.error("Vui lòng điền đủ thông tin và Số điện thoại (10-11 số)!");
+      return; // Cố tình không đóng Form, để user sửa
     }
 
-    setErrors({});
+    setErrors({}); // Xóa hết báo đỏ
 
-    // Chống quá tải: Ca chụp cách nhau dưới 2 tiếng
+    // 2. Chống quá tải: Kiểm tra xem có ca nào trùng dưới 2 tiếng không
     const lichCungNgay = lichLamViec.filter((item) => item.ngay === ngay && item.id !== dangSua);
     const [h1, m1] = gio.split(":").map(Number);
     const thoiGianMoi = h1 * 60 + m1;
@@ -135,38 +163,56 @@ export default function TabLich({
     });
 
     if (biTrung) {
-      const dongY = confirm(`⚠️ CẢNH BÁO OVERBOOK:\nCa chụp này quá sát với khách "${biTrung.tenKhach}" lúc ${biTrung.gio}.\n\nBạn có chắc chắn muốn nhận không?`);
+      const dongY = confirm(`⚠️ CẢNH BÁO OVERBOOK:\\nCa chụp này quá sát giờ với khách "${biTrung.tenKhach}" lúc ${biTrung.gio}.\\n\\nBạn có chắc chắn nhận lịch không?`);
       if (!dongY) return;
     }
 
+    // 3. Đóng gói và lưu Database an toàn
     const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
-    const duLieuLich = { ngay, gio, tenKhach, soDienThoai, soDienThoai2, theLoai: theLoaiCuoi, goiChup, giaTien: chuyenTienVeSo(giaTien), tienCoc: chuyenTienVeSo(tienCoc || "0"), trangThai: "Chưa liên hệ" };
+    const duLieuLich = { 
+      ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
+      theLoai: theLoaiCuoi, goiChup, 
+      giaTien: chuyenTienVeSo(giaTien) || 0, // An toàn NaN
+      tienCoc: chuyenTienVeSo(tienCoc) || 0, // An toàn NaN
+      trangThai: "Chưa liên hệ" 
+    };
 
     try {
-      if (dangSua) { await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); } 
-      else { await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch!"); } 
-      setShowModal(false); resetForm(); setTienCoc("");
-    } catch (error) { toast.error("Có lỗi đường truyền"); }
+      if (dangSua) { 
+        await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); 
+        toast.success("Đã lưu thay đổi!"); 
+      } else { 
+        await addDoc(collection(db, "lichStudio"), duLieuLich); 
+        toast.success("Đã thêm lịch!"); 
+      } 
+      setShowModal(false); 
+      resetForm(); 
+      setTienCoc("");
+    } catch (error) { toast.error("Có lỗi mạng"); }
   };
 
+  // ===============================================
   // QUẢN LÝ GÓI CHỤP CHO ADMIN
+  // ===============================================
   const luuGoiDichVu = async () => {
     if (!tenGoiMoi || !giaGoiMoi) return toast.error("Vui lòng nhập tên gói và giá!");
     try {
-      if (dangSuaGoi) { await updateDoc(doc(db, "goiDichVu", dangSuaGoi), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) }); toast.success("Cập nhật gói thành công!"); setDangSuaGoi(null); } 
-      else { await addDoc(collection(db, "goiDichVu"), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) }); toast.success("Thêm gói thành công!"); }
+      if (dangSuaGoi) { 
+        await updateDoc(doc(db, "goiDichVu", dangSuaGoi), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) || 0 }); 
+        toast.success("Cập nhật gói thành công!"); 
+        setDangSuaGoi(null); 
+      } else { 
+        await addDoc(collection(db, "goiDichVu"), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) || 0 }); 
+        toast.success("Thêm gói thành công!"); 
+      }
       setTenGoiMoi(""); setChiTietGoiMoi(""); setGiaGoiMoi("");
-    } catch(e) { toast.error("Lỗi!"); }
+    } catch(e) { toast.error("Lỗi mạng!"); }
   };
   const xoaGoiDichVu = async (id: string) => { if (confirm("Chắc chắn xóa gói chụp mẫu này?")) await deleteDoc(doc(db, "goiDichVu", id)); };
 
-  const getCoordinates = (e: any) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
+
+  // LOGIC KÝ TÊN
+  const getCoordinates = (e: any) => { const canvas = canvasRef.current; if (!canvas) return { x: 0, y: 0 }; const rect = canvas.getBoundingClientRect(); if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }; return { x: e.clientX - rect.left, y: e.clientY - rect.top }; };
   const startDrawing = (e: any) => { setIsDrawing(true); const pos = getCoordinates(e); const ctx = canvasRef.current?.getContext("2d"); if (ctx) { ctx.beginPath(); ctx.moveTo(pos.x, pos.y); } };
   const draw = (e: any) => { if (!isDrawing) return; const pos = getCoordinates(e); const ctx = canvasRef.current?.getContext("2d"); if (ctx) { ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#0f172a"; ctx.lineTo(pos.x, pos.y); ctx.stroke(); } };
   const stopDrawing = () => { setIsDrawing(false); if (canvasRef.current) setChuKy(canvasRef.current.toDataURL("image/png")); };
@@ -245,8 +291,12 @@ export default function TabLich({
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-black text-emerald-600 whitespace-nowrap">{formatTienInput(String(item.giaTien || 0))}đ</div>
-                      {tienNo > 0 && <div className="text-xs font-bold text-red-500 mt-0.5 bg-red-50 px-1.5 py-0.5 rounded text-right w-fit ml-auto">Nợ: {formatTienInput(String(tienNo))}đ</div>}
-                      {tienNo <= 0 && item.giaTien && item.giaTien > 0 ? <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 text-right w-fit ml-auto">Đã thu đủ</div> : null}
+                      {/* BÁO CÒN NỢ */}
+                      {tienNo > 0 ? (
+                        <div className="text-xs font-bold text-red-500 mt-0.5 bg-red-50 px-1.5 py-0.5 rounded text-right w-fit ml-auto">Còn nợ: {formatTienInput(String(tienNo))}đ</div>
+                      ) : item.giaTien && item.giaTien > 0 ? (
+                        <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 text-right w-fit ml-auto">Đã thu đủ</div>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -279,25 +329,31 @@ export default function TabLich({
             <h2 className="text-2xl font-black mb-6 text-slate-900">{dangSua ? "✏️ Cập nhật Lịch" : "✨ Thêm Lịch Mới"}</h2>
             <div className="grid gap-4">
               
+              {/* CHỌN NHANH GÓI CHỤP (TỰ NHẢY GIÁ) */}
               <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100 mb-2">
-                <div className="flex justify-between items-end mb-1.5"><label className="text-[10px] text-blue-700 font-black ml-2 block uppercase">Chọn Nhanh Gói Dịch Vụ</label>{laAdmin && <button onClick={() => setShowGoiModal(true)} className="text-[10px] text-blue-600 font-bold bg-white px-2 py-1 rounded shadow-sm">⚙️ Cài đặt</button>}</div>
+                <div className="flex justify-between items-end mb-1.5">
+                  <label className="text-[10px] text-blue-700 font-black ml-2 block uppercase">Chọn Nhanh Gói Dịch Vụ</label>
+                  {laAdmin && <button onClick={() => setShowGoiModal(true)} className="text-[10px] text-blue-600 font-bold bg-white px-2 py-1 rounded shadow-sm">⚙️ Cài đặt</button>}
+                </div>
                 <select 
                   onChange={(e) => {
                     if (!e.target.value) { setGoiChup(""); setGiaTien(""); return; }
                     const goi = danhSachGoiDichVu.find(g => g.id === e.target.value);
-                    if (goi) { setGoiChup(goi.chiTiet); setGiaTien(formatTienInput(String(goi.giaTien))); }
+                    if (goi) { setGoiChup(goi.chiTiet); setGiaTien(formatTienInput(String(goi.giaTien))); setTheLoai(goi.tenGoi); }
                   }}
                   className="bg-white p-3.5 rounded-xl w-full text-blue-700 font-bold focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
                 >
-                  <option value="">-- Chọn để tự động điền giá --</option>
+                  <option value="">-- Chọn để tự động điền giá & chi tiết --</option>
                   {danhSachGoiDichVu.map(g => (<option key={g.id} value={g.id}>{g.tenGoi} - {formatTienInput(String(g.giaTien))}đ</option>))}
                 </select>
               </div>
 
+              {/* BÁO ĐỎ NHỮNG Ô BỊ LỖI BẰNG CLASS: border-red-500 */}
               <div className="flex gap-3">
                 <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Ngày chụp</label><input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.ngay ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
                 <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Giờ chụp</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.gio ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
               </div>
+              
               <div><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label><input type="text" placeholder="Nhập tên..." value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.tenKhach ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
               
               <div className="flex gap-3">
@@ -330,6 +386,7 @@ export default function TabLich({
                 <div className="flex-1">
                   <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Khách Đã Cọc</label>
                   <div className="relative">
+                    {/* BỔ SUNG: Tính năng Cọc */}
                     <input type="text" inputMode="numeric" placeholder="0" value={tienCoc} onChange={(e) => setTienCoc(formatTienInput(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full pr-8 text-orange-600 font-black text-xl focus:bg-white focus:ring-4 border border-transparent outline-none" />
                     <span className="absolute right-3 top-5 text-slate-400 font-bold">đ</span>
                   </div>
@@ -345,15 +402,15 @@ export default function TabLich({
         </div>
       )}
 
-      {/* MODAL QUẢN LÝ GÓI DỊCH VỤ (CHỈ ADMIN) */}
+      {/* MODAL QUẢN LÝ GÓI DỊCH VỤ (CHỈ DÀNH CHO ADMIN) */}
       {showGoiModal && laAdmin && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-black mb-4 text-slate-900">⚙️ Quản lý Gói Dịch Vụ Mẫu</h2>
             <div className="bg-blue-50/50 p-4 rounded-xl mb-5 border border-blue-100">
-              <h3 className="font-bold text-sm mb-3 text-blue-800">{dangSuaGoi ? "Sửa thông tin gói" : "Tạo gói mới (Mùa này)"}</h3>
+              <h3 className="font-bold text-sm mb-3 text-blue-800">{dangSuaGoi ? "Sửa thông tin gói" : "Tạo gói mới"}</h3>
               <input type="text" placeholder="Tên gói (VD: Gói Cưới Premium)" value={tenGoiMoi} onChange={(e) => setTenGoiMoi(e.target.value)} className="w-full mb-3 p-3 rounded-xl border border-blue-200 font-bold outline-none focus:ring-2 focus:ring-blue-300" />
-              <textarea placeholder="Chi tiết gồm những gì? (VD: 2 Váy, 1 Vest, 1 Album...)" value={chiTietGoiMoi} onChange={(e) => setChiTietGoiMoi(e.target.value)} className="w-full mb-3 p-3 rounded-xl border border-blue-200 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-300" rows={3}></textarea>
+              <textarea placeholder="Chi tiết gồm những gì? (VD: 2 Váy, 1 Vest...)" value={chiTietGoiMoi} onChange={(e) => setChiTietGoiMoi(e.target.value)} className="w-full mb-3 p-3 rounded-xl border border-blue-200 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-300" rows={3}></textarea>
               <div className="relative mb-4">
                 <input type="text" inputMode="numeric" placeholder="Giá tiền mặc định" value={giaGoiMoi} onChange={(e) => setGiaGoiMoi(formatTienInput(e.target.value))} className="w-full p-3 rounded-xl border border-blue-200 font-black text-emerald-600 text-lg outline-none focus:ring-2 focus:ring-blue-300 pr-10" />
                 <span className="absolute right-4 top-4 text-slate-400 font-bold">VNĐ</span>
@@ -380,13 +437,12 @@ export default function TabLich({
               ))}
               {danhSachGoiDichVu.length === 0 && <div className="text-center text-sm text-slate-400 py-4 italic">Chưa có gói dịch vụ nào</div>}
             </div>
-
             <button onClick={() => setShowGoiModal(false)} className="w-full mt-6 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-xl hover:bg-slate-200">ĐÓNG BẢNG</button>
           </div>
         </div>
       )}
 
-      {/* FORM NHẬN HOA HỒNG */}
+      {/* FORM NHẬN HOA HỒNG (Giữ nguyên) */}
       {showHoaHongModal && lichDangChon && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-fade-in border border-white">
@@ -419,7 +475,7 @@ export default function TabLich({
         </div>
       )}
 
-      {/* MODAL HỢP ĐỒNG (BỔ SUNG CỌC VÀ CÒN NỢ) */}
+      {/* MODAL HỢP ĐỒNG IN (THÊM THÔNG TIN CỌC & NỢ) */}
       {hoaDonData && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:bg-white print:p-0">
           <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative print:shadow-none print:p-0 print:max-w-full print:overflow-visible">
@@ -461,9 +517,7 @@ export default function TabLich({
                 <thead>
                   <tr className="bg-slate-100">
                     <th className="border border-slate-800 p-2 text-center w-10">STT</th>
-                    <th className="border border-slate-800 p-2 text-left">MÔ TẢ</th>
-                    <th className="border border-slate-800 p-2 text-center w-12">SL</th>
-                    <th className="border border-slate-800 p-2 text-right">ĐƠN GIÁ</th>
+                    <th className="border border-slate-800 p-2 text-left">MÔ TẢ DỊCH VỤ</th>
                     <th className="border border-slate-800 p-2 text-right">THÀNH TIỀN</th>
                   </tr>
                 </thead>
@@ -471,21 +525,15 @@ export default function TabLich({
                   <tr>
                     <td className="border border-slate-800 p-2 text-center font-bold">1</td>
                     <td className="border border-slate-800 p-2 font-bold">{hoaDonData.theLoai}</td>
-                    <td className="border border-slate-800 p-2 text-center">1.0</td>
-                    <td className="border border-slate-800 p-2 text-right font-medium">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
                     <td className="border border-slate-800 p-2 text-right font-medium">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
                   </tr>
                   <tr>
                     <td className="border border-slate-800 p-2 text-center font-bold">2</td>
-                    <td className="border border-slate-800 p-2 text-slate-700 whitespace-pre-wrap">Sản phẩm / Dịch vụ chi tiết:\n{hoaDonData.goiChup}</td>
-                    <td className="border border-slate-800 p-2 text-center"></td>
-                    <td className="border border-slate-800 p-2 text-right"></td>
+                    <td className="border border-slate-800 p-2 text-slate-700 whitespace-pre-wrap">Chi tiết:\n{hoaDonData.goiChup}</td>
                     <td className="border border-slate-800 p-2 text-right"></td>
                   </tr>
                 </tbody>
               </table>
-
-              <div className="flex justify-end mb-4 pr-2"><div className="text-sm"><b>Tổng cộng: </b> <span className="font-black text-lg ml-4">{formatTienInput(String(hoaDonData.giaTien || 0))}</span></div></div>
 
               <table className="w-full border-collapse border border-slate-800 text-xs mb-8">
                 <tbody>
@@ -496,8 +544,8 @@ export default function TabLich({
                     <td className="border border-slate-800 p-2 font-black text-right w-1/4 text-sm text-green-700 bg-slate-50">{formatTienInput(String(hoaDonData.tienCoc || 0))}</td>
                   </tr>
                   <tr>
-                    <td className="border border-slate-800 p-2">Bao gồm: Chiết khấu</td>
-                    <td className="border border-slate-800 p-2 text-right">0</td>
+                    <td className="border border-slate-800 p-2">Ghi chú thêm:</td>
+                    <td className="border border-slate-800 p-2 text-right"></td>
                     <td className="border border-slate-800 p-2 font-bold text-red-600 bg-red-50">CÒN PHẢI THU</td>
                     <td className="border border-slate-800 p-2 font-black text-right text-red-600 text-base bg-red-50">
                       {formatTienInput(String((hoaDonData.giaTien || 0) - (hoaDonData.tienCoc || 0)))}
@@ -508,7 +556,7 @@ export default function TabLich({
 
               <div className="flex justify-between items-start text-center text-xs mt-6 px-10">
                 <div className="flex flex-col items-center"><p className="mb-2">Cảm ơn quý khách!</p><p className="font-bold">Khách hàng</p><div className="h-24 w-40 flex items-center justify-center mt-2">{chuKy ? <img src={chuKy} alt="Chữ ký" className="max-h-full max-w-full mix-blend-multiply" /> : <span className="text-slate-300 italic">(Chưa ký)</span>}</div><p className="font-bold mt-2">{hoaDonData.tenKhach}</p></div>
-                <div className="flex flex-col items-center"><p className="mb-2">Sơn La, Ngày {homNay().split('-')[2]} tháng {homNay().split('-')[1]} năm {homNay().split('-')[0]}</p><p className="font-bold">Người bán</p><div className="h-24 w-40 flex items-center justify-center mt-2"></div><p className="font-bold mt-2">SURI WEDDING</p></div>
+                <div className="flex flex-col items-center"><p className="mb-2">Sơn La, Ngày {homNay().split('-')[2]} tháng {homNay().split('-')[1]} năm {homNay().split('-')[0]}</p><p className="font-bold">Đại diện Cửa hàng</p><div className="h-24 w-40 flex items-center justify-center mt-2"></div><p className="font-bold mt-2">SURI WEDDING</p></div>
               </div>
             </div>
 

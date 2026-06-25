@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ChamCong, ThuHuong, TaiKhoan } from "../../types";
 
-// Tạo Type riêng cho bản tính lương sau khi tính toán xong
 interface BangLuong extends TaiKhoan {
   soNgayNghi: number;
   soLanMuon: number;
@@ -28,6 +27,9 @@ interface TabLuongProps {
   formatTienInput: (val: string) => string;
 }
 
+// BẢO VỆ CHỐNG NaN KHI NHẬP
+function chuyenTienVeSo(value: string) { return Number(value.replace(/\./g, "")) || 0; }
+
 export default function TabLuong({
   homNay, uidCuaToi, hoSoCuaToi, laAdmin, danhSachTaiKhoan = [], danhSachChamCong = [],
   danhSachThuHuong = [], themThuHuong, xoaThuHuong, formatTienInput
@@ -48,9 +50,6 @@ export default function TabLuong({
     setShowModal(false); 
   };
 
-  // ==========================================
-  // THUẬT TOÁN QUÉT NGÀY TỰ ĐỘNG - ĐÃ TỐI ƯU O(1)
-  // ==========================================
   const homNayStr = homNay();
   const thangHienTai = homNayStr.slice(0, 7);
   const currentDayNum = parseInt(homNayStr.slice(8, 10));
@@ -63,8 +62,6 @@ export default function TabLuong({
 
   const tinhLuongNhanVien = (tk: TaiKhoan): BangLuong => {
     const chamCongThang = danhSachChamCong.filter((cc) => cc.uid === tk.id && cc.ngay.startsWith(thangHienTai));
-    
-    // TỐI ƯU HÓA: Biến mảng thành "Từ điển" để tra cứu siêu tốc trong vòng lặp bên dưới
     const chamCongMap: Record<string, ChamCong> = {};
     chamCongThang.forEach(cc => { chamCongMap[cc.ngay] = cc; });
 
@@ -73,14 +70,10 @@ export default function TabLuong({
     let soLanMuon = 0;
     let tongPhutMuon = 0;
 
-    // Quét từng ngày trong quá khứ
     pastDates.forEach(date => {
-      // Gọi thẳng từ Map thay vì dùng hàm .find() lặp đi lặp lại
       const record = chamCongMap[date]; 
-      
       if (!record) {
-        soNgayNghi++;
-        soNgayTruLuong++;
+        soNgayNghi++; soNgayTruLuong++;
       } else {
         if (record.trangThaiGiaiTrinh === "Đã duyệt") {
           if (record.loaiGiaiTrinh === "Xin nghỉ phép") { soNgayNghi++; }
@@ -99,10 +92,9 @@ export default function TabLuong({
     const luongNgay = luongCung / 30;
     const luongPhut = luongNgay / 8 / 60; 
 
-    const phatDiMuon = Math.round(tongPhutMuon * luongPhut);
-    const soNghiKhongPhep = Math.max(0, soNgayNghi - 2) + soNgayTruLuong; 
+    const phatDiMuon = Math.round(tongPhutMuon * luongPhut) || 0;
     const soNgayPhatThucTe = Math.max(0, soNgayNghi - 2); 
-    const phatNghi = Math.round(soNgayPhatThucTe * luongNgay);
+    const phatNghi = Math.round(soNgayPhatThucTe * luongNgay) || 0;
 
     const chuyenCan = soNgayNghi === 0 && soLanMuon <= 3;
     const tienChuyenCan = chuyenCan ? (tk.thuongChuyenCan || 0) : 0;
@@ -110,20 +102,11 @@ export default function TabLuong({
     const thuHuongThang = danhSachThuHuong.filter((th) => th.uid === tk.id && th.ngay.startsWith(thangHienTai));
     const tongThuHuong = thuHuongThang.reduce((sum, th) => sum + Number(th.soTien || 0), 0);
 
-    const luongTamTinh = luongCung - phatDiMuon - phatNghi + tienChuyenCan + tongThuHuong;
+    const luongTamTinh = (luongCung - phatDiMuon - phatNghi + tienChuyenCan + tongThuHuong) || 0;
 
     return { 
-      ...tk, 
-      soNgayNghi, 
-      soLanMuon, 
-      tongPhutMuon, 
-      phatDiMuon, 
-      phatNghi, 
-      chuyenCan, 
-      tienChuyenCan, 
-      tongThuHuong, 
-      thuHuongThang, 
-      luongTamTinh 
+      ...tk, soNgayNghi, soLanMuon, tongPhutMuon, phatDiMuon, phatNghi, 
+      chuyenCan, tienChuyenCan, tongThuHuong, thuHuongThang, luongTamTinh 
     };
   };
 
@@ -133,12 +116,9 @@ export default function TabLuong({
 
   return (
     <div className="pb-24 px-2 pt-4">
-      
-      {/* ================= ADMIN VIEW ================= */}
       {laAdmin ? (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6 animate-fade-in">
           <h2 className="text-xl font-bold mb-5 text-gray-800">👑 Quản lý Quỹ Lương</h2>
-          
           <div className="bg-gradient-to-br from-slate-800 to-gray-900 rounded-2xl p-6 text-white shadow-lg mb-6">
             <div className="text-sm font-medium mb-1 uppercase text-gray-300">Tổng quỹ lương (Tháng {thangHienTai.split("-").reverse().join("/")})</div>
             <div className="text-4xl font-black text-yellow-400">{formatTienInput(String(tongQuyLuong))}đ</div>
@@ -178,12 +158,9 @@ export default function TabLuong({
           </div>
         </div>
       ) : (
-
-        /* ================= STAFF VIEW ================= */
         luongCuaToi && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6 animate-fade-in">
             <h2 className="text-xl font-bold mb-5 text-gray-800">💰 Bảng lương của tôi</h2>
-            
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg mb-5">
               <div className="text-sm font-medium mb-1 uppercase text-blue-200">Tổng lương tạm tính (Tháng {thangHienTai.split("-").reverse().join("/")})</div>
               <div className="text-4xl font-black">{formatTienInput(String(luongCuaToi.luongTamTinh))}đ</div>
@@ -234,7 +211,6 @@ export default function TabLuong({
         )
       )}
 
-      {/* MODAL CỘNG TIỀN (Dùng chung) */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">

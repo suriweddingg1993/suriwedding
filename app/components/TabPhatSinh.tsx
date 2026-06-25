@@ -2,6 +2,8 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { PhatSinh, TaiKhoan } from "../../types";
 
+function chuyenTienVeSo(value: string) { return Number(value.replace(/\./g, "")); }
+
 interface TabPhatSinhProps {
   psNgay: string; setPsNgay: (val: string) => void;
   psTenKhach: string; setPsTenKhach: (val: string) => void;
@@ -43,6 +45,9 @@ export default function TabPhatSinh({
   const [phatSinhDangChon, setPhatSinhDangChon] = useState<PhatSinh | null>(null);
   const [tienHoaHong, setTienHoaHong] = useState("");
   const [tuKhoa, setTuKhoa] = useState("");
+  
+  // STATE LỖI VALIDATE
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   const isThueDo = (loai: string) => (loai || "").toLowerCase().includes("thuê");
 
@@ -87,7 +92,7 @@ export default function TabPhatSinh({
 
   const copyNhacTraDo = (item: PhatSinh) => {
     const ngayTra = item.ngayTra ? item.ngayTra.split('-').reverse().join('/') : "";
-    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\n\nEm nhắn tin báo mình có lịch trả đồ (${item.loai}) vào ngày hôm nay (${ngayTra}).\n\nAnh/chị nhớ sắp xếp thời gian gửi lại đồ cho studio giúp em nhé. Em cảm ơn ạ!`;
+    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\n\nEm nhắn tin báo mình có lịch hẹn trả đồ (${item.loai}) vào ngày hôm nay (${ngayTra}).\n\nAnh/chị nhớ sắp xếp thời gian gửi lại đồ cho studio giúp em nhé. Em cảm ơn ạ!`;
     navigator.clipboard.writeText(text);
     toast.success("Đã copy tin nhắn nhắc trả đồ!");
   };
@@ -95,6 +100,33 @@ export default function TabPhatSinh({
   const clearForm = () => {
     setPsNgay(selectedDate);
     setPsTenKhach(""); setPsSoDienThoai(""); setPsLoai(""); setPsNgayTra(""); setPsSoTien(""); setPsGhiChu("");
+    setErrors({});
+  };
+
+  // LOGIC VALIDATE TRƯỚC KHI THÊM
+  const handleThemPhatSinh = async () => {
+    const newErrors: Record<string, boolean> = {};
+    if (!psNgay) newErrors.psNgay = true;
+    if (!psLoai) newErrors.psLoai = true;
+    if (!psSoTien || chuyenTienVeSo(psSoTien) <= 0) newErrors.psSoTien = true;
+    
+    // Nếu là đồ thuê thì phải có ngày trả
+    if (isThueDo(psLoai) && !psNgayTra) newErrors.psNgayTra = true;
+    
+    // Kiểm tra SĐT nếu có điền
+    if (psSoDienThoai && !/^[0-9]{10,11}$/.test(psSoDienThoai.replace(/\s/g, ""))) {
+      newErrors.psSoDienThoai = true;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error("Vui lòng điền đủ thông tin bôi đỏ (SĐT 10-11 số)!");
+      return;
+    }
+
+    setErrors({});
+    await themPhatSinh();
+    setShowModal(false);
   };
 
   let dsGiaoDichNgayNay: PhatSinh[] = [];
@@ -192,7 +224,6 @@ export default function TabPhatSinh({
                     <div className="font-black text-gray-900 text-lg">{item.tenKhach || "Khách lẻ"}</div>
                     <div className="text-xs font-bold text-orange-700 bg-orange-100/50 px-2 py-1 rounded-md w-fit mt-1">{item.loai}</div>
                     
-                    {/* Thêm Cả nút bấm ở đây cho phần Đồ thuê */}
                     {item.soDienThoai && (
                       <div className="flex items-center gap-2 mt-2">
                         <a href={`tel:${item.soDienThoai}`} className="text-sm text-blue-600 font-bold hover:underline">{item.soDienThoai}</a>
@@ -266,7 +297,6 @@ export default function TabPhatSinh({
                   </div>
                 </div>
 
-                {/* KHU VỰC SĐT CỦA THU CHI ĐÃ CÓ NÚT GỌI NHANH */}
                 <div className="grid gap-2 text-sm ml-2">
                   {item.soDienThoai && (
                     <div className="text-gray-500 font-medium flex items-center gap-2">
@@ -301,7 +331,7 @@ export default function TabPhatSinh({
         +
       </button>
 
-      {/* FORM THÊM GIAO DỊCH PREMIUM */}
+      {/* FORM THÊM GIAO DỊCH CÓ VALIDATE BÔI ĐỎ */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in border border-white">
@@ -311,11 +341,11 @@ export default function TabPhatSinh({
               <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Ngày ghi</label>
-                  <input type="date" value={psNgay} onChange={(e) => setPsNgay(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-gray-900 font-bold focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all" />
+                  <input type="date" value={psNgay} onChange={(e) => setPsNgay(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${errors.psNgay ? "border-2 border-red-500" : "border border-transparent focus:border-blue-300 focus:ring-blue-100"}`} />
                 </div>
                 <div className="flex-1">
                   <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Loại giao dịch</label>
-                  <select value={psLoai} onChange={(e) => setPsLoai(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-gray-900 font-bold focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all">
+                  <select value={psLoai} onChange={(e) => setPsLoai(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${errors.psLoai ? "border-2 border-red-500" : "border border-transparent focus:border-blue-300 focus:ring-blue-100"}`}>
                     <option value="">- Chọn -</option>
                     <option value="Thuê váy">👗 Thuê Váy / Áo dài</option>
                     <option value="Thuê vest">👔 Thuê Vest</option>
@@ -328,11 +358,11 @@ export default function TabPhatSinh({
               </div>
 
               <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách / Đối tác</label><input type="text" placeholder="Nhập tên..." value={psTenKhach} onChange={(e) => setPsTenKhach(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-gray-900 font-bold focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all" /></div>
-              <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Số điện thoại</label><input type="text" placeholder="0987..." value={psSoDienThoai} onChange={(e) => setPsSoDienThoai(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-gray-900 font-bold focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all" /></div>
+              <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Số điện thoại</label><input type="text" placeholder="0987..." value={psSoDienThoai} onChange={(e) => setPsSoDienThoai(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${errors.psSoDienThoai ? "border-2 border-red-500" : "border border-transparent focus:border-blue-300 focus:ring-blue-100"}`} /></div>
 
               {isThueDo(psLoai) && (
-                <div className="bg-orange-50/50 border border-orange-200 p-4 rounded-2xl">
-                  <label className="text-[10px] font-black text-orange-700 uppercase ml-2 mb-1.5 block tracking-wide">📅 Ngày hẹn trả đồ</label>
+                <div className={`p-4 rounded-2xl ${errors.psNgayTra ? "bg-red-50 border-2 border-red-500" : "bg-orange-50/50 border border-orange-200"}`}>
+                  <label className={`text-[10px] font-black uppercase ml-2 mb-1.5 block tracking-wide ${errors.psNgayTra ? "text-red-700" : "text-orange-700"}`}>📅 Ngày hẹn trả đồ</label>
                   <input type="date" value={psNgayTra} onChange={(e) => setPsNgayTra(e.target.value)} className="border border-orange-200 p-4 rounded-xl w-full bg-white font-black text-orange-800 focus:ring-4 focus:ring-orange-100 outline-none transition-all" />
                 </div>
               )}
@@ -340,7 +370,7 @@ export default function TabPhatSinh({
               <div>
                 <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Số tiền (VNĐ)</label>
                 <div className="relative">
-                  <input type="text" inputMode="numeric" placeholder="VD: 500.000" value={psSoTien} onChange={(e) => setPsSoTien(formatTienInput(e.target.value))} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full pr-12 text-blue-700 font-black text-xl focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all" />
+                  <input type="text" inputMode="numeric" placeholder="VD: 500.000" value={psSoTien} onChange={(e) => setPsSoTien(formatTienInput(e.target.value))} className={`bg-slate-50 p-4 rounded-2xl w-full pr-12 text-blue-700 font-black text-xl focus:bg-white focus:ring-4 outline-none transition-all ${errors.psSoTien ? "border-2 border-red-500" : "border border-transparent focus:border-blue-300 focus:ring-blue-100"}`} />
                   <span className="absolute right-5 top-5 text-gray-400 font-bold">đ</span>
                 </div>
               </div>
@@ -348,7 +378,7 @@ export default function TabPhatSinh({
               <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Ghi chú chi tiết</label><input type="text" placeholder="Tên váy, tình trạng đồ..." value={psGhiChu} onChange={(e) => setPsGhiChu(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-gray-900 font-bold focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all" /></div>
 
               <div className="flex gap-3 mt-4">
-                <button onClick={() => { themPhatSinh(); setShowModal(false); }} className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black shadow-lg shadow-gray-200 hover:bg-black active:scale-95 transition-all">Lưu Giao Dịch</button>
+                <button onClick={handleThemPhatSinh} className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black shadow-lg shadow-gray-200 hover:bg-black active:scale-95 transition-all">Lưu Giao Dịch</button>
                 <button onClick={() => setShowModal(false)} className="px-6 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 active:scale-95 transition-all">Hủy</button>
               </div>
             </div>

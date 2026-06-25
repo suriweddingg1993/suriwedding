@@ -13,7 +13,7 @@ export interface TaiKhoan {
   role: Role;
 }
 
-// Chuẩn hóa cho Gói Dịch Vụ (MỚI THÊM)
+// BỔ SUNG: Cấu trúc Gói Dịch Vụ
 export interface GoiDichVu {
   id?: string;
   tenGoi: string;
@@ -21,7 +21,7 @@ export interface GoiDichVu {
   giaTien: number;
 }
 
-// Chuẩn hóa cho Lịch chụp
+// Chuẩn hóa cho Lịch chụp (Bổ sung tiền cọc)
 export interface Lich {
   id?: string;
   ngay: string;
@@ -32,7 +32,7 @@ export interface Lich {
   theLoai: string;
   goiChup?: string;
   giaTien?: number;
-  tienCoc?: number; // MỚI THÊM: Tính tiền cọc
+  tienCoc?: number; 
   trangThai?: string;
 }
 

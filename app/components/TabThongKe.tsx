@@ -50,7 +50,7 @@ export default function TabThongKe({
                 TỔNG DOANH THU THÁNG {thangThongKe.split("-").reverse().join("/")}
               </div>
               <div className="text-4xl font-black tracking-tight mt-1">
-                {tongThuNhap.toLocaleString("vi-VN")}<span className="text-2xl font-bold ml-1 opacity-80">đ</span>
+                {(tongThuNhap || 0).toLocaleString("vi-VN")}<span className="text-2xl font-bold ml-1 opacity-80">đ</span>
               </div>
             </div>
 
@@ -58,14 +58,14 @@ export default function TabThongKe({
               <div className="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm flex flex-col justify-center">
                 <div className="text-[11px] font-bold text-blue-500 uppercase tracking-wide mb-1">Từ lịch chụp</div>
                 <div className="text-lg font-black text-gray-800">
-                  {tongThuNhapLich.toLocaleString("vi-VN")}đ
+                  {(tongThuNhapLich || 0).toLocaleString("vi-VN")}đ
                 </div>
               </div>
 
               <div className="bg-white border border-orange-100 rounded-2xl p-4 shadow-sm flex flex-col justify-center">
                 <div className="text-[11px] font-bold text-orange-500 uppercase tracking-wide mb-1">Từ phát sinh</div>
                 <div className="text-lg font-black text-gray-800">
-                  {tongThuNhapPhatSinh.toLocaleString("vi-VN")}đ
+                  {(tongThuNhapPhatSinh || 0).toLocaleString("vi-VN")}đ
                 </div>
               </div>
             </div>
