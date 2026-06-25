@@ -65,6 +65,18 @@ export default function TabLich({
   const [chiTietGoiMoi, setChiTietGoiMoi] = useState("");
   const [giaGoiMoi, setGiaGoiMoi] = useState("");
   const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
+  const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
+  const [hdDiaChi, setHdDiaChi] = useState("");
+
+  // KHÓA CUỘN NỀN KHI MỞ BẢNG
+  useEffect(() => {
+    if (showModal || showGoiModal || showHoaHongModal || hoaDonData) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    return () => { document.body.style.overflow = "auto"; };
+  }, [showModal, showGoiModal, showHoaHongModal, hoaDonData]);
 
   useEffect(() => {
     const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => {
@@ -73,9 +85,6 @@ export default function TabLich({
     return () => unsubGoi();
   }, []);
 
-  const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
-  const [hdDiaChi, setHdDiaChi] = useState("");
-  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [chuKy, setChuKy] = useState<string | null>(null);
@@ -107,7 +116,6 @@ export default function TabLich({
     navigator.clipboard.writeText(text); toast.success("Đã copy tin nhắn nhắc khách!");
   };
 
-  // TÍNH NĂNG MỚI: TẠO TEXT HỢP ĐỒNG GỬI ZALO
   const copyHopDongZalo = () => {
     if (!hoaDonData) return;
     const tongTien = formatTienInput(String(hoaDonData.giaTien || 0));
@@ -212,7 +220,22 @@ export default function TabLich({
 
   return (
     <div className="pb-24 px-2 pt-2">
-      <style>{`@media print { body * { visibility: hidden; } #invoice-content, #invoice-content * { visibility: visible; } #invoice-content { position: absolute; left: 0; top: 0; width: 100%; } }`}</style>
+      {/* CSS CĂN CHỈNH TRANG IN: Tự động loại bỏ Link Web & Bo viền siêu mỏng */}
+      <style>{`
+        @media print { 
+          @page { size: A5 portrait; margin: 12mm; }
+          body * { visibility: hidden; } 
+          #invoice-content, #invoice-content * { visibility: visible; } 
+          #invoice-content { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            color: #1f2937; /* Màu xám đen sang trọng */
+          } 
+        }
+      `}</style>
+
       <div className="mb-4">
         <input type="text" placeholder="🔍 Tìm nhanh Tên khách hoặc Số điện thoại..." value={tuKhoa} onChange={(e) => setTuKhoa(e.target.value)} className="w-full bg-white border border-gray-200 p-4 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 outline-none font-bold text-gray-700 transition-all" />
       </div>
@@ -310,7 +333,7 @@ export default function TabLich({
       {/* FORM THÊM / SỬA LỊCH */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in border border-white">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto overscroll-contain animate-fade-in border border-white">
             <h2 className="text-2xl font-black mb-6 text-slate-900">{dangSua ? "✏️ Cập nhật Lịch" : "✨ Thêm Lịch Mới"}</h2>
             <div className="grid gap-4">
               
@@ -387,7 +410,7 @@ export default function TabLich({
       {/* MODAL QUẢN LÝ GÓI DỊCH VỤ (CHỈ DÀNH CHO ADMIN) */}
       {showGoiModal && laAdmin && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto overscroll-contain">
             <h2 className="text-xl font-black mb-4 text-slate-900">⚙️ Quản lý Gói Dịch Vụ Mẫu</h2>
             <div className="bg-blue-50/50 p-4 rounded-xl mb-5 border border-blue-100">
               <h3 className="font-bold text-sm mb-3 text-blue-800">{dangSuaGoi ? "Sửa thông tin gói" : "Tạo gói mới"}</h3>
@@ -424,7 +447,7 @@ export default function TabLich({
         </div>
       )}
 
-      {/* FORM NHẬN HOA HỒNG (Giữ nguyên) */}
+      {/* FORM NHẬN HOA HỒNG */}
       {showHoaHongModal && lichDangChon && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-fade-in border border-white">
@@ -457,10 +480,10 @@ export default function TabLich({
         </div>
       )}
 
-      {/* MODAL HỢP ĐỒNG IN (THÊM THÔNG TIN CỌC & NỢ & GỬI ZALO) */}
+      {/* MODAL HỢP ĐỒNG MỚI: CHUYÊN NGHIỆP - GỌN GÀNG */}
       {hoaDonData && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:bg-white print:p-0">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative print:shadow-none print:p-0 print:max-w-full print:overflow-visible">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain p-6 shadow-2xl relative print:shadow-none print:p-0 print:max-w-full print:overflow-visible">
             
             <div className="print:hidden mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <h3 className="font-black text-blue-600 mb-3 text-sm uppercase">Thông tin bổ sung Hợp đồng</h3>
@@ -477,75 +500,90 @@ export default function TabLich({
               </div>
             </div>
 
-            <div id="invoice-content" className="text-black bg-white p-2">
-              <div className="flex justify-between items-start mb-6 border-b-2 border-slate-900 pb-4">
+            {/* BẢN IN HỢP ĐỒNG ĐƯỢC THIẾT KẾ LẠI GỌN GÀNG, ĐẸP MẮT */}
+            <div id="invoice-content" className="text-gray-900 bg-white p-2 sm:p-6 max-w-3xl mx-auto">
+              <div className="flex justify-between items-start mb-6 border-b border-gray-300 pb-4">
                 <div>
-                  <h1 className="text-xl font-black uppercase tracking-tight">Ảnh Viện SURI WEDDING</h1>
-                  <div className="text-[11px] mt-1 space-y-0.5">
+                  <h1 className="text-base sm:text-lg font-black uppercase tracking-tight">Ảnh Viện SURI WEDDING</h1>
+                  <div className="text-[11px] mt-1 text-gray-700 space-y-0.5">
                     <p><b>Địa chỉ:</b> Thuận Châu, Sơn La</p>
                     <p><b>Điện thoại:</b> 0967.185.505 - 0379.777.819</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <h2 className="text-lg font-black uppercase">HỢP ĐỒNG DỊCH VỤ</h2>
-                  <div className="text-[11px] mt-1"><p><b>HĐ:</b> {hoaDonData.id?.slice(-6).toUpperCase() || "A010098"}</p><p><b>Ngày:</b> {homNay().split('-').reverse().join('/')}</p></div>
+                  <h2 className="text-base sm:text-lg font-black uppercase whitespace-nowrap">HỢP ĐỒNG DỊCH VỤ</h2>
+                  <div className="text-[11px] mt-1 text-gray-700">
+                    <p><b>HĐ:</b> {hoaDonData.id?.slice(-6).toUpperCase() || "A010098"}</p>
+                    <p><b>Ngày:</b> {homNay().split('-').reverse().join('/')}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="text-xs mb-4">
-                <p className="mb-1"><b>Khách hàng:</b> {hoaDonData.tenKhach}</p>
-                <p className="mb-1"><b>Địa chỉ:</b> {hdDiaChi || "......................................................................"}</p>
-                <p><b>Điện thoại:</b> {hoaDonData.soDienThoai}</p>
+              <div className="text-[11px] mb-4 grid grid-cols-2 gap-2 text-gray-800">
+                <p><b className="text-gray-600">Khách hàng:</b> {hoaDonData.tenKhach}</p>
+                <p><b className="text-gray-600">Điện thoại:</b> {hoaDonData.soDienThoai}</p>
+                <p className="col-span-2"><b className="text-gray-600">Địa chỉ:</b> {hdDiaChi || ".................................................................................."}</p>
               </div>
 
-              <table className="w-full border-collapse border border-slate-800 text-xs mb-4">
+              <table className="w-full border-collapse mb-4 text-[11px]">
                 <thead>
-                  <tr className="bg-slate-100">
-                    <th className="border border-slate-800 p-2 text-center w-10">STT</th>
-                    <th className="border border-slate-800 p-2 text-left">MÔ TẢ DỊCH VỤ</th>
-                    <th className="border border-slate-800 p-2 text-right">THÀNH TIỀN</th>
+                  <tr className="bg-gray-50 border-b border-gray-300">
+                    <th className="p-1.5 text-center w-10 text-gray-600 font-bold border-r border-gray-200">STT</th>
+                    <th className="p-1.5 text-left text-gray-600 font-bold border-r border-gray-200">MÔ TẢ DỊCH VỤ</th>
+                    <th className="p-1.5 text-right text-gray-600 font-bold whitespace-nowrap">THÀNH TIỀN</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td className="border border-slate-800 p-2 text-center font-bold">1</td>
-                    <td className="border border-slate-800 p-2 font-bold">{hoaDonData.theLoai}</td>
-                    <td className="border border-slate-800 p-2 text-right font-medium">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
+                <tbody className="border-b border-gray-300">
+                  <tr className="border-b border-gray-200">
+                    <td className="p-2 text-center border-r border-gray-200">1</td>
+                    <td className="p-2 font-bold border-r border-gray-200">{hoaDonData.theLoai}</td>
+                    <td className="p-2 text-right font-bold">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
                   </tr>
                   <tr>
-                    <td className="border border-slate-800 p-2 text-center font-bold">2</td>
-                    <td className="border border-slate-800 p-2 text-slate-700 whitespace-pre-wrap">Chi tiết:\n{hoaDonData.goiChup}</td>
-                    <td className="border border-slate-800 p-2 text-right"></td>
+                    <td className="p-2 text-center border-r border-gray-200">2</td>
+                    <td className="p-2 text-gray-700 whitespace-pre-wrap border-r border-gray-200">Chi tiết:\n{hoaDonData.goiChup}</td>
+                    <td className="p-2 text-right"></td>
                   </tr>
                 </tbody>
               </table>
 
-              <table className="w-full border-collapse border border-slate-800 text-xs mb-8">
-                <tbody>
-                  <tr>
-                    <td className="border border-slate-800 p-2 font-bold w-1/4 bg-slate-50">Tổng thanh toán</td>
-                    <td className="border border-slate-800 p-2 font-black text-right w-1/4 text-sm bg-slate-50">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
-                    <td className="border border-slate-800 p-2 font-bold w-1/4 bg-slate-50">Khách đã đặt cọc</td>
-                    <td className="border border-slate-800 p-2 font-black text-right w-1/4 text-sm text-green-700 bg-slate-50">{formatTienInput(String(hoaDonData.tienCoc || 0))}</td>
+              <table className="w-full border-collapse mb-8 text-[11px]">
+                <tbody className="border border-gray-300">
+                  <tr className="border-b border-gray-300 bg-gray-50">
+                    <td className="p-2 text-gray-600 font-bold w-1/4 border-r border-gray-300 whitespace-nowrap">Tổng thanh toán</td>
+                    <td className="p-2 font-bold text-right w-1/4 border-r border-gray-300">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
+                    <td className="p-2 text-gray-600 font-bold w-1/4 border-r border-gray-300 whitespace-nowrap">Khách đã cọc</td>
+                    <td className="p-2 font-bold text-right w-1/4">{formatTienInput(String(hoaDonData.tienCoc || 0))}</td>
                   </tr>
                   <tr>
-                    <td className="border border-slate-800 p-2">Ghi chú thêm:</td>
-                    <td className="border border-slate-800 p-2 text-right"></td>
-                    <td className="border border-slate-800 p-2 font-bold text-red-600 bg-red-50">CÒN PHẢI THU</td>
-                    <td className="border border-slate-800 p-2 font-black text-right text-red-600 text-base bg-red-50">
+                    <td className="p-2 text-gray-500 italic border-r border-gray-300">(Ghi chú thêm)</td>
+                    <td className="p-2 text-right border-r border-gray-300"></td>
+                    <td className="p-2 font-black text-gray-900 bg-gray-100 border-r border-gray-300 whitespace-nowrap">CÒN PHẢI THU</td>
+                    <td className="p-2 font-black text-right text-gray-900 bg-gray-100 text-[13px]">
                       {formatTienInput(String((hoaDonData.giaTien || 0) - (hoaDonData.tienCoc || 0)))}
                     </td>
                   </tr>
                 </tbody>
               </table>
 
-              <div className="flex justify-between items-start text-center text-xs mt-6 px-10">
-                <div className="flex flex-col items-center"><p className="mb-2">Cảm ơn quý khách!</p><p className="font-bold">Khách hàng</p><div className="h-24 w-40 flex items-center justify-center mt-2">{chuKy ? <img src={chuKy} alt="Chữ ký" className="max-h-full max-w-full mix-blend-multiply" /> : <span className="text-slate-300 italic">(Chưa ký)</span>}</div><p className="font-bold mt-2">{hoaDonData.tenKhach}</p></div>
-                <div className="flex flex-col items-center"><p className="mb-2">Sơn La, Ngày {homNay().split('-')[2]} tháng {homNay().split('-')[1]} năm {homNay().split('-')[0]}</p><p className="font-bold">Đại diện Cửa hàng</p><div className="h-24 w-40 flex items-center justify-center mt-2"></div><p className="font-bold mt-2">SURI WEDDING</p></div>
+              <div className="flex justify-between items-start text-center text-[11px] mt-8 px-6">
+                <div className="flex flex-col items-center">
+                  <p className="mb-1 text-gray-500 italic">Cảm ơn quý khách!</p>
+                  <p className="font-bold text-gray-800">Khách hàng</p>
+                  <div className="h-20 w-32 flex items-center justify-center mt-2">
+                    {chuKy ? <img src={chuKy} alt="Chữ ký" className="max-h-full max-w-full mix-blend-multiply" /> : <span className="text-gray-300 italic">(Chưa ký)</span>}
+                  </div>
+                  <p className="font-bold mt-1 text-gray-900">{hoaDonData.tenKhach}</p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <p className="mb-1 text-gray-500 italic">Sơn La, Ngày {homNay().split('-')[2]} tháng {homNay().split('-')[1]} năm {homNay().split('-')[0]}</p>
+                  <p className="font-bold text-gray-800">Đại diện Cửa hàng</p>
+                  <div className="h-20 w-32 flex items-center justify-center mt-2"></div>
+                  <p className="font-bold mt-1 text-gray-900">SURI WEDDING</p>
+                </div>
               </div>
             </div>
 
-            {/* BỘ NÚT MỚI: COPY GỬI ZALO VÀ LƯU PDF */}
             <div className="print:hidden mt-6 flex flex-col sm:flex-row gap-3 border-t border-slate-100 pt-4">
               <button onClick={copyHopDongZalo} className="flex-1 bg-green-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 active:scale-95 transition-all">
                 💬 COPY TEXT GỬI ZALO
