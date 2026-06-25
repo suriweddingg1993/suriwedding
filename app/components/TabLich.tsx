@@ -56,13 +56,9 @@ export default function TabLich({
   const [vaiTro, setVaiTro] = useState("Chụp ảnh");
   const [tuKhoa, setTuKhoa] = useState(""); 
   
-  // STATE CHO VALIDATE LỖI (NHÁY ĐỎ)
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  
-  // STATE CHO TIỀN CỌC
   const [tienCoc, setTienCoc] = useState("");
   
-  // STATE CHO GÓI DỊCH VỤ
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]);
   const [showGoiModal, setShowGoiModal] = useState(false);
   const [tenGoiMoi, setTenGoiMoi] = useState("");
@@ -70,7 +66,6 @@ export default function TabLich({
   const [giaGoiMoi, setGiaGoiMoi] = useState("");
   const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
 
-  // KÉO DỮ LIỆU GÓI DỊCH VỤ VỀ
   useEffect(() => {
     const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => {
       setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]);
@@ -108,50 +103,49 @@ export default function TabLich({
 
   const copyNhacLich = (item: Lich) => {
     const ngayChup = item.ngay.split('-').reverse().join('/');
-    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\\n\\nEm nhắn tin báo mình có lịch hẹn (${item.theLoai} - ${item.goiChup || ""}) vào lúc ⏰ ${item.gio} ngày ${ngayChup}.\\n\\nAnh/chị nhớ sắp xếp thời gian đến đúng giờ để có những bức ảnh đẹp nhất nhé. Em cảm ơn ạ!`;
+    const text = `Dạ Suri Wedding chào anh/chị ${item.tenKhach || ""}.\n\nEm nhắn tin báo mình có lịch hẹn (${item.theLoai} - ${item.goiChup || ""}) vào lúc ⏰ ${item.gio} ngày ${ngayChup}.\n\nAnh/chị nhớ sắp xếp thời gian đến đúng giờ để có những bức ảnh đẹp nhất nhé. Em cảm ơn ạ!`;
     navigator.clipboard.writeText(text); toast.success("Đã copy tin nhắn nhắc khách!");
   };
 
-  // OVERRIDE MỞ FORM LỊCH (Xóa các ô đỏ báo lỗi)
-  const openAddModal = () => { 
-    resetForm(); 
-    setNgay(selectedDate); 
-    setTienCoc(""); 
-    setErrors({}); 
-    setShowModal(true); 
-  };
-  
-  const suaLichNangCao = (item: Lich) => { 
-    suaLich(item); 
-    setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
-    setErrors({}); 
-    setShowModal(true); 
+  // TÍNH NĂNG MỚI: TẠO TEXT HỢP ĐỒNG GỬI ZALO
+  const copyHopDongZalo = () => {
+    if (!hoaDonData) return;
+    const tongTien = formatTienInput(String(hoaDonData.giaTien || 0));
+    const daCoc = formatTienInput(String(hoaDonData.tienCoc || 0));
+    const conNo = formatTienInput(String((hoaDonData.giaTien || 0) - (hoaDonData.tienCoc || 0)));
+    const ngayChup = hoaDonData.ngay.split('-').reverse().join('/');
+
+    const text = `SURI WEDDING - XÁC NHẬN DỊCH VỤ\n\n👤 Khách hàng: ${hoaDonData.tenKhach}\n📞 SĐT: ${hoaDonData.soDienThoai}\n📅 Lịch chụp: ${hoaDonData.gio} ngày ${ngayChup}\n\n📌 CHI TIẾT DỊCH VỤ:\n- Gói: ${hoaDonData.theLoai}\n- Chi tiết: ${hoaDonData.goiChup}\n\n💰 TÀI CHÍNH:\n- Tổng hóa đơn: ${tongTien}đ\n- Đã đặt cọc: ${daCoc}đ\n- Còn phải thu: ${conNo}đ\n\nCảm ơn anh/chị đã tin tưởng Suri Wedding!\n☎ Hotline hỗ trợ: 0967.185.505 - 0379.777.819`;
+    
+    navigator.clipboard.writeText(text);
+    toast.success("Đã copy Hợp đồng! Mở Zalo dán ngay cho khách nhé.");
   };
 
-  // ===============================================
-  // LOGIC LƯU LỊCH THÔNG MINH (VALIDATE VÀ CẢNH BÁO)
-  // ===============================================
+  const openAddModal = () => { 
+    resetForm(); setNgay(selectedDate); setTienCoc(""); setErrors({}); setShowModal(true); 
+  };
+  const suaLichNangCao = (item: Lich) => { 
+    suaLich(item); setTienCoc(formatTienInput(String(item.tienCoc || 0))); setErrors({}); setShowModal(true); 
+  };
+
   const handleLuuLichThongMinh = async () => {
-    // 1. Kiểm tra Validate (nháy đỏ các ô thiếu/sai)
     const newErrors: Record<string, boolean> = {};
     if (!ngay) newErrors.ngay = true; 
     if (!gio) newErrors.gio = true;
     if (!tenKhach) newErrors.tenKhach = true; 
     
-    // Kiểm tra số điện thoại (chỉ số, 10-11 ký tự)
     const phoneRegex = /^[0-9]{10,11}$/;
-    if (!soDienThoai || !phoneRegex.test(soDienThoai.replace(/\\s/g, ""))) newErrors.soDienThoai = true;
-    if (soDienThoai2 && !phoneRegex.test(soDienThoai2.replace(/\\s/g, ""))) newErrors.soDienThoai2 = true;
+    if (!soDienThoai || !phoneRegex.test(soDienThoai.replace(/\s/g, ""))) newErrors.soDienThoai = true;
+    if (soDienThoai2 && !phoneRegex.test(soDienThoai2.replace(/\s/g, ""))) newErrors.soDienThoai2 = true;
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       toast.error("Vui lòng điền đủ thông tin và Số điện thoại (10-11 số)!");
-      return; // Cố tình không đóng Form, để user sửa
+      return; 
     }
 
-    setErrors({}); // Xóa hết báo đỏ
+    setErrors({}); 
 
-    // 2. Chống quá tải: Kiểm tra xem có ca nào trùng dưới 2 tiếng không
     const lichCungNgay = lichLamViec.filter((item) => item.ngay === ngay && item.id !== dangSua);
     const [h1, m1] = gio.split(":").map(Number);
     const thoiGianMoi = h1 * 60 + m1;
@@ -159,21 +153,20 @@ export default function TabLich({
     const biTrung = lichCungNgay.find((item) => {
       const [h2, m2] = item.gio.split(":").map(Number);
       const thoiGianCu = h2 * 60 + m2;
-      return Math.abs(thoiGianMoi - thoiGianCu) < 120; // 120 phút = 2 tiếng
+      return Math.abs(thoiGianMoi - thoiGianCu) < 120;
     });
 
     if (biTrung) {
-      const dongY = confirm(`⚠️ CẢNH BÁO OVERBOOK:\\nCa chụp này quá sát giờ với khách "${biTrung.tenKhach}" lúc ${biTrung.gio}.\\n\\nBạn có chắc chắn nhận lịch không?`);
+      const dongY = confirm(`⚠️ CẢNH BÁO OVERBOOK:\nCa chụp này quá sát giờ với khách "${biTrung.tenKhach}" lúc ${biTrung.gio}.\n\nBạn có chắc chắn nhận lịch không?`);
       if (!dongY) return;
     }
 
-    // 3. Đóng gói và lưu Database an toàn
     const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
     const duLieuLich = { 
       ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
       theLoai: theLoaiCuoi, goiChup, 
-      giaTien: chuyenTienVeSo(giaTien) || 0, // An toàn NaN
-      tienCoc: chuyenTienVeSo(tienCoc) || 0, // An toàn NaN
+      giaTien: chuyenTienVeSo(giaTien) || 0, 
+      tienCoc: chuyenTienVeSo(tienCoc) || 0, 
       trangThai: "Chưa liên hệ" 
     };
 
@@ -185,15 +178,10 @@ export default function TabLich({
         await addDoc(collection(db, "lichStudio"), duLieuLich); 
         toast.success("Đã thêm lịch!"); 
       } 
-      setShowModal(false); 
-      resetForm(); 
-      setTienCoc("");
+      setShowModal(false); resetForm(); setTienCoc("");
     } catch (error) { toast.error("Có lỗi mạng"); }
   };
 
-  // ===============================================
-  // QUẢN LÝ GÓI CHỤP CHO ADMIN
-  // ===============================================
   const luuGoiDichVu = async () => {
     if (!tenGoiMoi || !giaGoiMoi) return toast.error("Vui lòng nhập tên gói và giá!");
     try {
@@ -210,8 +198,6 @@ export default function TabLich({
   };
   const xoaGoiDichVu = async (id: string) => { if (confirm("Chắc chắn xóa gói chụp mẫu này?")) await deleteDoc(doc(db, "goiDichVu", id)); };
 
-
-  // LOGIC KÝ TÊN
   const getCoordinates = (e: any) => { const canvas = canvasRef.current; if (!canvas) return { x: 0, y: 0 }; const rect = canvas.getBoundingClientRect(); if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }; return { x: e.clientX - rect.left, y: e.clientY - rect.top }; };
   const startDrawing = (e: any) => { setIsDrawing(true); const pos = getCoordinates(e); const ctx = canvasRef.current?.getContext("2d"); if (ctx) { ctx.beginPath(); ctx.moveTo(pos.x, pos.y); } };
   const draw = (e: any) => { if (!isDrawing) return; const pos = getCoordinates(e); const ctx = canvasRef.current?.getContext("2d"); if (ctx) { ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#0f172a"; ctx.lineTo(pos.x, pos.y); ctx.stroke(); } };
@@ -291,7 +277,6 @@ export default function TabLich({
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-black text-emerald-600 whitespace-nowrap">{formatTienInput(String(item.giaTien || 0))}đ</div>
-                      {/* BÁO CÒN NỢ */}
                       {tienNo > 0 ? (
                         <div className="text-xs font-bold text-red-500 mt-0.5 bg-red-50 px-1.5 py-0.5 rounded text-right w-fit ml-auto">Còn nợ: {formatTienInput(String(tienNo))}đ</div>
                       ) : item.giaTien && item.giaTien > 0 ? (
@@ -329,7 +314,6 @@ export default function TabLich({
             <h2 className="text-2xl font-black mb-6 text-slate-900">{dangSua ? "✏️ Cập nhật Lịch" : "✨ Thêm Lịch Mới"}</h2>
             <div className="grid gap-4">
               
-              {/* CHỌN NHANH GÓI CHỤP (TỰ NHẢY GIÁ) */}
               <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100 mb-2">
                 <div className="flex justify-between items-end mb-1.5">
                   <label className="text-[10px] text-blue-700 font-black ml-2 block uppercase">Chọn Nhanh Gói Dịch Vụ</label>
@@ -348,7 +332,6 @@ export default function TabLich({
                 </select>
               </div>
 
-              {/* BÁO ĐỎ NHỮNG Ô BỊ LỖI BẰNG CLASS: border-red-500 */}
               <div className="flex gap-3">
                 <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Ngày chụp</label><input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.ngay ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
                 <div className="flex-1"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Giờ chụp</label><input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold focus:bg-white focus:ring-4 outline-none ${errors.gio ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
@@ -386,7 +369,6 @@ export default function TabLich({
                 <div className="flex-1">
                   <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Khách Đã Cọc</label>
                   <div className="relative">
-                    {/* BỔ SUNG: Tính năng Cọc */}
                     <input type="text" inputMode="numeric" placeholder="0" value={tienCoc} onChange={(e) => setTienCoc(formatTienInput(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full pr-8 text-orange-600 font-black text-xl focus:bg-white focus:ring-4 border border-transparent outline-none" />
                     <span className="absolute right-3 top-5 text-slate-400 font-bold">đ</span>
                   </div>
@@ -475,7 +457,7 @@ export default function TabLich({
         </div>
       )}
 
-      {/* MODAL HỢP ĐỒNG IN (THÊM THÔNG TIN CỌC & NỢ) */}
+      {/* MODAL HỢP ĐỒNG IN (THÊM THÔNG TIN CỌC & NỢ & GỬI ZALO) */}
       {hoaDonData && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:bg-white print:p-0">
           <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative print:shadow-none print:p-0 print:max-w-full print:overflow-visible">
@@ -499,7 +481,10 @@ export default function TabLich({
               <div className="flex justify-between items-start mb-6 border-b-2 border-slate-900 pb-4">
                 <div>
                   <h1 className="text-xl font-black uppercase tracking-tight">Ảnh Viện SURI WEDDING</h1>
-                  <div className="text-[11px] mt-1 space-y-0.5"><p><b>Địa chỉ:</b> Thuận Châu, Sơn La</p><p><b>Điện thoại:</b> 09xx.xxx.xxx</p></div>
+                  <div className="text-[11px] mt-1 space-y-0.5">
+                    <p><b>Địa chỉ:</b> Thuận Châu, Sơn La</p>
+                    <p><b>Điện thoại:</b> 0967.185.505 - 0379.777.819</p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <h2 className="text-lg font-black uppercase">HỢP ĐỒNG DỊCH VỤ</h2>
@@ -560,10 +545,19 @@ export default function TabLich({
               </div>
             </div>
 
-            <div className="print:hidden mt-6 flex gap-3 border-t border-slate-100 pt-4">
-              <button onClick={() => window.print()} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-slate-300 hover:bg-slate-800 active:scale-95 transition-all">🖨️ IN HỢP ĐỒNG</button>
-              <button onClick={() => setHoaDonData(null)} className="px-6 py-3.5 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 active:scale-95 transition-all">Đóng</button>
+            {/* BỘ NÚT MỚI: COPY GỬI ZALO VÀ LƯU PDF */}
+            <div className="print:hidden mt-6 flex flex-col sm:flex-row gap-3 border-t border-slate-100 pt-4">
+              <button onClick={copyHopDongZalo} className="flex-1 bg-green-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 active:scale-95 transition-all">
+                💬 COPY TEXT GỬI ZALO
+              </button>
+              <button onClick={() => window.print()} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-slate-300 hover:bg-slate-800 active:scale-95 transition-all">
+                🖨️ LƯU PDF / IN BẢN CỨNG
+              </button>
+              <button onClick={() => setHoaDonData(null)} className="px-6 py-3.5 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 active:scale-95 transition-all">
+                Đóng
+              </button>
             </div>
+            
           </div>
         </div>
       )}

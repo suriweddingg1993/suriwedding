@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+/* BIẾN PWA THÀNH NATIVE APP */
+html, body {
+  overflow-x: hidden !important; /* Cấm tuyệt đối trượt ngang */
+  overscroll-behavior-y: none; /* Khóa hiệu ứng nảy (rubber-band) của iOS khi kéo lố */
+  overscroll-behavior-x: none;
+  touch-action: pan-y; /* Chỉ cho phép vuốt dọc, khóa các thao tác vuốt web mặc định */
+  
+  /* Xóa hiệu ứng chớp màu xanh khi chạm vào nút trên điện thoại */
+  -webkit-tap-highlight-color: transparent; 
+  
+  /* Cấm người dùng bôi đen văn bản giống hệt App thật */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* Cấm hiện menu popup khi giữ lâu vào màn hình */
+}
+
+/* Vẫn phải cho phép người dùng bôi đen và copy ở các ô nhập liệu (Input) */
+input, textarea, select {
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+}
