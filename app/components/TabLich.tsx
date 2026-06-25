@@ -68,14 +68,31 @@ export default function TabLich({
   const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
   const [hdDiaChi, setHdDiaChi] = useState("");
 
-  // KHÓA CUỘN NỀN KHI MỞ BẢNG
+  // ========================================================
+  // XỬ LÝ TRIỆT ĐỂ: KHÓA SCROLL BLEED TRÊN iPHONE / ANDROID
+  // ========================================================
   useEffect(() => {
     if (showModal || showGoiModal || showHoaHongModal || hoaDonData) {
-      document.body.style.overflow = "hidden";
+      // Khi bảng mở lên: Lưu lại tọa độ cuộn hiện tại & Ép cố định Body
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
     } else {
-      document.body.style.overflow = "auto";
+      // Khi bảng đóng lại: Nhả cố định & Cuộn về lại đúng tọa độ cũ
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
-    return () => { document.body.style.overflow = "auto"; };
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+    };
   }, [showModal, showGoiModal, showHoaHongModal, hoaDonData]);
 
   useEffect(() => {
@@ -220,18 +237,26 @@ export default function TabLich({
 
   return (
     <div className="pb-24 px-2 pt-2">
-      {/* CSS CĂN CHỈNH TRANG IN: Tự động loại bỏ Link Web & Bo viền siêu mỏng */}
+      {/* CSS CĂN CHỈNH TRANG IN: Xóa Margin để mất Link Web & Ép vửa 1 trang */}
       <style>{`
         @media print { 
-          @page { size: A5 portrait; margin: 12mm; }
+          @page { 
+            size: A5 portrait; 
+            margin: 0; /* Quan trọng: margin 0 sẽ xóa Header/Footer của trình duyệt */
+          }
+          body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           body * { visibility: hidden; } 
           #invoice-content, #invoice-content * { visibility: visible; } 
           #invoice-content { 
             position: absolute; 
             left: 0; 
             top: 0; 
-            width: 100%; 
-            color: #1f2937; /* Màu xám đen sang trọng */
+            width: 100vw; 
+            height: 100vh; /* Ép cố định không cho tràn sang trang 2 */
+            padding: 12mm 15mm !important; /* Tạo lề giấy bên trong */
+            box-sizing: border-box; 
+            color: #000;
+            overflow: hidden; /* Cắt phần thừa nếu lỡ quá dài */
           } 
         }
       `}</style>
@@ -333,7 +358,7 @@ export default function TabLich({
       {/* FORM THÊM / SỬA LỊCH */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto overscroll-contain animate-fade-in border border-white">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto animate-fade-in border border-white" style={{ WebkitOverflowScrolling: 'touch' }}>
             <h2 className="text-2xl font-black mb-6 text-slate-900">{dangSua ? "✏️ Cập nhật Lịch" : "✨ Thêm Lịch Mới"}</h2>
             <div className="grid gap-4">
               
@@ -410,7 +435,7 @@ export default function TabLich({
       {/* MODAL QUẢN LÝ GÓI DỊCH VỤ (CHỈ DÀNH CHO ADMIN) */}
       {showGoiModal && laAdmin && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto overscroll-contain">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
             <h2 className="text-xl font-black mb-4 text-slate-900">⚙️ Quản lý Gói Dịch Vụ Mẫu</h2>
             <div className="bg-blue-50/50 p-4 rounded-xl mb-5 border border-blue-100">
               <h3 className="font-bold text-sm mb-3 text-blue-800">{dangSuaGoi ? "Sửa thông tin gói" : "Tạo gói mới"}</h3>
@@ -480,10 +505,10 @@ export default function TabLich({
         </div>
       )}
 
-      {/* MODAL HỢP ĐỒNG MỚI: CHUYÊN NGHIỆP - GỌN GÀNG */}
+      {/* MODAL HỢP ĐỒNG IN */}
       {hoaDonData && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:bg-white print:p-0">
-          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain p-6 shadow-2xl relative print:shadow-none print:p-0 print:max-w-full print:overflow-visible">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative print:shadow-none print:p-0 print:max-w-full print:overflow-visible" style={{ WebkitOverflowScrolling: 'touch' }}>
             
             <div className="print:hidden mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <h3 className="font-black text-blue-600 mb-3 text-sm uppercase">Thông tin bổ sung Hợp đồng</h3>
@@ -502,7 +527,7 @@ export default function TabLich({
 
             {/* BẢN IN HỢP ĐỒNG ĐƯỢC THIẾT KẾ LẠI GỌN GÀNG, ĐẸP MẮT */}
             <div id="invoice-content" className="text-gray-900 bg-white p-2 sm:p-6 max-w-3xl mx-auto">
-              <div className="flex justify-between items-start mb-6 border-b border-gray-300 pb-4">
+              <div className="flex justify-between items-start mb-4 print:mb-2 border-b border-gray-300 pb-3 print:pb-2">
                 <div>
                   <h1 className="text-base sm:text-lg font-black uppercase tracking-tight">Ảnh Viện SURI WEDDING</h1>
                   <div className="text-[11px] mt-1 text-gray-700 space-y-0.5">
@@ -519,13 +544,13 @@ export default function TabLich({
                 </div>
               </div>
 
-              <div className="text-[11px] mb-4 grid grid-cols-2 gap-2 text-gray-800">
+              <div className="text-[11px] mb-4 print:mb-2 grid grid-cols-2 gap-2 text-gray-800">
                 <p><b className="text-gray-600">Khách hàng:</b> {hoaDonData.tenKhach}</p>
                 <p><b className="text-gray-600">Điện thoại:</b> {hoaDonData.soDienThoai}</p>
                 <p className="col-span-2"><b className="text-gray-600">Địa chỉ:</b> {hdDiaChi || ".................................................................................."}</p>
               </div>
 
-              <table className="w-full border-collapse mb-4 text-[11px]">
+              <table className="w-full border-collapse mb-4 print:mb-2 text-[11px]">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-300">
                     <th className="p-1.5 text-center w-10 text-gray-600 font-bold border-r border-gray-200">STT</th>
@@ -535,42 +560,42 @@ export default function TabLich({
                 </thead>
                 <tbody className="border-b border-gray-300">
                   <tr className="border-b border-gray-200">
-                    <td className="p-2 text-center border-r border-gray-200">1</td>
-                    <td className="p-2 font-bold border-r border-gray-200">{hoaDonData.theLoai}</td>
-                    <td className="p-2 text-right font-bold">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
+                    <td className="p-1.5 print:p-1 text-center border-r border-gray-200">1</td>
+                    <td className="p-1.5 print:p-1 font-bold border-r border-gray-200">{hoaDonData.theLoai}</td>
+                    <td className="p-1.5 print:p-1 text-right font-bold">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
                   </tr>
                   <tr>
-                    <td className="p-2 text-center border-r border-gray-200">2</td>
-                    <td className="p-2 text-gray-700 whitespace-pre-wrap border-r border-gray-200">Chi tiết:\n{hoaDonData.goiChup}</td>
-                    <td className="p-2 text-right"></td>
+                    <td className="p-1.5 print:p-1 text-center border-r border-gray-200">2</td>
+                    <td className="p-1.5 print:p-1 text-gray-700 whitespace-pre-wrap border-r border-gray-200">Chi tiết:\n{hoaDonData.goiChup}</td>
+                    <td className="p-1.5 print:p-1 text-right"></td>
                   </tr>
                 </tbody>
               </table>
 
-              <table className="w-full border-collapse mb-8 text-[11px]">
+              <table className="w-full border-collapse mb-4 print:mb-2 text-[11px]">
                 <tbody className="border border-gray-300">
                   <tr className="border-b border-gray-300 bg-gray-50">
-                    <td className="p-2 text-gray-600 font-bold w-1/4 border-r border-gray-300 whitespace-nowrap">Tổng thanh toán</td>
-                    <td className="p-2 font-bold text-right w-1/4 border-r border-gray-300">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
-                    <td className="p-2 text-gray-600 font-bold w-1/4 border-r border-gray-300 whitespace-nowrap">Khách đã cọc</td>
-                    <td className="p-2 font-bold text-right w-1/4">{formatTienInput(String(hoaDonData.tienCoc || 0))}</td>
+                    <td className="p-1.5 print:p-1 text-gray-600 font-bold w-1/4 border-r border-gray-300 whitespace-nowrap">Tổng thanh toán</td>
+                    <td className="p-1.5 print:p-1 font-bold text-right w-1/4 border-r border-gray-300">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
+                    <td className="p-1.5 print:p-1 text-gray-600 font-bold w-1/4 border-r border-gray-300 whitespace-nowrap">Khách đã cọc</td>
+                    <td className="p-1.5 print:p-1 font-bold text-right w-1/4">{formatTienInput(String(hoaDonData.tienCoc || 0))}</td>
                   </tr>
                   <tr>
-                    <td className="p-2 text-gray-500 italic border-r border-gray-300">(Ghi chú thêm)</td>
-                    <td className="p-2 text-right border-r border-gray-300"></td>
-                    <td className="p-2 font-black text-gray-900 bg-gray-100 border-r border-gray-300 whitespace-nowrap">CÒN PHẢI THU</td>
-                    <td className="p-2 font-black text-right text-gray-900 bg-gray-100 text-[13px]">
+                    <td className="p-1.5 print:p-1 text-gray-500 italic border-r border-gray-300">(Ghi chú thêm)</td>
+                    <td className="p-1.5 print:p-1 text-right border-r border-gray-300"></td>
+                    <td className="p-1.5 print:p-1 font-black text-gray-900 bg-gray-100 border-r border-gray-300 whitespace-nowrap">CÒN PHẢI THU</td>
+                    <td className="p-1.5 print:p-1 font-black text-right text-gray-900 bg-gray-100 text-[13px]">
                       {formatTienInput(String((hoaDonData.giaTien || 0) - (hoaDonData.tienCoc || 0)))}
                     </td>
                   </tr>
                 </tbody>
               </table>
 
-              <div className="flex justify-between items-start text-center text-[11px] mt-8 px-6">
+              <div className="flex justify-between items-start text-center text-[11px] mt-4 print:mt-2 px-6">
                 <div className="flex flex-col items-center">
                   <p className="mb-1 text-gray-500 italic">Cảm ơn quý khách!</p>
                   <p className="font-bold text-gray-800">Khách hàng</p>
-                  <div className="h-20 w-32 flex items-center justify-center mt-2">
+                  <div className="h-16 print:h-12 w-32 flex items-center justify-center mt-1">
                     {chuKy ? <img src={chuKy} alt="Chữ ký" className="max-h-full max-w-full mix-blend-multiply" /> : <span className="text-gray-300 italic">(Chưa ký)</span>}
                   </div>
                   <p className="font-bold mt-1 text-gray-900">{hoaDonData.tenKhach}</p>
@@ -578,7 +603,7 @@ export default function TabLich({
                 <div className="flex flex-col items-center">
                   <p className="mb-1 text-gray-500 italic">Sơn La, Ngày {homNay().split('-')[2]} tháng {homNay().split('-')[1]} năm {homNay().split('-')[0]}</p>
                   <p className="font-bold text-gray-800">Đại diện Cửa hàng</p>
-                  <div className="h-20 w-32 flex items-center justify-center mt-2"></div>
+                  <div className="h-16 print:h-12 w-32 flex items-center justify-center mt-1"></div>
                   <p className="font-bold mt-1 text-gray-900">SURI WEDDING</p>
                 </div>
               </div>
