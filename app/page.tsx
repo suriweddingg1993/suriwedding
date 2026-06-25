@@ -8,15 +8,15 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, Lich, TaiKhoan } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, CheckCircle2, ChevronRight, Camera } from "lucide-react";
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
 
-const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-zinc-400 font-medium animate-pulse tracking-wide">Đang tải dữ liệu...</div> });
-const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-zinc-400 font-medium animate-pulse tracking-wide">Đang tải dữ liệu...</div> });
-const TabThongKe = dynamic(() => import("./components/TabThongKe"), { loading: () => <div className="p-10 text-center text-zinc-400 font-medium animate-pulse tracking-wide">Đang tải dữ liệu...</div> });
-const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading: () => <div className="p-10 text-center text-zinc-400 font-medium animate-pulse tracking-wide">Đang tải dữ liệu...</div> });
-const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-zinc-400 font-medium animate-pulse tracking-wide">Đang tải dữ liệu...</div> });
-const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-zinc-400 font-medium animate-pulse tracking-wide">Đang tải dữ liệu...</div> });
-const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-zinc-400 font-medium animate-pulse tracking-wide">Đang tải dữ liệu...</div> });
+const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabThongKe = dynamic(() => import("./components/TabThongKe"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const CUA_HANG_LAT = 21.436897313370316;
@@ -53,6 +53,7 @@ export default function HomePage() {
   const [goiChup, setGoiChup] = useState(""); const [giaTien, setGiaTien] = useState("");
   const [tuKhoa, setTuKhoa] = useState(""); const [dangSua, setDangSua] = useState<string | null>(null);
   
+  // ĐÃ KHÔI PHỤC LẠI 2 BIẾN NÀY
   const [timNgay, setTimNgay] = useState("");
   const [thangThongKe, setThangThongKe] = useState("");
 
@@ -191,35 +192,18 @@ export default function HomePage() {
   const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNay);
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi"); } };
 
-  if (dangTai) return <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center font-medium text-zinc-400 tracking-wide">Đang kết nối không gian...</div>;
-  
-  /* GIAO DIỆN LOGIN - SANG TRỌNG / TỐI GIẢN */
+  if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
   if (!user) { 
     return ( 
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6 relative overflow-hidden">
-        {/* Họa tiết mờ trang trí */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-zinc-200/40 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-stone-200/40 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
-
-        <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] p-10 w-full max-w-sm border border-white/50 relative z-10">
-          <div className="w-16 h-16 bg-zinc-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-zinc-200/50">
-            <Camera size={28} strokeWidth={1.5} />
-          </div>
-          <h1 className="text-3xl font-extrabold mb-1.5 text-center text-zinc-900 tracking-tight">Suri Studio</h1>
-          <p className="text-zinc-400 text-sm font-medium text-center mb-8 tracking-wide">Quản trị không gian cưới</p>
-          
-          <div className="grid gap-5">
-            <div>
-              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] ml-1 mb-2 block">Email</label>
-              <input type="email" placeholder="Tài khoản..." value={email} onChange={(e) => setEmail(e.target.value)} className="bg-zinc-50/50 border border-zinc-100 p-4 rounded-2xl w-full text-zinc-900 font-medium focus:bg-white focus:border-zinc-300 focus:ring-4 focus:ring-zinc-100/50 outline-none transition-all placeholder:text-zinc-300" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em] ml-1 mb-2 block">Mật khẩu</label>
-              <input type="password" placeholder="••••••••" value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="bg-zinc-50/50 border border-zinc-100 p-4 rounded-2xl w-full text-zinc-900 font-medium focus:bg-white focus:border-zinc-300 focus:ring-4 focus:ring-zinc-100/50 outline-none transition-all placeholder:text-zinc-300" />
-            </div>
-            <button onClick={dangNhap} className="bg-zinc-900 text-white p-4 rounded-2xl font-bold tracking-wide shadow-lg shadow-zinc-200 hover:bg-zinc-800 active:scale-[0.98] transition-all mt-4 flex items-center justify-center gap-2">
-              Vào hệ thống <ChevronRight size={18} />
-            </button>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-100/50 p-8 w-full max-w-sm border border-white">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6"><Users size={32} strokeWidth={2} /></div>
+          <h1 className="text-2xl font-black mb-2 text-center text-slate-800 tracking-tight">Suri Wedding</h1>
+          <p className="text-slate-500 text-sm font-medium text-center mb-8">Đăng nhập hệ thống quản lý</p>
+          <div className="grid gap-4">
+            <div><label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5 block">Email</label><input type="email" placeholder="Nhập email..." value={email} onChange={(e) => setEmail(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-xl w-full text-slate-900 font-bold focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 outline-none transition-all" /></div>
+            <div><label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5 block">Mật khẩu</label><input type="password" placeholder="Nhập mật khẩu..." value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-xl w-full text-slate-900 font-bold focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 outline-none transition-all" /></div>
+            <button onClick={dangNhap} className="bg-blue-600 text-white p-4 rounded-xl font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all mt-2">ĐĂNG NHẬP</button>
           </div>
         </div>
       </div> 
@@ -227,91 +211,84 @@ export default function HomePage() {
   }
 
   const nutMenu = [
-    { key: "home", icon: Home, label: "Tổng quan", color: "text-zinc-900", bg: "bg-zinc-100", adminOnly: false },
-    { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-zinc-900", bg: "bg-zinc-100", adminOnly: false },
-    { key: "phatSinh", icon: Wallet, label: "Thu / Chi", color: "text-zinc-900", bg: "bg-zinc-100", adminOnly: false },
-    { key: "tinhTrangKH", icon: ClipboardList, label: "Kho đồ", color: "text-zinc-900", bg: "bg-zinc-100", adminOnly: false },
-    { key: "chamCong", icon: Clock, label: "Chấm công", color: "text-zinc-900", bg: "bg-zinc-100", adminOnly: false },
-    { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-zinc-900", bg: "bg-zinc-100", adminOnly: false },
-    { key: "nhanVien", icon: Users, label: "Nhân sự", color: "text-zinc-900", bg: "bg-zinc-100", adminOnly: true },
-    { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-zinc-900", bg: "bg-zinc-100", adminOnly: true },
+    { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
+    { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
+    { key: "phatSinh", icon: Wallet, label: "Thu / Chi", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
+    { key: "tinhTrangKH", icon: ClipboardList, label: "Kho đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
+    { key: "chamCong", icon: Clock, label: "Chấm công", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
+    { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
+    { key: "nhanVien", icon: Users, label: "Nhân sự", color: "text-pink-600", bg: "bg-pink-50", adminOnly: true },
+    { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
   ] as const;
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] p-5 md:p-10 pb-32 font-sans selection:bg-zinc-200">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-28 font-sans">
       {coBanCapNhat && (
-        <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl shadow-zinc-200/50 z-50 relative">
+        <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm z-50 relative">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-zinc-800 text-white rounded-full flex items-center justify-center animate-spin-slow"><RefreshCw size={18} /></div> 
-            <div><div className="font-bold text-white text-sm tracking-wide">Cập nhật hệ thống</div><div className="text-xs text-zinc-400 mt-1">Phiên bản mới đã sẵn sàng.</div></div>
+            <div className="w-12 h-12 bg-amber-200 text-amber-700 rounded-full flex items-center justify-center animate-pulse"><RefreshCw size={24} /></div> 
+            <div><div className="font-black text-amber-800 text-lg">App có bản cập nhật mới!</div><div className="text-sm text-amber-700 font-medium mt-0.5">Vui lòng cập nhật ngay để app hoạt động chuẩn xác nhất.</div></div>
           </div>
           <div className="flex gap-2">
-            {laAdmin && (<button onClick={xacNhanPhatHanh} className="flex-1 md:flex-none bg-white text-zinc-900 px-5 py-2.5 rounded-xl text-xs font-bold shadow-sm hover:bg-zinc-100 active:scale-95 transition-all">Phát hành</button>)}
-            <button onClick={() => window.location.reload()} className="flex-1 md:flex-none bg-zinc-800 text-white border border-zinc-700 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-zinc-700 active:scale-95 transition-all">Tải lại</button>
+            {laAdmin && (<button onClick={xacNhanPhatHanh} className="flex-1 md:flex-none bg-emerald-600 text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700 active:scale-95 transition-all">Phát hành bản này</button>)}
+            <button onClick={() => window.location.reload()} className="flex-1 md:flex-none bg-amber-500 text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-amber-600 active:scale-95 transition-all">Cập nhật ngay</button>
           </div>
         </div>
       )}
 
       {/* HEADER TỐI GIẢN */}
-      <div className="flex justify-between items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-zinc-900 tracking-tight">Suri Studio.</h1>
-          <p className="text-[11px] uppercase tracking-widest font-bold text-zinc-400 mt-1.5">{user.email?.split('@')[0]} <span className="mx-1">•</span> {laAdmin ? "Quản trị viên" : "Nhân sự"}</p>
-        </div>
-        <button onClick={dangXuat} className="bg-white border border-zinc-100 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm"><LogOut size={18} strokeWidth={2} /></button>
+      <div className="flex justify-between items-center gap-4 mb-6">
+        <div><h1 className="text-2xl font-black text-slate-900 tracking-tight">Suri Wedding</h1><p className="text-xs font-bold text-slate-500 mt-1">{user.email?.split('@')[0]} • {laAdmin ? "Admin" : "Nhân viên"}</p></div>
+        <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm"><LogOut size={18} strokeWidth={2.5} /></button>
       </div>
 
       {tab === "home" && (
-        <div className="animate-fade-in space-y-8">
-          {/* KHỐI TỔNG QUAN */}
+        <div className="animate-fade-in space-y-6">
+          {/* KHỐI TỔNG QUAN HÔM NAY (Grid 2x2) Gọn gàng */}
           <div>
-            <div className="flex items-center justify-between mb-4 px-1">
-              <h2 className="font-bold text-sm uppercase tracking-widest text-zinc-400">Hôm nay</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="col-span-2 bg-zinc-900 p-6 rounded-[2rem] shadow-xl shadow-zinc-200/50 hover:shadow-2xl transition-all active:scale-[0.98] flex items-center justify-between group relative overflow-hidden">
-                {/* Lớp phủ mờ ánh kim */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/3"></div>
-                
-                <div className="flex items-center gap-5 relative z-10">
-                  <div className="w-14 h-14 rounded-2xl bg-zinc-800 text-white flex items-center justify-center group-hover:scale-105 transition-transform duration-500"><CalendarDays size={24} strokeWidth={1.5} /></div>
+            <div className="flex items-center justify-between mb-3 px-1"><h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng công việc</h2></div>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="col-span-2 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-between group relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500 rounded-l-3xl"></div>
+                <div className="flex items-center gap-4 ml-2">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"><CalendarDays size={28} strokeWidth={1.5} /></div>
                   <div className="text-left">
-                    <div className="text-zinc-400 font-medium text-[11px] uppercase tracking-[0.2em] mb-1">Lịch bấm máy</div>
-                    <div className="text-2xl font-light text-white leading-none">
-                      {lichLamViec.filter((item) => item.ngay === homNay()).length > 0 ? <span className="font-medium text-white">{lichLamViec.filter((item) => item.ngay === homNay()).length} <span className="text-base text-zinc-400 font-normal tracking-wide">khách</span></span> : <span className="text-zinc-500 text-lg tracking-wide">Trống lịch</span>}
+                    <div className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">Lịch chụp hôm nay</div>
+                    <div className="text-2xl font-black text-slate-800 leading-none">
+                      {lichLamViec.filter((item) => item.ngay === homNay()).length > 0 ? <span className="text-indigo-600">{lichLamViec.filter((item) => item.ngay === homNay()).length} <span className="text-lg text-slate-600 font-semibold tracking-tight">khách hàng</span></span> : <span className="text-slate-400 text-lg tracking-tight">Lịch trống</span>}
                     </div>
                   </div>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:bg-white group-hover:text-zinc-900 transition-colors z-10"><ChevronRight size={20} strokeWidth={2} /></div>
+                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></div>
               </button>
 
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-6 rounded-[2rem] border transition-all active:scale-95 flex flex-col gap-4 ${canTraHomNay.length > 0 ? "bg-[#FAF5ED] border-[#F2E5D0] shadow-sm" : "bg-white border-zinc-100 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.03)]"}`}>
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${canTraHomNay.length > 0 ? "bg-[#F2E5D0] text-[#8C6B38]" : "bg-zinc-50 text-zinc-400"}`}><ClipboardList size={22} strokeWidth={1.5} /></div>
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-5 rounded-3xl border shadow-sm transition-all active:scale-95 flex flex-col gap-4 ${canTraHomNay.length > 0 ? "bg-gradient-to-b from-amber-50 to-orange-50 border-amber-200" : "bg-white border-slate-100"}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}><ClipboardList size={24} strokeWidth={2} /></div>
                 <div className="text-left">
-                  <div className={`text-3xl font-light leading-none mb-2 ${canTraHomNay.length > 0 ? "text-[#8C6B38] font-medium" : "text-zinc-800"}`}>{canTraHomNay.length}</div>
-                  <div className={`text-[10px] font-bold uppercase tracking-[0.15em] ${canTraHomNay.length > 0 ? "text-[#A88B5A]" : "text-zinc-400"}`}>Khách trả đồ</div>
+                  <div className={`text-3xl font-black leading-none mb-1.5 ${canTraHomNay.length > 0 ? "text-amber-700" : "text-slate-800"}`}>{canTraHomNay.length}</div>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-400"}`}>Trả đồ hôm nay</div>
                 </div>
               </button>
 
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-6 rounded-[2rem] border transition-all active:scale-95 flex flex-col gap-4 ${quaHan.length > 0 ? "bg-[#FCF0F0] border-[#F5DADA] shadow-sm" : "bg-white border-zinc-100 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.03)]"}`}>
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${quaHan.length > 0 ? "bg-[#F5DADA] text-[#9B4747] animate-pulse" : "bg-zinc-50 text-zinc-400"}`}><AlertCircle size={22} strokeWidth={1.5} /></div>
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-5 rounded-3xl border shadow-sm transition-all active:scale-95 flex flex-col gap-4 ${quaHan.length > 0 ? "bg-gradient-to-b from-rose-50 to-red-50 border-rose-200" : "bg-white border-slate-100"}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${quaHan.length > 0 ? "bg-rose-100 text-rose-600 animate-pulse" : "bg-slate-50 text-slate-400"}`}><AlertCircle size={24} strokeWidth={2} /></div>
                 <div className="text-left">
-                  <div className={`text-3xl font-light leading-none mb-2 ${quaHan.length > 0 ? "text-[#9B4747] font-medium" : "text-zinc-800"}`}>{quaHan.length}</div>
-                  <div className={`text-[10px] font-bold uppercase tracking-[0.15em] ${quaHan.length > 0 ? "text-[#B96A6A]" : "text-zinc-400"}`}>Quá hạn trả</div>
+                  <div className={`text-3xl font-black leading-none mb-1.5 ${quaHan.length > 0 ? "text-rose-700" : "text-slate-800"}`}>{quaHan.length}</div>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${quaHan.length > 0 ? "text-rose-600" : "text-slate-400"}`}>Quá hạn trả</div>
                 </div>
               </button>
             </div>
           </div>
 
           <div>
-            <h2 className="font-bold text-sm uppercase tracking-widest text-zinc-400 mb-4 ml-1">Danh mục</h2>
+            <h2 className="font-black text-lg mb-3 text-slate-800 ml-1 tracking-tight">Tính năng quản lý</h2>
             <div className="grid grid-cols-2 gap-3">
               {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
                   const IconComponent = item.icon;
                   return ( 
-                    <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-[1.5rem] shadow-[0_8px_30px_-12px_rgba(0,0,0,0.04)] border border-zinc-100/50 p-4 flex items-center gap-4 transition-all hover:shadow-[0_10px_40px_-15px_rgba(0,0,0,0.08)] hover:border-zinc-200 active:scale-95 group">
-                      <div className={`p-3 rounded-2xl bg-zinc-50 group-hover:bg-zinc-900 group-hover:text-white text-zinc-500 transition-colors duration-500 shrink-0`}><IconComponent size={20} strokeWidth={1.5} /></div>
-                      <div className="font-medium text-sm text-zinc-700 text-left leading-tight tracking-wide">{item.label}</div>
+                    <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group">
+                      <div className={`p-2.5 rounded-xl bg-slate-50 group-hover:${item.bg} ${item.color} transition-colors duration-300 shrink-0`}><IconComponent size={20} strokeWidth={2} /></div>
+                      <div className="font-bold text-sm text-slate-700 text-left leading-tight">{item.label}</div>
                     </button> 
                   );
               })}
@@ -320,8 +297,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* RENDER CÁC TAB - NỘI DUNG GIỮ NGUYÊN LOGIC */}
-      <div id="noi-dung-tab" className="mt-4">
+      {/* RENDER CÁC TAB */}
+      <div id="noi-dung-tab" className="mt-2">
         {tab === "lich" && <TabLich homNay={homNay} dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} />}
         {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} />}
         {tab === "chamCong" && <TabChamCong homNay={homNay} BAN_KINH_CHO_PHEP={BAN_KINH_CHO_PHEP} khoangCach={khoangCach} chamCongHomNay={chamCongHomNay} chamCong={chamCong} dangLayViTri={dangLayViTri} laAdmin={laAdmin} chamCongHienThi={chamCongHienThi} guiGiaiTrinh={guiGiaiTrinh} duyetGiaiTrinh={duyetGiaiTrinh} />}
@@ -331,23 +308,20 @@ export default function HomePage() {
         {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}
       </div>
 
-      {/* THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (Floating Pill Bottom Nav) */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/90 backdrop-blur-xl border border-white/50 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.08)] flex justify-between items-center px-2 py-2 z-40">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-2xl border-t border-slate-200/50 flex justify-around items-end pt-2 pb-6 md:pb-4 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] z-40">
         {[
-          { key: "home", icon: Home, label: "Tổng quan" },
+          { key: "home", icon: Home, label: "Trang chủ" },
           { key: "lich", icon: CalendarDays, label: "Lịch chụp" },
-          { key: "phatSinh", icon: Wallet, label: "Thu Chi" },
+          { key: "phatSinh", icon: Wallet, label: "Thu / Chi" },
           { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
         ].map((nav) => {
           const IconComponent = nav.icon;
           const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "nhanVien" || tab === "thongKe" || tab === "tinhTrangKH"));
           return (
-            <button key={nav.key} onClick={() => { setTab(nav.key === "luong" ? "luong" : (nav.key as TabType)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`flex items-center justify-center px-4 py-2.5 rounded-full transition-all duration-500 ease-out ${isActive ? "bg-zinc-900 text-white shadow-md" : "bg-transparent text-zinc-400 hover:text-zinc-600"}`}>
-              <IconComponent size={20} strokeWidth={isActive ? 2 : 1.5} className="shrink-0" />
-              {/* Chữ chỉ hiện ra khi tab đang active */}
-              <div className={`overflow-hidden transition-all duration-500 ease-out ${isActive ? "max-w-[100px] ml-2 opacity-100" : "max-w-0 ml-0 opacity-0"}`}>
-                <span className="text-[11px] font-bold tracking-wide whitespace-nowrap">{nav.label}</span>
-              </div>
+            <button key={nav.key} onClick={() => { setTab(nav.key === "luong" ? "luong" : (nav.key as TabType)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group transition-all duration-300">
+              {isActive && <span className="absolute -top-3 w-1.5 h-1.5 bg-blue-600 rounded-full animate-fade-in shadow-sm shadow-blue-300"></span>}
+              <div className={`transition-all duration-300 ${isActive ? "-translate-y-1" : "group-hover:-translate-y-0.5"}`}><IconComponent size={24} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"} /></div>
+              <span className={`text-[10px] mt-1.5 transition-all duration-300 ${isActive ? "font-bold text-blue-600" : "font-semibold text-slate-400 group-hover:text-slate-600"}`}>{nav.label}</span>
             </button>
           )
         })}
