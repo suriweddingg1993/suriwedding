@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { PhatSinh, TaiKhoan, Lich } from "../../types"; // Thêm Lich
+import { PhatSinh, TaiKhoan, Lich } from "../../types";
 
-// Import các Modal vừa tách
 import ModalThemPhatSinh from "./ModalThemPhatSinh";
 import ModalHoaHongPhatSinh from "./ModalHoaHongPhatSinh";
 
@@ -24,7 +23,7 @@ interface TabPhatSinhProps {
   hoSoCuaToi: TaiKhoan | null;
   themThuHuong: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
   danhDauDaTraDo: (id: string) => Promise<void>;
-  lichLamViec: Lich[]; // BẮT BUỘC THÊM PROP NÀY TỪ COMPONENT CHA (App.tsx)
+  lichLamViec: Lich[]; 
 }
 
 export default function TabPhatSinh({
@@ -44,7 +43,6 @@ export default function TabPhatSinh({
 
   const [selectedDate, setSelectedDate] = useState(localToday);
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
-  const [activeFilter, setActiveFilter] = useState("Tất cả"); // TẤT CẢ | ĐỒ THUÊ | LẺ
 
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
@@ -120,89 +118,116 @@ export default function TabPhatSinh({
     setErrors({}); await themPhatSinh(); setShowModal(false);
   };
 
-  // Xác định dữ liệu ngày hiện tại
-  let dsGiaoDichNgayNay = tuKhoa.trim() 
-    ? (danhSachPhatSinh || []).filter((item: PhatSinh) => (item.tenKhach || "").toLowerCase().includes(tuKhoa.toLowerCase().trim()) || (item.soDienThoai || "").includes(tuKhoa.trim()) || (item.ghiChu || "").toLowerCase().includes(tuKhoa.toLowerCase().trim()))
-    : (phatSinhTheoNgay[selectedDate] || []);
+  let dsGiaoDichNgayNay: PhatSinh[] = [];
+  if (tuKhoa.trim()) {
+     const kw = tuKhoa.toLowerCase().trim();
+     dsGiaoDichNgayNay = (danhSachPhatSinh || []).filter((item: PhatSinh) =>
+        (item.tenKhach || "").toLowerCase().includes(kw) ||
+        (item.soDienThoai || "").includes(kw) ||
+        (item.ghiChu || "").toLowerCase().includes(kw)
+     );
+  } else {
+     dsGiaoDichNgayNay = phatSinhTheoNgay[selectedDate] || [];
+  }
 
-  // Lọc theo Tab (Đồ thuê / Dịch vụ lẻ)
-  if (activeFilter === "Đồ Thuê") dsGiaoDichNgayNay = dsGiaoDichNgayNay.filter(item => isThueDo(item.loai));
-  if (activeFilter === "Lẻ") dsGiaoDichNgayNay = dsGiaoDichNgayNay.filter(item => !isThueDo(item.loai));
-
-  // Thống kê Doanh Thu
-  const tongThuNgayNay = (phatSinhTheoNgay[selectedDate] || []).reduce((sum, item) => sum + (item.soTien || 0), 0);
   const dsTraDoNgayNay = danhSachPhatSinh.filter((ps: PhatSinh) => isThueDo(ps.loai) && ps.ngayTra === selectedDate);
 
   return (
     <div className="pb-24 px-2 pt-2">
       
       <div className="mb-4">
-        <input type="text" placeholder="🔍 Tìm bằng Tên, SĐT, Ghi chú..." value={tuKhoa} onChange={(e) => setTuKhoa(e.target.value)} className="w-full bg-white border border-gray-200 p-4 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 outline-none font-bold text-gray-700 transition-all" />
+        <input type="text" placeholder="🔍 Tìm bằng Tên, SĐT, Ghi chú..." value={tuKhoa} onChange={(e) => setTuKhoa(e.target.value)} className="w-full bg-white border border-slate-200 p-4 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-700 transition-all" />
       </div>
 
       {!tuKhoa.trim() && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 mb-6 animate-fade-in">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 mb-6 animate-fade-in">
           <div className="flex justify-between items-center mb-6">
             <button onClick={goToToday} className="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl active:scale-95 transition-all">Hôm nay</button>
             <div className="flex items-center gap-2">
-              <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">◀</button>
-              <div className="font-black text-gray-800 text-sm uppercase tracking-wide w-28 text-center">Th {month + 1}, {year}</div>
-              <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-xl hover:bg-gray-100 text-gray-600 font-bold active:scale-90 transition-all">▶</button>
+              <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl hover:bg-slate-100 text-slate-600 font-bold active:scale-90 transition-all">◀</button>
+              <div className="font-black text-slate-800 text-sm uppercase tracking-wide w-28 text-center">Th {month + 1}, {year}</div>
+              <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-xl hover:bg-slate-100 text-slate-600 font-bold active:scale-90 transition-all">▶</button>
             </div>
           </div>
 
           <div className="grid grid-cols-7 gap-y-3 gap-x-1 text-center">
             {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
-              <div key={d} className="text-[10px] font-black text-gray-400 uppercase mb-2">{d}</div>
+              <div key={d} className="text-[10px] font-black text-slate-400 uppercase mb-2">{d}</div>
             ))}
             
             {daysArray.map((dateStr, idx) => {
               if (!dateStr) return <div key={idx} className="p-2"></div>;
+              
               const isToday = dateStr === localToday;
               const isSelected = dateStr === selectedDate;
+              
               const hasGiaoDich = (phatSinhTheoNgay[dateStr] || []).length > 0;
               const hasTraDo = danhSachPhatSinh.some((ps: PhatSinh) => isThueDo(ps.loai) && ps.ngayTra === dateStr && !ps.daTraDo);
               
               return (
                 <div key={dateStr} className="flex flex-col items-center justify-start h-12 relative group">
-                  <button onClick={() => setSelectedDate(dateStr)} className={`relative w-10 h-10 flex items-center justify-center rounded-2xl text-sm transition-all ${isSelected ? "bg-blue-600 text-white font-black shadow-lg shadow-blue-200 scale-105" : isToday ? "bg-blue-50 text-blue-700 font-black" : "hover:bg-gray-50 text-gray-700 font-bold"}`}>
+                  <button 
+                    onClick={() => setSelectedDate(dateStr)}
+                    className={`relative w-10 h-10 flex items-center justify-center rounded-2xl text-sm transition-all
+                      ${isSelected ? "bg-blue-600 text-white font-black shadow-lg shadow-blue-200 scale-105" : 
+                        isToday ? "bg-blue-50 text-blue-700 font-black" : 
+                        "hover:bg-slate-50 text-slate-700 font-bold"}
+                    `}
+                  >
                     {parseInt(dateStr.split('-')[2])}
                   </button>
+
                   <div className="mt-1 flex gap-1 h-1.5 absolute bottom-[-4px]">
-                    {hasGiaoDich && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-300" : "bg-emerald-400"}`}></span>}
+                    {hasGiaoDich && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-300" : "bg-blue-400"}`}></span>}
                     {hasTraDo && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-300" : "bg-orange-500 shadow-sm shadow-orange-200"}`}></span>}
                   </div>
                 </div>
               )
             })}
           </div>
+
+          <div className="flex gap-5 justify-center mt-6 pt-4 border-t border-slate-100 text-[11px] font-bold text-slate-500">
+            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span> Thu / Dịch vụ</div>
+            <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Cho thuê đồ</div>
+          </div>
         </div>
       )}
 
-      {/* HIỂN THỊ KHÁCH TRẢ ĐỒ HÔM NAY */}
       {dsTraDoNgayNay.length > 0 && !tuKhoa.trim() && (
         <div className="mb-8 animate-fade-in">
-          <h3 className="font-black text-gray-800 text-lg mb-3 flex items-center gap-2 px-1"><span className="text-xl">🛎️</span> Trả đồ hôm nay</h3>
+          <h3 className="font-black text-slate-800 text-lg mb-3 flex items-center gap-2 px-1">
+            <span className="text-xl">🛎️</span> Trả đồ hôm nay
+          </h3>
           <div className="space-y-3">
             {dsTraDoNgayNay.map((item: PhatSinh) => (
-              <div key={`tra-${item.id}`} className={`p-5 rounded-3xl border shadow-sm transition-all ${item.daTraDo ? "bg-gray-50/50 border-gray-200 opacity-60" : "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 hover:shadow-md"}`}>
+              <div key={`tra-${item.id}`} className={`p-5 rounded-3xl border shadow-sm transition-all ${item.daTraDo ? "bg-slate-50 border-slate-200 opacity-60" : "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 hover:shadow-md"}`}>
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <div className="font-black text-gray-900 text-lg">{item.tenKhach || "Khách lẻ"}</div>
+                    <div className="font-black text-slate-900 text-lg">{item.tenKhach || "Khách lẻ"}</div>
                     <div className="text-xs font-bold text-orange-700 bg-orange-100/50 px-2 py-1 rounded-md w-fit mt-1">{item.loai}</div>
+                    
                     {item.soDienThoai && (
                       <div className="flex items-center gap-2 mt-2">
                         <a href={`tel:${item.soDienThoai}`} className="text-sm text-blue-600 font-bold hover:underline">{item.soDienThoai}</a>
-                        <a href={`tel:${item.soDienThoai}`} className="w-6 h-6 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm">📞</a>
+                        <a href={`tel:${item.soDienThoai}`} className="w-6 h-6 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm" title="Gọi ngay">📞</a>
                       </div>
                     )}
                   </div>
-                  {item.daTraDo ? (<span className="bg-green-100 text-green-700 text-[10px] font-black px-3 py-1.5 rounded-lg">ĐÃ TRẢ ĐỒ</span>) : (<span className="bg-red-500 text-white shadow-sm shadow-red-200 text-[10px] font-black px-3 py-1.5 rounded-lg animate-pulse">CHƯA TRẢ</span>)}
+                  {item.daTraDo ? (
+                    <span className="bg-green-100 text-green-700 text-[10px] font-black px-3 py-1.5 rounded-lg">ĐÃ TRẢ ĐỒ</span>
+                  ) : (
+                    <span className="bg-red-500 text-white shadow-sm shadow-red-200 text-[10px] font-black px-3 py-1.5 rounded-lg animate-pulse">CHƯA TRẢ</span>
+                  )}
                 </div>
+                
                 {!item.daTraDo && (
                   <div className="flex gap-2 mt-4 pt-4 border-t border-orange-200/50">
-                    <button onClick={() => copyNhacTraDo(item)} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95">💬 Nhắc khách</button>
-                    <button onClick={() => item.id && danhDauDaTraDo(item.id)} className="flex-1 py-2 bg-green-500 text-white hover:bg-green-600 rounded-xl text-sm font-black transition-all shadow-md shadow-green-200 active:scale-95">✅ Đã nhận lại đồ</button>
+                    <button onClick={() => copyNhacTraDo(item)} className="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95">
+                      💬 Nhắc khách
+                    </button>
+                    <button onClick={() => item.id && danhDauDaTraDo(item.id)} className="flex-1 py-2 bg-green-500 text-white hover:bg-green-600 rounded-xl text-sm font-black transition-all shadow-md shadow-green-200 active:scale-95">
+                      ✅ Đã nhận lại đồ
+                    </button>
                   </div>
                 )}
               </div>
@@ -211,53 +236,46 @@ export default function TabPhatSinh({
         </div>
       )}
 
-      {/* VÙNG THỐNG KÊ DOANH THU & FILTER */}
-      {!tuKhoa.trim() && (
-        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 p-4 rounded-3xl mb-6 shadow-sm">
-          <div>
-            <div className="text-[10px] font-black text-emerald-600 uppercase tracking-wide mb-1">Tổng thu ngày</div>
-            <div className="text-2xl font-black text-emerald-700">{formatTienInput(String(tongThuNgayNay))} đ</div>
-          </div>
-          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm text-emerald-500">💰</div>
+      <div className="mb-4 flex justify-between items-end px-1 mt-6">
+        <div>
+          <h3 className="font-black text-slate-800 text-lg">{tuKhoa.trim() ? "Kết quả tìm kiếm" : "Giao dịch phát sinh"}</h3>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mt-1">
+             {tuKhoa.trim() ? `Từ khóa: "${tuKhoa}"` : `Ngày ${selectedDate.split("-").reverse().join("/")}`}
+          </p>
         </div>
-      )}
-
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 hide-scrollbar px-1">
-        {['Tất cả', 'Đồ Thuê', 'Lẻ'].map(tab => (
-          <button key={tab} onClick={() => setActiveFilter(tab)} className={`shrink-0 px-5 py-2.5 rounded-xl font-bold text-xs transition-all ${activeFilter === tab ? "bg-slate-800 text-white shadow-md" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
-            {tab}
-          </button>
-        ))}
+        <div className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100">
+          {dsGiaoDichNgayNay.length} Bản ghi
+        </div>
       </div>
 
-      {/* DANH SÁCH GIAO DỊCH */}
       <div className="space-y-4">
         {dsGiaoDichNgayNay.length === 0 ? (
-          <div className="bg-white border border-dashed border-gray-200 rounded-3xl p-10 text-center shadow-sm">
+          <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-10 text-center shadow-sm">
             <div className="text-5xl mb-4 opacity-50 grayscale">🧾</div>
-            <h4 className="text-gray-600 font-bold text-base">{tuKhoa.trim() ? "Không có kết quả" : "Sổ quỹ trống"}</h4>
-            <p className="text-xs text-gray-400 mt-2">Chưa có khoản thu nào được ghi chép.</p>
+            <h4 className="text-slate-600 font-bold text-base">{tuKhoa.trim() ? "Không có kết quả" : "Sổ quỹ trống"}</h4>
+            <p className="text-xs text-slate-400 mt-2">{tuKhoa.trim() ? "Thử tìm bằng SĐT hoặc Tên khác nhé." : "Không có khoản Thu nào trong ngày."}</p>
           </div>
         ) : (
           [...dsGiaoDichNgayNay].reverse().map((item: PhatSinh) => {
             const isThue = isThueDo(item.loai);
 
             return (
-              <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md group relative overflow-hidden">
-                {/* Viền trái: Đồ thuê màu Cam, Dịch vụ màu Xanh */}
+              <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-md group relative overflow-hidden">
+                {/* Viền trái: Cam cho đồ thuê, Xanh cho dịch vụ */}
                 <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${isThue ? "bg-orange-500" : "bg-blue-500"}`}></div>
                 
-                <div className="flex justify-between items-start pb-4 border-b border-gray-100 mb-4 ml-2">
+                <div className="flex justify-between items-start pb-4 border-b border-slate-100 mb-4 ml-2">
                   <div>
-                    {/* Tag nhãn: Trả lại thiết kế và màu y như bản gốc */}
+                    {/* Tag nhãn: Cam cho đồ thuê, Xanh cho dịch vụ */}
                     <div className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase w-fit mb-2 ${
                       isThue ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
                     }`}>
                       {item.loai}
                     </div>
-                    {item.tenKhach && <div className="text-base font-black text-gray-900">{item.tenKhach}</div>}
-                    {tuKhoa.trim() && <div className="text-xs font-bold text-blue-600 mt-1">📅 Thu ngày: {item.ngay.split("-").reverse().join("/")}</div>}
+                    {item.tenKhach && <div className="text-base font-black text-slate-900">{item.tenKhach}</div>}
+                    {tuKhoa.trim() && <div className="text-xs font-bold text-blue-600 mt-1">📅 Ngày ghi: {item.ngay.split("-").reverse().join("/")}</div>}
                   </div>
+                  {/* Số tiền màu xanh lá */}
                   <div className="text-xl font-black text-green-600">
                     +{formatTienInput(String(item.soTien || 0))}
                   </div>
@@ -265,16 +283,16 @@ export default function TabPhatSinh({
 
                 <div className="grid gap-2 text-sm ml-2">
                   {item.soDienThoai && (
-                    <div className="text-gray-500 font-medium flex items-center gap-2">
+                    <div className="text-slate-500 font-medium flex items-center gap-2">
                       SĐT: 
                       <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a>
                       <a href={`tel:${item.soDienThoai}`} className="w-7 h-7 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm ml-1" title="Gọi ngay">📞</a>
                     </div>
                   )}
-                  {item.ghiChu && <div className="text-gray-600 italic bg-slate-50 p-3 rounded-xl text-xs border border-gray-100 mt-1">" {item.ghiChu} "</div>}
+                  {item.ghiChu && <div className="text-slate-600 italic bg-slate-50 p-3 rounded-xl text-xs border border-slate-100 mt-1">" {item.ghiChu} "</div>}
                 </div>
 
-                <div className="flex justify-between items-center mt-4 pt-4 border-t border-dashed border-gray-200 ml-2">
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-dashed border-slate-200 ml-2">
                   {isThue ? (
                     <button onClick={() => { setPhatSinhDangChon(item); setTienHoaHong(""); setShowHoaHongModal(true); }} className="bg-blue-50 text-blue-700 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors shadow-sm active:scale-95">
                       🙋‍♂️ Nhận Hoa hồng
@@ -282,7 +300,7 @@ export default function TabPhatSinh({
                   ) : <div></div>}
 
                   {laAdmin && item.id && (
-                    <button onClick={() => xoaPhatSinh(item.id as string)} className="w-9 h-9 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl font-bold transition-all opacity-50 group-hover:opacity-100">
+                    <button onClick={() => xoaPhatSinh(item.id as string)} className="w-9 h-9 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-xl font-bold transition-all opacity-50 group-hover:opacity-100">
                       🗑
                     </button>
                   )}
@@ -293,21 +311,24 @@ export default function TabPhatSinh({
         )}
       </div>
 
-      <button onClick={() => { clearForm(); setShowModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-200/50 flex items-center justify-center text-3xl z-40 hover:scale-110 active:scale-90 transition-all">+</button>
+      <button onClick={() => { clearForm(); setShowModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-200/50 flex items-center justify-center text-3xl z-40 hover:scale-110 active:scale-90 transition-all">
+        +
+      </button>
 
       {/* RENDER MODAL */}
       <ModalThemPhatSinh
-        showModal={showModal} setShowModal={setShowModal}
-        psNgay={psNgay} setPsNgay={setPsNgay} psLoai={psLoai} setPsLoai={setPsLoai}
-        psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai}
-        psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien}
-        psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} errors={errors} formatTienInput={formatTienInput}
-        handleThemPhatSinh={handleThemPhatSinh} isThueDo={isThueDo} lichLamViec={lichLamViec}
+        showModal={showModal} setShowModal={setShowModal} psNgay={psNgay} setPsNgay={setPsNgay}
+        psLoai={psLoai} setPsLoai={setPsLoai} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach}
+        psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra}
+        psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu}
+        errors={errors} formatTienInput={formatTienInput} handleThemPhatSinh={handleThemPhatSinh}
+        isThueDo={isThueDo} lichLamViec={lichLamViec}
       />
 
       <ModalHoaHongPhatSinh
-        showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} phatSinhDangChon={phatSinhDangChon}
-        tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien}
+        showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal}
+        phatSinhDangChon={phatSinhDangChon} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong}
+        formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien}
       />
     </div>
   );

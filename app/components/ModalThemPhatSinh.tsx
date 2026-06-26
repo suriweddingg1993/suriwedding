@@ -44,24 +44,24 @@ export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
   return (
     <div className="fixed inset-0 z-[90] bg-gray-100 flex flex-col w-screen h-screen overflow-hidden">
       
-      {/* HEADER: MŨI TÊN QUAY LẠI VÀ NÚT LƯU GÓC PHẢI */}
+      {/* HEADER: MŨI TÊN VÀ NÚT LƯU */}
       <div className="flex items-center justify-between px-4 py-3 bg-white shadow-sm shrink-0 relative z-10">
         <div className="flex items-center">
-          <button onClick={() => props.setShowModal(false)} className="p-2 -ml-2 text-gray-600 active:bg-gray-100 rounded-full transition-colors">
+          <button onClick={() => props.setShowModal(false)} className="p-2 -ml-2 text-slate-600 active:bg-slate-100 rounded-full transition-colors">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>
-          <h2 className="text-lg font-black text-gray-800 ml-1">Bổ sung Doanh thu</h2>
+          <h2 className="text-lg font-black text-slate-800 ml-1">Ghi chép mới</h2>
         </div>
         <button onClick={props.handleThemPhatSinh} className="text-blue-600 font-black text-sm uppercase px-2 py-1 active:opacity-50 transition-opacity">
           LƯU
         </button>
       </div>
 
-      {/* NỘI DUNG FORM CUỘN Ở GIỮA */}
+      {/* NỘI DUNG FORM */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center">
         <div className="w-full max-w-[400px]">
           
-          <div className="bg-white p-5 rounded-2xl shadow-sm text-gray-900 border border-gray-200 relative">
+          <div className="bg-white p-5 rounded-2xl shadow-sm text-slate-900 border border-slate-200 relative">
             
             {goiYKhach && (
               <div className="absolute -top-3 right-4 bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full shadow-sm animate-pulse">
@@ -72,12 +72,12 @@ export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
             <div className="grid gap-4 w-full">
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Ngày ghi</label>
-                  <input type="date" value={props.psNgay} onChange={(e) => props.setPsNgay(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${props.errors.psNgay ? "border-2 border-red-500" : "border border-transparent focus:border-blue-300 focus:ring-blue-100"}`} />
+                  <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Ngày ghi</label>
+                  <input type="date" value={props.psNgay} onChange={(e) => props.setPsNgay(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold outline-none transition-all ${props.errors.psNgay ? "border-2 border-red-500" : "border border-transparent focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-300"}`} />
                 </div>
                 <div className="flex-1">
-                  <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Loại dịch vụ</label>
-                  <select value={props.psLoai} onChange={(e) => props.setPsLoai(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${props.errors.psLoai ? "border-2 border-red-500" : "border border-transparent focus:border-blue-300 focus:ring-blue-100"}`}>
+                  <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Loại dịch vụ</label>
+                  <select value={props.psLoai} onChange={(e) => props.setPsLoai(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold outline-none transition-all ${props.errors.psLoai ? "border-2 border-red-500" : "border border-transparent focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-300"}`}>
                     <option value="">- Chọn -</option>
                     <optgroup label="👗 Nhóm Cho Thuê">
                       <option value="Thuê váy">Thuê Váy Cưới / Áo dài</option>
@@ -100,11 +100,11 @@ export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
               </div>
 
               <div>
-                <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Số điện thoại</label>
-                <input type="text" placeholder="Gõ SĐT để tìm khách cũ..." value={props.psSoDienThoai} onChange={handleDienSoDienThoai} className={`bg-slate-50 p-4 rounded-2xl w-full text-gray-900 font-bold focus:bg-white focus:ring-4 outline-none transition-all ${props.errors.psSoDienThoai ? "border-2 border-red-500" : "border border-transparent focus:border-blue-300 focus:ring-blue-100"}`} />
+                <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Số điện thoại</label>
+                <input type="text" placeholder="Gõ SĐT để tìm khách cũ..." value={props.psSoDienThoai} onChange={handleDienSoDienThoai} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold outline-none transition-all ${props.errors.psSoDienThoai ? "border-2 border-red-500" : "border border-transparent focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-300"}`} />
               </div>
 
-              <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label><input type="text" placeholder="Nhập tên..." value={props.psTenKhach} onChange={(e) => props.setPsTenKhach(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-gray-900 font-bold focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all" /></div>
+              <div><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label><input type="text" placeholder="Nhập tên..." value={props.psTenKhach} onChange={(e) => props.setPsTenKhach(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-slate-900 font-bold outline-none transition-all focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-300" /></div>
               
               {props.isThueDo(props.psLoai) && (
                 <div className={`p-4 rounded-2xl ${props.errors.psNgayTra ? "bg-red-50 border-2 border-red-500" : "bg-orange-50/50 border border-orange-200"}`}>
@@ -114,14 +114,14 @@ export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
               )}
 
               <div>
-                <label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Doanh thu (VNĐ)</label>
+                <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Số tiền (VNĐ)</label>
                 <div className="relative">
-                  <input type="text" inputMode="numeric" placeholder="VD: 500.000" value={props.psSoTien} onChange={(e) => props.setPsSoTien(props.formatTienInput(e.target.value))} className={`bg-emerald-50 p-4 rounded-2xl w-full pr-12 text-emerald-700 font-black text-xl focus:bg-emerald-100 focus:ring-4 outline-none transition-all ${props.errors.psSoTien ? "border-2 border-red-500" : "border border-transparent focus:border-emerald-300 focus:ring-emerald-200"}`} />
-                  <span className="absolute right-5 top-5 text-emerald-600 font-bold">đ</span>
+                  <input type="text" inputMode="numeric" placeholder="VD: 500.000" value={props.psSoTien} onChange={(e) => props.setPsSoTien(props.formatTienInput(e.target.value))} className={`bg-slate-50 p-4 rounded-2xl w-full pr-12 text-blue-700 font-black text-xl outline-none transition-all ${props.errors.psSoTien ? "border-2 border-red-500" : "border border-transparent focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-300"}`} />
+                  <span className="absolute right-5 top-5 text-slate-400 font-bold">đ</span>
                 </div>
               </div>
 
-              <div><label className="text-[10px] text-gray-500 font-bold ml-2 mb-1.5 block uppercase">Ghi chú chi tiết</label><input type="text" placeholder="VD: 1 váy đuôi cá, cọc CCCD..." value={props.psGhiChu} onChange={(e) => props.setPsGhiChu(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-gray-900 font-bold focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all" /></div>
+              <div><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Ghi chú chi tiết</label><input type="text" placeholder="Tên váy, tình trạng đồ..." value={props.psGhiChu} onChange={(e) => props.setPsGhiChu(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-2xl w-full text-slate-900 font-bold outline-none transition-all focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-300" /></div>
             </div>
           </div>
           
