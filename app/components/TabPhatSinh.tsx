@@ -235,29 +235,40 @@ export default function TabPhatSinh({
         {dsGiaoDichNgayNay.length === 0 ? (
           <div className="bg-white border border-dashed border-gray-200 rounded-3xl p-10 text-center shadow-sm">
             <div className="text-5xl mb-4 opacity-50 grayscale">🧾</div>
-            <h4 className="text-gray-600 font-bold text-base">{tuKhoa.trim() ? "Không có kết quả" : "Trống doanh thu"}</h4>
+            <h4 className="text-gray-600 font-bold text-base">{tuKhoa.trim() ? "Không có kết quả" : "Sổ quỹ trống"}</h4>
             <p className="text-xs text-gray-400 mt-2">Chưa có khoản thu nào được ghi chép.</p>
           </div>
         ) : (
           [...dsGiaoDichNgayNay].reverse().map((item: PhatSinh) => {
             const isThue = isThueDo(item.loai);
+
             return (
               <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md group relative overflow-hidden">
-                <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${isThue ? "bg-orange-500" : "bg-emerald-500"}`}></div>
+                {/* Viền trái: Đồ thuê màu Cam, Dịch vụ màu Xanh */}
+                <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${isThue ? "bg-orange-500" : "bg-blue-500"}`}></div>
                 
                 <div className="flex justify-between items-start pb-4 border-b border-gray-100 mb-4 ml-2">
                   <div>
-                    <div className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase w-fit mb-2 ${isThue ? "bg-orange-50 text-orange-600" : "bg-emerald-50 text-emerald-600"}`}>{item.loai}</div>
+                    {/* Tag nhãn: Trả lại thiết kế và màu y như bản gốc */}
+                    <div className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase w-fit mb-2 ${
+                      isThue ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
+                    }`}>
+                      {item.loai}
+                    </div>
                     {item.tenKhach && <div className="text-base font-black text-gray-900">{item.tenKhach}</div>}
                     {tuKhoa.trim() && <div className="text-xs font-bold text-blue-600 mt-1">📅 Thu ngày: {item.ngay.split("-").reverse().join("/")}</div>}
                   </div>
-                  <div className="text-xl font-black text-emerald-600">+{formatTienInput(String(item.soTien || 0))}</div>
+                  <div className="text-xl font-black text-green-600">
+                    +{formatTienInput(String(item.soTien || 0))}
+                  </div>
                 </div>
 
                 <div className="grid gap-2 text-sm ml-2">
                   {item.soDienThoai && (
                     <div className="text-gray-500 font-medium flex items-center gap-2">
-                      SĐT: <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a>
+                      SĐT: 
+                      <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a>
+                      <a href={`tel:${item.soDienThoai}`} className="w-7 h-7 flex items-center justify-center bg-green-100 text-green-600 rounded-full hover:bg-green-200 shadow-sm ml-1" title="Gọi ngay">📞</a>
                     </div>
                   )}
                   {item.ghiChu && <div className="text-gray-600 italic bg-slate-50 p-3 rounded-xl text-xs border border-gray-100 mt-1">" {item.ghiChu} "</div>}
@@ -266,12 +277,14 @@ export default function TabPhatSinh({
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-dashed border-gray-200 ml-2">
                   {isThue ? (
                     <button onClick={() => { setPhatSinhDangChon(item); setTienHoaHong(""); setShowHoaHongModal(true); }} className="bg-blue-50 text-blue-700 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-100 transition-colors shadow-sm active:scale-95">
-                      🙋‍♂️ Khai báo Hoa hồng
+                      🙋‍♂️ Nhận Hoa hồng
                     </button>
                   ) : <div></div>}
 
                   {laAdmin && item.id && (
-                    <button onClick={() => xoaPhatSinh(item.id as string)} className="w-9 h-9 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl font-bold transition-all opacity-50 group-hover:opacity-100">🗑</button>
+                    <button onClick={() => xoaPhatSinh(item.id as string)} className="w-9 h-9 flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl font-bold transition-all opacity-50 group-hover:opacity-100">
+                      🗑
+                    </button>
                   )}
                 </div>
               </div>
