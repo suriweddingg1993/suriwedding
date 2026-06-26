@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { Lich, TaiKhoan, GoiDichVu } from "../../types";
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
-// Nhập 4 Component đã tách
+// Nhập Component đã tách
 import ModalHoaDon from "./ModalHoaDon";
 import ModalThemLich from "./ModalThemLich";
 import ModalQuanLyGoi from "./ModalQuanLyGoi";
@@ -62,7 +62,9 @@ export default function TabLich({
   const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
   const [hdDiaChi, setHdDiaChi] = useState("");
 
-  // Quản lý chặn cuộn màn hình Tổng (Kích hoạt khi mở bất kỳ modal nào)
+  // Nơi đặt neo (ref) để tự động trượt tới danh sách
+  const danhSachLichRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (showModal || showGoiModal || showHoaHongModal || hoaDonData) {
       document.body.style.overflow = "hidden";
@@ -72,7 +74,6 @@ export default function TabLich({
     return () => { document.body.style.overflow = ""; };
   }, [showModal, showGoiModal, showHoaHongModal, hoaDonData]);
 
-  // Lấy dữ liệu gói dịch vụ
   useEffect(() => {
     const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => {
       setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]);
@@ -91,6 +92,14 @@ export default function TabLich({
   const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
   const goToToday = () => { setCurrentMonth(new Date(localToday)); setSelectedDate(localToday); setTuKhoa(""); };
+
+  // HÀM CHỌN NGÀY VÀ TỰ ĐỘNG CUỘN
+  const chonNgayVaCuon = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    setTimeout(() => {
+      danhSachLichRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150); // Độ trễ nhỏ để trải nghiệm cuộn mượt mà hơn
+  };
 
   const xacNhanNhanTien = () => {
     if (!tienHoaHong) { toast.error("Vui lòng nhập số tiền!"); return; }
@@ -145,13 +154,18 @@ export default function TabLich({
     }
 
     const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
-    const duLieuLich = { 
+    
+    // Gán dữ liệu, Nếu là THÊM MỚI thì cho mặc định luôn là "Đã chốt lịch"
+    const duLieuLich: any = { 
       ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
       theLoai: theLoaiCuoi, goiChup, 
       giaTien: chuyenTienVeSo(giaTien) || 0, 
-      tienCoc: chuyenTienVeSo(tienCoc) || 0, 
-      trangThai: "Chưa liên hệ" 
+      tienCoc: chuyenTienVeSo(tienCoc) || 0
     };
+
+    if (!dangSua) {
+      duLieuLich.trangThai = "Đã chốt lịch";
+    }
 
     try {
       if (dangSua) { await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); } 
@@ -160,12 +174,8 @@ export default function TabLich({
     } catch (error) { toast.error("Có lỗi mạng"); }
   };
 
-  // ĐÃ SỬA LỖI PROMISE VOID Ở ĐÂY
   const luuGoiDichVu = async () => {
-    if (!tenGoiMoi || !giaGoiMoi) {
-      toast.error("Vui lòng nhập tên gói và giá!");
-      return; // Thêm return riêng rẽ ở đây
-    }
+    if (!tenGoiMoi || !giaGoiMoi) { toast.error("Vui lòng nhập tên gói và giá!"); return; }
     try {
       if (dangSuaGoi) { 
         await updateDoc(doc(db, "goiDichVu", dangSuaGoi), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) || 0 }); 
@@ -175,9 +185,7 @@ export default function TabLich({
         toast.success("Thêm gói thành công!"); 
       }
       setTenGoiMoi(""); setChiTietGoiMoi(""); setGiaGoiMoi("");
-    } catch(e) { 
-      toast.error("Lỗi mạng!"); 
-    }
+    } catch(e) { toast.error("Lỗi mạng!"); }
   };
 
   const xoaGoiDichVu = async (id: string) => { if (confirm("Chắc chắn xóa gói chụp mẫu này?")) await deleteDoc(doc(db, "goiDichVu", id)); };
@@ -211,7 +219,8 @@ export default function TabLich({
               const isToday = dateStr === localToday; const isSelected = dateStr === selectedDate; const hasLich = (lichTheoNgay[dateStr] || []).length > 0;
               return (
                 <div key={dateStr} className="flex flex-col items-center justify-start h-12 relative group">
-                  <button onClick={() => setSelectedDate(dateStr)} className={`relative w-10 h-10 flex items-center justify-center rounded-2xl text-sm transition-all ${isSelected ? "bg-blue-600 text-white font-black shadow-lg shadow-blue-200 scale-105" : isToday ? "bg-blue-50 text-blue-700 font-black" : "hover:bg-gray-50 text-gray-700 font-bold"}`}>{parseInt(dateStr.split('-')[2])}</button>
+                  {/* BẤM VÀO NGÀY GỌI HÀM chonNgayVaCuon ĐỂ AUTO SCROLL */}
+                  <button onClick={() => chonNgayVaCuon(dateStr)} className={`relative w-10 h-10 flex items-center justify-center rounded-2xl text-sm transition-all ${isSelected ? "bg-blue-600 text-white font-black shadow-lg shadow-blue-200 scale-105" : isToday ? "bg-blue-50 text-blue-700 font-black" : "hover:bg-gray-50 text-gray-700 font-bold"}`}>{parseInt(dateStr.split('-')[2])}</button>
                   <div className="mt-1 flex gap-1 h-1.5 absolute bottom-[-4px]">{hasLich && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-300" : "bg-blue-500 shadow-sm shadow-blue-200"}`}></span>}</div>
                 </div>
               )
@@ -220,7 +229,8 @@ export default function TabLich({
         </div>
       )}
 
-      <div className="mb-4 flex justify-between items-end px-1 mt-6">
+      {/* ĐIỂM NEO (REF) ĐỂ CUỘN MÀN HÌNH TỚI ĐÂY */}
+      <div ref={danhSachLichRef} className="mb-4 flex justify-between items-end px-1 mt-6 scroll-mt-4">
         <div><h3 className="font-black text-gray-800 text-lg">{tuKhoa.trim() ? "Kết quả tìm kiếm" : "Lịch chụp Studio"}</h3><p className="text-xs font-bold text-gray-500 uppercase tracking-wide mt-1">{tuKhoa.trim() ? `Từ khóa: "${tuKhoa}"` : `Ngày ${selectedDate.split("-").reverse().join("/")}`}</p></div>
         <div className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100">{dsLichNgayNay.length} Kết quả</div>
       </div>
@@ -234,20 +244,27 @@ export default function TabLich({
           </div>
         ) : (
           [...dsLichNgayNay].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: Lich) => {
-            const trangThaiColors: Record<string, string> = { "Chưa liên hệ": "bg-slate-100 text-slate-600", "Đã gọi - Chờ": "bg-amber-100 text-amber-700", "Đã chốt lịch": "bg-blue-100 text-blue-700", "Đã chụp xong": "bg-emerald-100 text-emerald-700", "Hủy lịch": "bg-rose-100 text-rose-600" };
+            
+            // CẬP NHẬT QUY TRÌNH MÀU SẮC CHUẨN XÁC
+            const trangThaiColors: Record<string, string> = { 
+              "Chưa liên hệ": "bg-slate-100 text-slate-600", // Giữ lại dự phòng cho data cũ
+              "Đã chốt lịch": "bg-blue-100 text-blue-700",
+              "Đã nhắc lịch": "bg-amber-100 text-amber-700",
+              "Đã chụp xong": "bg-purple-100 text-purple-700",
+              "Hoàn thành": "bg-emerald-100 text-emerald-700",
+              "Hủy lịch": "bg-rose-100 text-rose-600" 
+            };
             const tienNo = (item.giaTien || 0) - (item.tienCoc || 0);
+            const currentTrangThai = item.trangThai || "Đã chốt lịch";
 
             return (
               <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-md group relative overflow-hidden">
                 <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-blue-500"></div>
                 <div className="flex justify-between items-start pb-4 border-b border-slate-100 mb-4 ml-2">
                   <div className="pr-2">
-                    <div className="flex items-center gap-2 mb-2"><span className="bg-blue-50 text-blue-600 text-xs font-black px-2.5 py-1 rounded-lg">⏰ {item.gio}</span><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${trangThaiColors[item.trangThai || "Chưa liên hệ"]}`}>{item.trangThai || "Chưa liên hệ"}</span></div>
+                    <div className="flex items-center gap-2 mb-2"><span className="bg-blue-50 text-blue-600 text-xs font-black px-2.5 py-1 rounded-lg">⏰ {item.gio}</span><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${trangThaiColors[currentTrangThai] || trangThaiColors["Đã chốt lịch"]}`}>{currentTrangThai}</span></div>
                     <div className="text-lg font-black text-slate-900">{item.tenKhach}</div>
-                    
-                    {/* Tối giản phần hiển thị: Xóa chi tiết dài dòng ở màn hình ngoài */}
                     <div className="text-sm font-bold text-slate-500 mt-1">{item.theLoai}</div>
-                  
                   </div>
                   <div className="flex flex-col items-end gap-3 shrink-0">
                     <div className="flex gap-2">
@@ -270,9 +287,16 @@ export default function TabLich({
                 </div>
 
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
-                  <select value={item.trangThai || "Chưa liên hệ"} onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-200 outline-none min-w-[110px]">
-                    <option value="Chưa liên hệ">Chưa liên hệ</option><option value="Đã gọi - Chờ">Đã gọi - Chờ</option><option value="Đã chốt lịch">Đã chốt lịch</option><option value="Đã chụp xong">Đã chụp xong</option><option value="Hủy lịch">Hủy lịch</option>
+                  
+                  {/* DANH SÁCH QUY TRÌNH MỚI */}
+                  <select value={currentTrangThai} onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-200 outline-none min-w-[110px]">
+                    <option value="Đã chốt lịch">Đã chốt lịch</option>
+                    <option value="Đã nhắc lịch">Đã nhắc lịch</option>
+                    <option value="Đã chụp xong">Đã chụp xong</option>
+                    <option value="Hoàn thành">Hoàn thành</option>
+                    <option value="Hủy lịch">Hủy lịch</option>
                   </select>
+
                   <button onClick={() => { setHoaDonData(item); setHdDiaChi(""); }} className="bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">🧾 Hóa Đơn</button>
                   <button onClick={() => copyNhacLich(item)} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">💬 Nhắc khách</button>
                   <button onClick={() => { setLichDangChon(item); setTienHoaHong(""); setVaiTro("Chụp ảnh"); setShowHoaHongModal(true); }} className="flex-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-2.5 rounded-xl hover:bg-blue-100 transition-colors shadow-sm min-w-[100px]">🙋‍♂️ Báo cáo</button>
