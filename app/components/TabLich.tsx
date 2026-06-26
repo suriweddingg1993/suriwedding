@@ -62,7 +62,6 @@ export default function TabLich({
   const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
   const [hdDiaChi, setHdDiaChi] = useState("");
 
-  // Nơi đặt neo (ref) để tự động trượt tới danh sách
   const danhSachLichRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,12 +92,11 @@ export default function TabLich({
   const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
   const goToToday = () => { setCurrentMonth(new Date(localToday)); setSelectedDate(localToday); setTuKhoa(""); };
 
-  // HÀM CHỌN NGÀY VÀ TỰ ĐỘNG CUỘN
   const chonNgayVaCuon = (dateStr: string) => {
     setSelectedDate(dateStr);
     setTimeout(() => {
       danhSachLichRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 150); // Độ trễ nhỏ để trải nghiệm cuộn mượt mà hơn
+    }, 150); 
   };
 
   const xacNhanNhanTien = () => {
@@ -155,7 +153,6 @@ export default function TabLich({
 
     const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
     
-    // Gán dữ liệu, Nếu là THÊM MỚI thì cho mặc định luôn là "Đã chốt lịch"
     const duLieuLich: any = { 
       ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
       theLoai: theLoaiCuoi, goiChup, 
@@ -219,7 +216,6 @@ export default function TabLich({
               const isToday = dateStr === localToday; const isSelected = dateStr === selectedDate; const hasLich = (lichTheoNgay[dateStr] || []).length > 0;
               return (
                 <div key={dateStr} className="flex flex-col items-center justify-start h-12 relative group">
-                  {/* BẤM VÀO NGÀY GỌI HÀM chonNgayVaCuon ĐỂ AUTO SCROLL */}
                   <button onClick={() => chonNgayVaCuon(dateStr)} className={`relative w-10 h-10 flex items-center justify-center rounded-2xl text-sm transition-all ${isSelected ? "bg-blue-600 text-white font-black shadow-lg shadow-blue-200 scale-105" : isToday ? "bg-blue-50 text-blue-700 font-black" : "hover:bg-gray-50 text-gray-700 font-bold"}`}>{parseInt(dateStr.split('-')[2])}</button>
                   <div className="mt-1 flex gap-1 h-1.5 absolute bottom-[-4px]">{hasLich && <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-300" : "bg-blue-500 shadow-sm shadow-blue-200"}`}></span>}</div>
                 </div>
@@ -229,7 +225,6 @@ export default function TabLich({
         </div>
       )}
 
-      {/* ĐIỂM NEO (REF) ĐỂ CUỘN MÀN HÌNH TỚI ĐÂY */}
       <div ref={danhSachLichRef} className="mb-4 flex justify-between items-end px-1 mt-6 scroll-mt-4">
         <div><h3 className="font-black text-gray-800 text-lg">{tuKhoa.trim() ? "Kết quả tìm kiếm" : "Lịch chụp Studio"}</h3><p className="text-xs font-bold text-gray-500 uppercase tracking-wide mt-1">{tuKhoa.trim() ? `Từ khóa: "${tuKhoa}"` : `Ngày ${selectedDate.split("-").reverse().join("/")}`}</p></div>
         <div className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100">{dsLichNgayNay.length} Kết quả</div>
@@ -245,9 +240,8 @@ export default function TabLich({
         ) : (
           [...dsLichNgayNay].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: Lich) => {
             
-            // CẬP NHẬT QUY TRÌNH MÀU SẮC CHUẨN XÁC
             const trangThaiColors: Record<string, string> = { 
-              "Chưa liên hệ": "bg-slate-100 text-slate-600", // Giữ lại dự phòng cho data cũ
+              "Chưa liên hệ": "bg-slate-100 text-slate-600",
               "Đã chốt lịch": "bg-blue-100 text-blue-700",
               "Đã nhắc lịch": "bg-amber-100 text-amber-700",
               "Đã chụp xong": "bg-purple-100 text-purple-700",
@@ -256,6 +250,11 @@ export default function TabLich({
             };
             const tienNo = (item.giaTien || 0) - (item.tienCoc || 0);
             const currentTrangThai = item.trangThai || "Đã chốt lịch";
+
+            // LOGIC KHÓA BẢO MẬT DÀNH CHO NHÂN VIÊN
+            const laThangCu = item.ngay.substring(0, 7) < localToday.substring(0, 7);
+            const daHoanThanh = currentTrangThai === "Hoàn thành";
+            const biKhoaVoiNhanVien = (laThangCu || daHoanThanh) && !laAdmin;
 
             return (
               <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-md group relative overflow-hidden">
@@ -269,7 +268,11 @@ export default function TabLich({
                   <div className="flex flex-col items-end gap-3 shrink-0">
                     <div className="flex gap-2">
                       {laAdmin && item.id && (<button onClick={() => xoaLich(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-full font-bold transition-all shadow-sm">🗑</button>)}
-                      <button onClick={() => suaLichNangCao(item)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-full font-bold transition-all shadow-sm">✏️</button>
+                      
+                      {/* ẨN NÚT SỬA NẾU BỊ KHÓA */}
+                      {!biKhoaVoiNhanVien && (
+                        <button onClick={() => suaLichNangCao(item)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-full font-bold transition-all shadow-sm">✏️</button>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-black text-emerald-600 whitespace-nowrap">{formatTienInput(String(item.giaTien || 0))}đ</div>
@@ -288,8 +291,13 @@ export default function TabLich({
 
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
                   
-                  {/* DANH SÁCH QUY TRÌNH MỚI */}
-                  <select value={currentTrangThai} onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-200 outline-none min-w-[110px]">
+                  {/* VÔ HIỆU HÓA SELECT NẾU BỊ KHÓA */}
+                  <select 
+                    disabled={biKhoaVoiNhanVien}
+                    value={currentTrangThai} 
+                    onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)} 
+                    className={`flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl outline-none min-w-[110px] ${biKhoaVoiNhanVien ? "opacity-60 cursor-not-allowed bg-slate-100" : "focus:ring-2 focus:ring-blue-200"}`}
+                  >
                     <option value="Đã chốt lịch">Đã chốt lịch</option>
                     <option value="Đã nhắc lịch">Đã nhắc lịch</option>
                     <option value="Đã chụp xong">Đã chụp xong</option>
@@ -310,40 +318,10 @@ export default function TabLich({
       <button onClick={openAddModal} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-200/50 flex items-center justify-center text-3xl z-40 hover:scale-110 active:scale-90 transition-all">+</button>
 
       {/* RENDER CÁC COMPONENT CON */}
-      <ModalHoaDon 
-        hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} 
-        hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} 
-        homNay={homNay} formatTienInput={formatTienInput} 
-      />
-
-      <ModalThemLich 
-        showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} 
-        ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} 
-        tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} 
-        setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} 
-        theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} 
-        setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} 
-        giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} 
-        errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} 
-        danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} 
-      />
-
-      <ModalQuanLyGoi 
-        showGoiModal={showGoiModal} setShowGoiModal={setShowGoiModal} 
-        dangSuaGoi={dangSuaGoi} setDangSuaGoi={setDangSuaGoi} 
-        tenGoiMoi={tenGoiMoi} setTenGoiMoi={setTenGoiMoi} 
-        chiTietGoiMoi={chiTietGoiMoi} setChiTietGoiMoi={setChiTietGoiMoi} 
-        giaGoiMoi={giaGoiMoi} setGiaGoiMoi={setGiaGoiMoi} formatTienInput={formatTienInput} 
-        luuGoiDichVu={luuGoiDichVu} danhSachGoiDichVu={danhSachGoiDichVu} 
-        xoaGoiDichVu={xoaGoiDichVu} laAdmin={laAdmin} 
-      />
-
-      <ModalBaoCao 
-        showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} 
-        lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} 
-        tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} 
-        formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} 
-      />
+      <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} />
+      <ModalThemLich showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} />
+      <ModalQuanLyGoi showGoiModal={showGoiModal} setShowGoiModal={setShowGoiModal} dangSuaGoi={dangSuaGoi} setDangSuaGoi={setDangSuaGoi} tenGoiMoi={tenGoiMoi} setTenGoiMoi={setTenGoiMoi} chiTietGoiMoi={chiTietGoiMoi} setChiTietGoiMoi={setChiTietGoiMoi} giaGoiMoi={giaGoiMoi} setGiaGoiMoi={setGiaGoiMoi} formatTienInput={formatTienInput} luuGoiDichVu={luuGoiDichVu} danhSachGoiDichVu={danhSachGoiDichVu} xoaGoiDichVu={xoaGoiDichVu} laAdmin={laAdmin} />
+      <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
     </div>
   );

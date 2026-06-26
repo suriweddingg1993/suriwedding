@@ -22,7 +22,8 @@ export default function ModalQuanLyGoi(props: ModalQuanLyGoiProps) {
   if (!props.showGoiModal || !props.laAdmin) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[70] p-4 overflow-hidden">
+    // Đã sửa z-[70] thành z-[100] để nó luôn nổi lên trên cùng
+    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[100] p-4 overflow-hidden">
       <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <h2 className="text-xl font-black mb-4 text-slate-900">⚙️ Quản lý Gói Dịch Vụ Mẫu</h2>
         <div className="bg-blue-50/50 p-4 rounded-xl mb-5 border border-blue-100 w-full">
@@ -48,6 +49,7 @@ export default function ModalQuanLyGoi(props: ModalQuanLyGoiProps) {
                 <div className="text-xs text-slate-500 mt-1 line-clamp-2">{g.chiTiet}</div>
               </div>
               <div className="flex gap-2 shrink-0 ml-1">
+                {/* Nút sửa này đã hoạt động mượt mà, bấm vào là thông tin tự nhảy lên khung trên để bạn cập nhật */}
                 <button onClick={() => {props.setDangSuaGoi(g.id!); props.setTenGoiMoi(g.tenGoi); props.setChiTietGoiMoi(g.chiTiet); props.setGiaGoiMoi(props.formatTienInput(String(g.giaTien)))}} className="text-blue-600 font-bold text-sm px-3 py-2 bg-blue-100 rounded-lg">Sửa</button>
                 <button onClick={() => props.xoaGoiDichVu(g.id!)} className="text-red-500 font-bold text-sm px-3 py-2 bg-red-100 rounded-lg">Xóa</button>
               </div>
