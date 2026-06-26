@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Lich } from "../../types";
 
 interface ModalThemPhatSinhProps {
@@ -21,6 +21,38 @@ interface ModalThemPhatSinhProps {
 export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
   const [goiYKhach, setGoiYKhach] = useState<string>("");
 
+  // --- LOGIC VUỐT ĐỂ TRỞ VỀ (SWIPE TO GO BACK NHƯ IPHONE) ---
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    // Lưu tọa độ X, Y khi ngón tay bắt đầu chạm
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = Math.abs(touchEndY - touchStartY.current);
+
+    // Điều kiện 1: Vuốt sang phải một đoạn > 70px
+    // Điều kiện 2: Vuốt ngang nhiều hơn vuốt dọc (tránh lộn với cuộn trang)
+    // Điều kiện 3: Điểm bắt đầu phải nằm ở mép trái màn hình (dưới 60px) giống hệt iOS
+    if (deltaX > 70 && deltaX > deltaY * 2 && touchStartX.current < 60) {
+      props.setShowModal(false); // Kích hoạt đóng Modal
+    }
+
+    // Reset lại tọa độ
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+  // -----------------------------------------------------------
+
   useEffect(() => {
     if (!props.showModal) setGoiYKhach("");
   }, [props.showModal]);
@@ -42,7 +74,11 @@ export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
   if (!props.showModal) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] bg-gray-100 flex flex-col w-screen h-screen overflow-hidden">
+    <div 
+      className="fixed inset-0 z-[90] bg-gray-100 flex flex-col w-screen h-screen overflow-hidden"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       
       {/* HEADER: MŨI TÊN VÀ NÚT LƯU */}
       <div className="flex items-center justify-between px-4 py-3 bg-white shadow-sm shrink-0 relative z-10">
