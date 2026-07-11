@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Lich } from "../../types";
+import { Lich, PhatSinh } from "../../types";
 
 interface ModalHoaDonProps {
   hoaDonData: Lich | null;
@@ -8,10 +8,11 @@ interface ModalHoaDonProps {
   setHdDiaChi: (val: string) => void;
   homNay: () => string;
   formatTienInput: (val: string) => string;
+  danhSachPhatSinh: PhatSinh[];
 }
 
 export default function ModalHoaDon({
-  hoaDonData, setHoaDonData, hdDiaChi, setHdDiaChi, homNay, formatTienInput
+  hoaDonData, setHoaDonData, hdDiaChi, setHdDiaChi, homNay, formatTienInput, danhSachPhatSinh
 }: ModalHoaDonProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -60,6 +61,13 @@ export default function ModalHoaDon({
   };
 
   if (!hoaDonData) return null;
+
+  // LỌC VÀ TÍNH TOÁN CÁC KHOẢN PHÁT SINH CỦA KHÁCH NÀY (Dựa vào SĐT)
+  const cacKhoanPhatSinh = danhSachPhatSinh.filter(ps => ps.soDienThoai === hoaDonData.soDienThoai);
+  const tongTienPhatSinh = cacKhoanPhatSinh.reduce((sum, item) => sum + (item.soTien || 0), 0);
+  
+  const tongThanhToan = (hoaDonData.giaTien || 0) + tongTienPhatSinh;
+  const conPhaiThu = tongThanhToan - (hoaDonData.tienCoc || 0);
 
   return (
     <div className="fixed inset-0 z-[80] bg-gray-100 flex flex-col w-full h-full overflow-hidden">
@@ -124,7 +132,7 @@ export default function ModalHoaDon({
                   <td className="py-2 px-1 text-right font-medium whitespace-nowrap">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
                 </tr>
                 {hoaDonData.goiChup && (
-                  <tr>
+                  <tr className="border-b border-gray-100">
                     <td></td>
                     <td className="pb-3 px-1 whitespace-pre-wrap text-gray-600 italic leading-relaxed pt-1" colSpan={4}>
                       <span className="font-semibold not-italic">Chi tiết: </span>
@@ -132,6 +140,19 @@ export default function ModalHoaDon({
                     </td>
                   </tr>
                 )}
+                
+                {/* TỰ ĐỘNG RENDER CÁC KHOẢN PHÁT SINH VÀO ĐÂY */}
+                {cacKhoanPhatSinh.map((ps, index) => (
+                  <tr key={ps.id || index} className="border-b border-gray-100 bg-blue-50/30">
+                    <td className="py-2 px-1 text-center font-medium">{index + 2}</td>
+                    <td className="py-2 px-1 font-black text-gray-800">
+                      {ps.loai} {ps.ghiChu ? <span className="font-normal italic text-gray-500">({ps.ghiChu})</span> : ""}
+                    </td>
+                    <td className="py-2 px-1 text-center font-medium">1</td>
+                    <td className="py-2 px-1 text-right font-medium whitespace-nowrap">{formatTienInput(String(ps.soTien || 0))}</td>
+                    <td className="py-2 px-1 text-right font-medium whitespace-nowrap text-blue-700 font-bold">{formatTienInput(String(ps.soTien || 0))}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
 
@@ -140,7 +161,7 @@ export default function ModalHoaDon({
                 <tbody>
                   <tr>
                     <td className="py-1 px-2 font-medium text-gray-500 text-right">Tổng thanh toán:</td>
-                    <td className="py-1 px-2 text-right font-bold text-gray-800 w-24">{formatTienInput(String(hoaDonData.giaTien || 0))}</td>
+                    <td className="py-1 px-2 text-right font-bold text-gray-800 w-24">{formatTienInput(String(tongThanhToan))}</td>
                   </tr>
                   <tr>
                     <td className="py-1 px-2 font-medium text-gray-500 text-right pb-3 border-b border-gray-100">Khách đã cọc:</td>
@@ -148,7 +169,7 @@ export default function ModalHoaDon({
                   </tr>
                   <tr>
                     <td className="py-1.5 px-2 font-black text-gray-900 uppercase text-right pt-3">Còn phải thu:</td>
-                    <td className="py-1.5 px-2 text-right font-black text-red-600 text-sm pt-3">{formatTienInput(String((hoaDonData.giaTien || 0) - (hoaDonData.tienCoc || 0)))}</td>
+                    <td className="py-1.5 px-2 text-right font-black text-red-600 text-sm pt-3">{formatTienInput(String(conPhaiThu))}</td>
                   </tr>
                 </tbody>
               </table>

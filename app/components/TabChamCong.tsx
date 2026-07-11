@@ -21,7 +21,10 @@ export default function TabChamCong({
 }: TabChamCongProps) {
   
   const todayStr = homNay();
-  const [currentTime, setCurrentTime] = useState("");
+  // ĐÃ SỬA: Lấy giờ chuẩn ngay từ lúc mở tab để không bị trống
+  const [currentTime, setCurrentTime] = useState(() => 
+    new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+  );
   const [showModalYeuCau, setShowModalYeuCau] = useState(false);
   
   // FORM YÊU CẦU
