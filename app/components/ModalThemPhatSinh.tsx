@@ -21,37 +21,27 @@ interface ModalThemPhatSinhProps {
 export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
   const [goiYKhach, setGoiYKhach] = useState<string>("");
 
-  // --- LOGIC VUỐT ĐỂ TRỞ VỀ (SWIPE TO GO BACK NHƯ IPHONE) ---
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => {
-    // Lưu tọa độ X, Y khi ngón tay bắt đầu chạm
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
-
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
-
     const deltaX = touchEndX - touchStartX.current;
     const deltaY = Math.abs(touchEndY - touchStartY.current);
 
-    // Điều kiện 1: Vuốt sang phải một đoạn > 70px
-    // Điều kiện 2: Vuốt ngang nhiều hơn vuốt dọc (tránh lộn với cuộn trang)
-    // Điều kiện 3: Điểm bắt đầu phải nằm ở mép trái màn hình (dưới 60px) giống hệt iOS
     if (deltaX > 70 && deltaX > deltaY * 2 && touchStartX.current < 60) {
-      props.setShowModal(false); // Kích hoạt đóng Modal
+      props.setShowModal(false); 
     }
-
-    // Reset lại tọa độ
     touchStartX.current = null;
     touchStartY.current = null;
   };
-  // -----------------------------------------------------------
 
   useEffect(() => {
     if (!props.showModal) setGoiYKhach("");
@@ -62,7 +52,13 @@ export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
     props.setPsSoDienThoai(val);
 
     if (val.length >= 9) {
-      const khachCu = props.lichLamViec.find(l => l.soDienThoai === val || l.soDienThoai2 === val);
+      // Fix 5: Xóa khoảng trắng để so sánh SĐT chính xác
+      const valClean = val.replace(/\s/g, "");
+      const khachCu = props.lichLamViec.find(l => 
+        (l.soDienThoai || "").replace(/\s/g, "") === valClean || 
+        (l.soDienThoai2 || "").replace(/\s/g, "") === valClean
+      );
+      
       if (khachCu && !props.psTenKhach) {
         props.setPsTenKhach(khachCu.tenKhach);
         setGoiYKhach("Đã tự động điền tên khách cũ!");
@@ -80,7 +76,6 @@ export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
       onTouchEnd={onTouchEnd}
     >
       
-      {/* HEADER: MŨI TÊN VÀ NÚT LƯU */}
       <div className="flex items-center justify-between px-4 py-3 bg-white shadow-sm shrink-0 relative z-10">
         <div className="flex items-center">
           <button onClick={() => props.setShowModal(false)} className="p-2 -ml-2 text-slate-600 active:bg-slate-100 rounded-full transition-colors">
@@ -93,7 +88,6 @@ export default function ModalThemPhatSinh(props: ModalThemPhatSinhProps) {
         </button>
       </div>
 
-      {/* NỘI DUNG FORM */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center">
         <div className="w-full max-w-[400px]">
           

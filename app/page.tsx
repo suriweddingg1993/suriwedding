@@ -21,7 +21,7 @@ const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading:
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const APP_VERSION = "v1.0.8"; 
 
-// ĐÃ SỬA: Lấy chuẩn ngày giờ Việt Nam
+// Fix 1: Đồng bộ Múi giờ Việt Nam
 function homNay() { 
   const d = new Date(); 
   const offset = d.getTimezoneOffset() * 60000;
@@ -136,7 +136,13 @@ export default function HomePage() {
   };
   const xoaPhatSinh = async (id?: string) => { if (!id) return; if (!laAdmin) { toast.error("Chỉ admin mới được xóa"); return; } if (!confirm("Xóa khoản này?")) return; await deleteDoc(doc(db, "phatSinh", id)); toast.success("Đã xóa"); };
 
-  const danhSachHienThi = lichLamViec.filter((item) => { const dungNgay = timNgay ? item.ngay === timNgay : true; const keyword = tuKhoa.toLowerCase().trim(); const dungTuKhoa = keyword ? item.tenKhach.toLowerCase().includes(keyword) || (item.soDienThoai || "").includes(keyword) : true; return dungNgay && dungTuKhoa; });
+  // Fix 2: Bọc an toàn item.tenKhach bằng (item.tenKhach || "")
+  const danhSachHienThi = lichLamViec.filter((item) => { 
+    const dungNgay = timNgay ? item.ngay === timNgay : true; 
+    const keyword = tuKhoa.toLowerCase().trim(); 
+    const dungTuKhoa = keyword ? (item.tenKhach || "").toLowerCase().includes(keyword) || (item.soDienThoai || "").includes(keyword) : true; 
+    return dungNgay && dungTuKhoa; 
+  });
   const lichTheoNgay = danhSachHienThi.reduce((acc: Record<string, Lich[]>, item) => { if (!acc[item.ngay]) acc[item.ngay] = []; acc[item.ngay].push(item); return acc; }, {});
   const lichTrongThang = thangThongKe ? lichLamViec.filter((item) => item.ngay.startsWith(thangThongKe)) : [];
   const phatSinhTrongThang = thangThongKe ? danhSachPhatSinh.filter((item) => item.ngay.startsWith(thangThongKe)) : [];
@@ -144,7 +150,8 @@ export default function HomePage() {
   const tongThuNhapPhatSinh = phatSinhTrongThang.reduce((sum, item) => sum + Number(item.soTien || 0), 0);
   const tongThuNhap = tongThuNhapLich + tongThuNhapPhatSinh;
   
-  const ngayHomNay = new Date().toISOString().split("T")[0];
+  // Fix 3: Sử dụng hàm homNay() chuẩn thay vì ISOString trực tiếp
+  const ngayHomNay = homNay();
   const isThueDoCheck = (loai: string) => loai && loai.toLowerCase().includes("thuê");
   const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra === ngayHomNay);
   const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNay);
@@ -258,7 +265,6 @@ export default function HomePage() {
 
       {/* RENDER CÁC TAB */}
       <div id="noi-dung-tab" className="mt-2">
-        {/* ĐÃ SỬA: Truyền thêm danhSachPhatSinh vào TabLich và sửa dấu cách ở TabPhatSinh */}
         {tab === "lich" && <TabLich homNay={homNay} dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} />}
         {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} lichLamViec={lichLamViec} />}
         {tab === "chamCong" && <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />}

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { User } from "firebase/auth";
 import { db } from "../lib/firebase"; 
-import { Lich, PhatSinh, ChamCong, ThuHuong, TaiKhoan, GoiDichVu } from "../types"; // Import thêm GoiDichVu
+import { Lich, PhatSinh, ChamCong, ThuHuong, TaiKhoan, GoiDichVu } from "../types";
 
 export const useAppData = (user: User | null, laAdmin: boolean) => {
   const [lichLamViec, setLichLamViec] = useState<Lich[]>([]);
@@ -10,11 +10,14 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
   const [danhSachChamCong, setDanhSachChamCong] = useState<ChamCong[]>([]);
   const [danhSachThuHuong, setDanhSachThuHuong] = useState<ThuHuong[]>([]);
   const [danhSachTaiKhoan, setDanhSachTaiKhoan] = useState<TaiKhoan[]>([]);
-  const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]); // Khai báo Gói Dịch Vụ
+  const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]); 
 
+  // Fix 4: Đồng bộ Múi giờ Việt Nam cho mốc thời gian tải dữ liệu (6 tháng)
   const mocThoiGian = useMemo(() => {
-    const d = new Date(); d.setMonth(d.getMonth() - 6);
-    return d.toISOString().slice(0, 10);
+    const d = new Date(); 
+    d.setMonth(d.getMonth() - 6);
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 10);
   }, []);
 
   useEffect(() => {
@@ -36,7 +39,6 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
       (snapshot) => setDanhSachThuHuong(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as ThuHuong[])
     );
 
-    // MỚI THÊM: Tự động kéo kho Gói Dịch Vụ
     const unsubGoiDichVu = onSnapshot(collection(db, "goiDichVu"), 
       (snapshot) => setDanhSachGoiDichVu(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as GoiDichVu[])
     );
@@ -54,6 +56,5 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
     return () => unsubTK();
   }, [laAdmin]);
 
-  // Trả thêm danhSachGoiDichVu ra ngoài
   return { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachGoiDichVu }; 
 };
