@@ -14,6 +14,11 @@ interface ModalThemLichProps {
   goiChup: string; setGoiChup: (val: string) => void;
   giaTien: string; setGiaTien: (val: string) => void;
   tienCoc: string; setTienCoc: (val: string) => void;
+  
+  // PROPS MỚI CHO DỊCH VỤ THÊM
+  dichVuThem: string; setDichVuThem: (val: string) => void;
+  tienDichVuThem: string; setTienDichVuThem: (val: string) => void;
+
   errors: Record<string, boolean>;
   formatTienInput: (val: string) => string;
   handleLuuLichThongMinh: () => Promise<void>;
@@ -25,7 +30,6 @@ interface ModalThemLichProps {
 export default function ModalThemLich(props: ModalThemLichProps) {
   if (!props.showModal) return null;
 
-  // Hàm xác nhận trước khi lưu
   const xacNhanTruocKhiLuu = () => {
     const isConfirm = window.confirm("Bạn có chắc chắn muốn lưu thông tin lịch hẹn này không?");
     if (isConfirm) {
@@ -36,7 +40,6 @@ export default function ModalThemLich(props: ModalThemLichProps) {
   return (
     <div className="fixed inset-0 z-[90] bg-gray-100 flex flex-col w-screen h-screen overflow-hidden">
       
-      {/* HEADER: MŨI TÊN QUAY LẠI VÀ NÚT LƯU GÓC PHẢI */}
       <div className="flex items-center justify-between px-4 py-3 bg-white shadow-sm shrink-0">
         <div className="flex items-center">
           <button onClick={() => props.setShowModal(false)} className="p-2 -ml-2 text-gray-600 active:bg-gray-100 rounded-full transition-colors">
@@ -49,7 +52,6 @@ export default function ModalThemLich(props: ModalThemLichProps) {
         </button>
       </div>
 
-      {/* NỘI DUNG FORM CUỘN Ở GIỮA */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center">
         <div className="w-full max-w-[400px]">
           
@@ -118,8 +120,24 @@ export default function ModalThemLich(props: ModalThemLichProps) {
                 <div className="flex-1 min-w-0">
                   <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Khách Đã Cọc</label>
                   <div className="relative">
-                    <input type="text" inputMode="numeric" placeholder="0" value={props.tienCoc} onChange={(e) => props.setTienCoc(props.formatTienInput(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full pr-8 text-orange-600 font-black text-xl border border-transparent outline-none" />
+                    <input type="text" inputMode="numeric" placeholder="0" value={props.tienCoc} onChange={(e) => props.setTienCoc(props.formatTienInput(e.target.value))} className="bg-slate-50 p-4 rounded-2xl w-full pr-8 text-emerald-600 font-black text-xl border border-transparent outline-none" />
                     <span className="absolute right-3 top-5 text-slate-400 font-bold">đ</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* KHU VỰC NHẬP DỊCH VỤ THÊM NỔI BẬT */}
+              <div className="bg-orange-50/50 p-3 rounded-2xl border border-orange-100 w-full mt-2">
+                <label className="text-[10px] text-orange-700 font-black ml-2 mb-1.5 block uppercase">Phát Sinh / Dịch Vụ Làm Thêm (Nếu có)</label>
+                <div className="flex gap-3 w-full">
+                  <div className="flex-1 min-w-0">
+                    <input type="text" placeholder="Tên DV (VD: In ảnh...)" value={props.dichVuThem} onChange={(e) => props.setDichVuThem(e.target.value)} className="bg-white p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none border border-transparent focus:border-orange-300 shadow-sm transition-all" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="relative">
+                      <input type="text" inputMode="numeric" placeholder="Số tiền" value={props.tienDichVuThem} onChange={(e) => props.setTienDichVuThem(props.formatTienInput(e.target.value))} className="bg-white p-3.5 rounded-xl w-full pr-8 text-orange-600 font-black outline-none border border-transparent focus:border-orange-300 shadow-sm transition-all" />
+                      <span className="absolute right-3 top-4 text-slate-400 font-bold">đ</span>
+                    </div>
                   </div>
                 </div>
               </div>

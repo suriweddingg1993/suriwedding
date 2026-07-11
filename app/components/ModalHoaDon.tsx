@@ -62,11 +62,13 @@ export default function ModalHoaDon({
 
   if (!hoaDonData) return null;
 
-  // LỌC VÀ TÍNH TOÁN CÁC KHOẢN PHÁT SINH CỦA KHÁCH NÀY (Dựa vào SĐT)
+  // 1. TÌM CÁC KHOẢN GHI TRONG TAB THU/CHI
   const cacKhoanPhatSinh = danhSachPhatSinh.filter(ps => ps.soDienThoai === hoaDonData.soDienThoai);
   const tongTienPhatSinh = cacKhoanPhatSinh.reduce((sum, item) => sum + (item.soTien || 0), 0);
   
-  const tongThanhToan = (hoaDonData.giaTien || 0) + tongTienPhatSinh;
+  // 2. TÍNH TỔNG: Giá chụp gốc + Tiền dv thêm (trong Lịch) + Các khoản thu/chi SĐT trùng khớp
+  const tienDVThem = (hoaDonData as any).tienDichVuThem || 0;
+  const tongThanhToan = (hoaDonData.giaTien || 0) + tienDVThem + tongTienPhatSinh;
   const conPhaiThu = tongThanhToan - (hoaDonData.tienCoc || 0);
 
   return (
@@ -141,18 +143,34 @@ export default function ModalHoaDon({
                   </tr>
                 )}
                 
-                {/* TỰ ĐỘNG RENDER CÁC KHOẢN PHÁT SINH VÀO ĐÂY */}
-                {cacKhoanPhatSinh.map((ps, index) => (
-                  <tr key={ps.id || index} className="border-b border-gray-100 bg-blue-50/30">
-                    <td className="py-2 px-1 text-center font-medium">{index + 2}</td>
+                {/* RENDER DỊCH VỤ THÊM NẾU GHI TRONG LỊCH */}
+                {(hoaDonData as any).dichVuThem && (
+                  <tr className="border-b border-gray-100 bg-orange-50/40">
+                    <td className="py-2 px-1 text-center font-medium">2</td>
                     <td className="py-2 px-1 font-black text-gray-800">
-                      {ps.loai} {ps.ghiChu ? <span className="font-normal italic text-gray-500">({ps.ghiChu})</span> : ""}
+                        {(hoaDonData as any).dichVuThem} <span className="font-normal italic text-gray-500 text-[9px] uppercase ml-1">(Dịch vụ thêm)</span>
                     </td>
                     <td className="py-2 px-1 text-center font-medium">1</td>
-                    <td className="py-2 px-1 text-right font-medium whitespace-nowrap">{formatTienInput(String(ps.soTien || 0))}</td>
-                    <td className="py-2 px-1 text-right font-medium whitespace-nowrap text-blue-700 font-bold">{formatTienInput(String(ps.soTien || 0))}</td>
+                    <td className="py-2 px-1 text-right font-medium whitespace-nowrap">{formatTienInput(String((hoaDonData as any).tienDichVuThem || 0))}</td>
+                    <td className="py-2 px-1 text-right font-medium whitespace-nowrap text-orange-700 font-bold">{formatTienInput(String((hoaDonData as any).tienDichVuThem || 0))}</td>
                   </tr>
-                ))}
+                )}
+                
+                {/* RENDER CÁC KHOẢN TỪ THU/CHI */}
+                {cacKhoanPhatSinh.map((ps, index) => {
+                  const startIndex = (hoaDonData as any).dichVuThem ? 3 : 2;
+                  return (
+                    <tr key={ps.id || index} className="border-b border-gray-100 bg-blue-50/30">
+                      <td className="py-2 px-1 text-center font-medium">{index + startIndex}</td>
+                      <td className="py-2 px-1 font-black text-gray-800">
+                        {ps.loai} {ps.ghiChu ? <span className="font-normal italic text-gray-500">({ps.ghiChu})</span> : ""}
+                      </td>
+                      <td className="py-2 px-1 text-center font-medium">1</td>
+                      <td className="py-2 px-1 text-right font-medium whitespace-nowrap">{formatTienInput(String(ps.soTien || 0))}</td>
+                      <td className="py-2 px-1 text-right font-medium whitespace-nowrap text-blue-700 font-bold">{formatTienInput(String(ps.soTien || 0))}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
 

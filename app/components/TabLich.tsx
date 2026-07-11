@@ -50,7 +50,11 @@ export default function TabLich({
   const [vaiTro, setVaiTro] = useState("Chụp ảnh");
   const [tuKhoa, setTuKhoa] = useState(""); 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  
+  // STATE CHO TIỀN CỌC VÀ DỊCH VỤ THÊM
   const [tienCoc, setTienCoc] = useState("");
+  const [dichVuThem, setDichVuThem] = useState("");
+  const [tienDichVuThem, setTienDichVuThem] = useState("");
   
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]);
   const [showGoiModal, setShowGoiModal] = useState(false);
@@ -115,10 +119,22 @@ export default function TabLich({
   };
 
   const openAddModal = () => { 
-    resetForm(); setNgay(selectedDate); setTienCoc(""); setErrors({}); setShowModal(true); 
+    resetForm(); 
+    setNgay(selectedDate); 
+    setTienCoc(""); 
+    setDichVuThem(""); 
+    setTienDichVuThem(""); 
+    setErrors({}); 
+    setShowModal(true); 
   };
-  const suaLichNangCao = (item: Lich) => { 
-    suaLich(item); setTienCoc(formatTienInput(String(item.tienCoc || 0))); setErrors({}); setShowModal(true); 
+
+  const suaLichNangCao = (item: any) => { 
+    suaLich(item); 
+    setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
+    setDichVuThem(item.dichVuThem || ""); 
+    setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
+    setErrors({}); 
+    setShowModal(true); 
   };
 
   const handleLuuLichThongMinh = async () => {
@@ -157,7 +173,9 @@ export default function TabLich({
       ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
       theLoai: theLoaiCuoi, goiChup, 
       giaTien: chuyenTienVeSo(giaTien) || 0, 
-      tienCoc: chuyenTienVeSo(tienCoc) || 0
+      tienCoc: chuyenTienVeSo(tienCoc) || 0,
+      dichVuThem,
+      tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0
     };
 
     if (!dangSua) {
@@ -167,7 +185,7 @@ export default function TabLich({
     try {
       if (dangSua) { await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); } 
       else { await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch!"); } 
-      setShowModal(false); resetForm(); setTienCoc("");
+      setShowModal(false); resetForm(); setTienCoc(""); setDichVuThem(""); setTienDichVuThem("");
     } catch (error) { toast.error("Có lỗi mạng"); }
   };
 
@@ -248,10 +266,13 @@ export default function TabLich({
               "Hoàn thành": "bg-emerald-100 text-emerald-700",
               "Hủy lịch": "bg-rose-100 text-rose-600" 
             };
-            const tienNo = (item.giaTien || 0) - (item.tienCoc || 0);
+            
+            // Tính toán tổng tiền mới (Đã bao gồm tiền Dịch vụ thêm)
+            const tongTienCaLich = (item.giaTien || 0) + ((item as any).tienDichVuThem || 0);
+            const tienNo = tongTienCaLich - (item.tienCoc || 0);
+            
             const currentTrangThai = item.trangThai || "Đã chốt lịch";
 
-            // LOGIC KHÓA BẢO MẬT DÀNH CHO NHÂN VIÊN
             const laThangCu = item.ngay.substring(0, 7) < localToday.substring(0, 7);
             const daHoanThanh = currentTrangThai === "Hoàn thành";
             const biKhoaVoiNhanVien = (laThangCu || daHoanThanh) && !laAdmin;
@@ -269,16 +290,15 @@ export default function TabLich({
                     <div className="flex gap-2">
                       {laAdmin && item.id && (<button onClick={() => xoaLich(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-full font-bold transition-all shadow-sm">🗑</button>)}
                       
-                      {/* ẨN NÚT SỬA NẾU BỊ KHÓA */}
                       {!biKhoaVoiNhanVien && (
                         <button onClick={() => suaLichNangCao(item)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-full font-bold transition-all shadow-sm">✏️</button>
                       )}
                     </div>
                     <div className="text-right">
-                      <div className="text-xl font-black text-emerald-600 whitespace-nowrap">{formatTienInput(String(item.giaTien || 0))}đ</div>
+                      <div className="text-xl font-black text-emerald-600 whitespace-nowrap">{formatTienInput(String(tongTienCaLich))}đ</div>
                       {tienNo > 0 ? (
                         <div className="text-xs font-bold text-red-500 mt-0.5 bg-red-50 px-1.5 py-0.5 rounded text-right w-fit ml-auto">Còn nợ: {formatTienInput(String(tienNo))}đ</div>
-                      ) : item.giaTien && item.giaTien > 0 ? (
+                      ) : tongTienCaLich > 0 ? (
                         <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 text-right w-fit ml-auto">Đã thu đủ</div>
                       ) : null}
                     </div>
@@ -287,13 +307,16 @@ export default function TabLich({
 
                 <div className="grid gap-2 text-sm ml-2 mt-1">
                   {item.soDienThoai && (<div className="text-slate-500 font-medium flex items-center gap-2">SĐT 1: <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a></div>)}
-                  {/* ĐÃ THÊM: Hiển thị SĐT 2 */}
                   {item.soDienThoai2 && (<div className="text-slate-500 font-medium flex items-center gap-2">SĐT 2: <a href={`tel:${item.soDienThoai2}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai2}</a></div>)}
+                  {/* HIỂN THỊ DỊCH VỤ THÊM NẾU CÓ */}
+                  {(item as any).dichVuThem && (
+                    <div className="text-orange-600 font-bold bg-orange-50 px-3 py-2 rounded-xl mt-1 text-xs">
+                      🔥 Phát sinh: {(item as any).dichVuThem} (+{formatTienInput(String((item as any).tienDichVuThem || 0))}đ)
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
-                  
-                  {/* VÔ HIỆU HÓA SELECT NẾU BỊ KHÓA */}
                   <select 
                     disabled={biKhoaVoiNhanVien}
                     value={currentTrangThai} 
@@ -319,9 +342,11 @@ export default function TabLich({
 
       <button onClick={openAddModal} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-200/50 flex items-center justify-center text-3xl z-40 hover:scale-110 active:scale-90 transition-all">+</button>
 
-      {/* RENDER CÁC COMPONENT CON */}
       <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} />
-      <ModalThemLich showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} />
+      
+      {/* ĐÃ CẬP NHẬT TRUYỀN THÊM STATE VÀO MODAL */}
+      <ModalThemLich showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} dichVuThem={dichVuThem} setDichVuThem={setDichVuThem} tienDichVuThem={tienDichVuThem} setTienDichVuThem={setTienDichVuThem} errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} />
+      
       <ModalQuanLyGoi showGoiModal={showGoiModal} setShowGoiModal={setShowGoiModal} dangSuaGoi={dangSuaGoi} setDangSuaGoi={setDangSuaGoi} tenGoiMoi={tenGoiMoi} setTenGoiMoi={setTenGoiMoi} chiTietGoiMoi={chiTietGoiMoi} setChiTietGoiMoi={setChiTietGoiMoi} giaGoiMoi={giaGoiMoi} setGiaGoiMoi={setGiaGoiMoi} formatTienInput={formatTienInput} luuGoiDichVu={luuGoiDichVu} danhSachGoiDichVu={danhSachGoiDichVu} xoaGoiDichVu={xoaGoiDichVu} laAdmin={laAdmin} />
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
