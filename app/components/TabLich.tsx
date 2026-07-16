@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
-import { Lich, TaiKhoan, GoiDichVu, PhatSinh } from "../../types";
+import { Lich, TaiKhoan, GoiDichVu, PhatSinh, ThuHuong } from "../../types";
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
@@ -17,7 +17,6 @@ function chuyenTienVeSo(value: string) {
 
 interface TabLichProps {
   homNay: () => string; dangSua: string | null; ngay: string; setNgay: (val: string) => void;
-  // Khai báo props ngayCuoi
   ngayCuoi: string; setNgayCuoi: (val: string) => void;
   gio: string; setGio: (val: string) => void; tenKhach: string; setTenKhach: (val: string) => void;
   soDienThoai: string; setSoDienThoai: (val: string) => void; soDienThoai2: string; setSoDienThoai2: (val: string) => void;
@@ -27,14 +26,15 @@ interface TabLichProps {
   lichTheoNgay: Record<string, Lich[]>; suaLich: (item: Lich) => void;
   capNhatTrangThai: (id: string, trangThai: string) => Promise<void>; hoSoCuaToi: TaiKhoan | null;
   themThuHuong: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
-  laAdmin: boolean; xoaLich: (id: string) => Promise<void>; lichLamViec: Lich[]; danhSachPhatSinh: PhatSinh[];
+  laAdmin: boolean; xoaLich: (id: string) => Promise<void>; lichLamViec: Lich[]; 
+  danhSachPhatSinh: PhatSinh[]; danhSachThuHuong: ThuHuong[];
 }
 
 export default function TabLich({
   homNay, dangSua, ngay, setNgay, ngayCuoi, setNgayCuoi, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
   theLoai, setTheLoai, theLoaiKhac, setTheLoaiKhac, goiChup, setGoiChup, giaTien, setGiaTien, formatTienInput,
   themHoacSuaLich, resetForm, lichTheoNgay, suaLich, capNhatTrangThai,
-  hoSoCuaToi, themThuHuong, laAdmin, xoaLich, lichLamViec, danhSachPhatSinh
+  hoSoCuaToi, themThuHuong, laAdmin, xoaLich, lichLamViec, danhSachPhatSinh, danhSachThuHuong
 }: TabLichProps) {
   
   const getLocalToday = () => {
@@ -110,6 +110,14 @@ export default function TabLich({
     if (!hoSoCuaToi) { toast.error("Không tìm thấy thông tin tài khoản!"); return; }
     if (!lichDangChon) return;
     const moTaJob = `[${vaiTro}] KH: ${lichDangChon.tenKhach} (${lichDangChon.theLoai})`;
+    
+    // LOGIC CHỐNG GIAN LẬN: Kiểm tra xem đã báo cáo Job này chưa
+    const daBaoCao = danhSachThuHuong.some(th => th.uid === hoSoCuaToi.id && th.moTa === moTaJob);
+    if (daBaoCao) {
+      toast.error("Bạn đã nhận hoa hồng cho công đoạn này rồi!");
+      return;
+    }
+
     themThuHuong(hoSoCuaToi.id, hoSoCuaToi.email, hoSoCuaToi.hoTen || "", lichDangChon.ngay, moTaJob, tienHoaHong);
     setShowHoaHongModal(false); setTienHoaHong(""); setVaiTro("Chụp ảnh");
   };
@@ -123,7 +131,7 @@ export default function TabLich({
   const openAddModal = () => { 
     resetForm(); 
     setNgay(selectedDate); 
-    setNgayCuoi(""); // Thêm dòng này
+    setNgayCuoi(""); 
     setTienCoc(""); 
     setDichVuThem(""); 
     setTienDichVuThem(""); 
@@ -133,7 +141,7 @@ export default function TabLich({
 
   const suaLichNangCao = (item: any) => { 
     suaLich(item); 
-    setNgayCuoi(item.ngayCuoi || ""); // Thêm dòng này
+    setNgayCuoi(item.ngayCuoi || ""); 
     setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
     setDichVuThem(item.dichVuThem || ""); 
     setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
@@ -173,7 +181,6 @@ export default function TabLich({
 
     const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
     
-    // ĐÃ THÊM: Lưu biến ngayCuoi vào CSDL
     const duLieuLich: any = { 
       ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
       theLoai: theLoaiCuoi, goiChup, 
@@ -312,7 +319,6 @@ export default function TabLich({
 
                 <div className="grid gap-2 text-sm ml-2 mt-1">
                   
-                  {/* ĐÃ THÊM: Ngày cưới nổi bật nếu có */}
                   {(item as any).ngayCuoi && (
                     <div className="text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-xl mb-1 text-xs w-fit border border-rose-100 flex items-center gap-1.5 shadow-sm">
                       💍 Ngày Cưới: {(item as any).ngayCuoi.split('-').reverse().join('/')}
@@ -367,10 +373,10 @@ export default function TabLich({
 
       <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} />
       
-      {/* ĐÃ CẬP NHẬT TRUYỀN THÊM ngayCuoi VÀO MODAL */}
       <ModalThemLich showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} ngay={ngay} setNgay={setNgay} ngayCuoi={ngayCuoi} setNgayCuoi={setNgayCuoi} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} dichVuThem={dichVuThem} setDichVuThem={setDichVuThem} tienDichVuThem={tienDichVuThem} setTienDichVuThem={setTienDichVuThem} errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} />
       
       <ModalQuanLyGoi showGoiModal={showGoiModal} setShowGoiModal={setShowGoiModal} dangSuaGoi={dangSuaGoi} setDangSuaGoi={setDangSuaGoi} tenGoiMoi={tenGoiMoi} setTenGoiMoi={setTenGoiMoi} chiTietGoiMoi={chiTietGoiMoi} setChiTietGoiMoi={setChiTietGoiMoi} giaGoiMoi={giaGoiMoi} setGiaGoiMoi={setGiaGoiMoi} formatTienInput={formatTienInput} luuGoiDichVu={luuGoiDichVu} danhSachGoiDichVu={danhSachGoiDichVu} xoaGoiDichVu={xoaGoiDichVu} laAdmin={laAdmin} />
+      
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
     </div>
