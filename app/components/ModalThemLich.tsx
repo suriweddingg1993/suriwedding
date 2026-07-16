@@ -5,6 +5,8 @@ interface ModalThemLichProps {
   setShowModal: (val: boolean) => void;
   dangSua: string | null;
   ngay: string; setNgay: (val: string) => void;
+  // Khai báo Prop Ngày Cưới
+  ngayCuoi: string; setNgayCuoi: (val: string) => void;
   gio: string; setGio: (val: string) => void;
   tenKhach: string; setTenKhach: (val: string) => void;
   soDienThoai: string; setSoDienThoai: (val: string) => void;
@@ -14,8 +16,6 @@ interface ModalThemLichProps {
   goiChup: string; setGoiChup: (val: string) => void;
   giaTien: string; setGiaTien: (val: string) => void;
   tienCoc: string; setTienCoc: (val: string) => void;
-  
-  // PROPS MỚI CHO DỊCH VỤ THÊM
   dichVuThem: string; setDichVuThem: (val: string) => void;
   tienDichVuThem: string; setTienDichVuThem: (val: string) => void;
 
@@ -81,7 +81,17 @@ export default function ModalThemLich(props: ModalThemLichProps) {
                 <div className="flex-1 min-w-0"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Giờ chụp</label><input type="time" value={props.gio} onChange={(e) => props.setGio(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold outline-none ${props.errors.gio ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
               </div>
               
-              <div><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label><input type="text" placeholder="Nhập tên..." value={props.tenKhach} onChange={(e) => props.setTenKhach(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold outline-none ${props.errors.tenKhach ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
+              {/* ĐÃ THÊM: Cột Tên Khách (Trái) và Ngày Cưới (Phải) */}
+              <div className="flex gap-3 w-full">
+                <div className="flex-[2] min-w-0">
+                  <label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">Tên Khách</label>
+                  <input type="text" placeholder="Nhập tên..." value={props.tenKhach} onChange={(e) => props.setTenKhach(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold outline-none ${props.errors.tenKhach ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} />
+                </div>
+                <div className="flex-[1.5] min-w-0">
+                  <label className="text-[10px] text-rose-500 font-bold ml-2 mb-1.5 block uppercase flex items-center gap-1">💍 Ngày cưới</label>
+                  <input type="date" value={props.ngayCuoi} onChange={(e) => props.setNgayCuoi(e.target.value)} className="bg-rose-50 border border-transparent p-4 rounded-2xl w-full text-rose-900 font-bold outline-none focus:bg-white focus:border-rose-300 transition-all" />
+                </div>
+              </div>
               
               <div className="flex gap-3 w-full">
                 <div className="flex-1 min-w-0"><label className="text-[10px] text-slate-500 font-bold ml-2 mb-1.5 block uppercase">SĐT 1</label><input type="text" placeholder="0987..." value={props.soDienThoai} onChange={(e) => props.setSoDienThoai(e.target.value)} className={`bg-slate-50 p-4 rounded-2xl w-full text-slate-900 font-bold outline-none transition-all ${props.errors.soDienThoai ? "border-2 border-red-500 bg-red-50" : "border border-transparent"}`} /></div>
@@ -126,7 +136,6 @@ export default function ModalThemLich(props: ModalThemLichProps) {
                 </div>
               </div>
 
-              {/* KHU VỰC NHẬP DỊCH VỤ THÊM NỔI BẬT */}
               <div className="bg-orange-50/50 p-3 rounded-2xl border border-orange-100 w-full mt-2">
                 <label className="text-[10px] text-orange-700 font-black ml-2 mb-1.5 block uppercase">Phát Sinh / Dịch Vụ Làm Thêm (Nếu có)</label>
                 <div className="flex gap-3 w-full">

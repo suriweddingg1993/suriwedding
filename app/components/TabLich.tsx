@@ -9,7 +9,7 @@ import ModalHoaDon from "./ModalHoaDon";
 import ModalThemLich from "./ModalThemLich";
 import ModalQuanLyGoi from "./ModalQuanLyGoi";
 import ModalBaoCao from "./ModalBaoCao";
-import NutCopy from "./NutCopy"; // ĐÃ THÊM: Import component NutCopy
+import NutCopy from "./NutCopy"; 
 
 function chuyenTienVeSo(value: string) { 
   return Number(value.replace(/\./g, "")); 
@@ -17,6 +17,8 @@ function chuyenTienVeSo(value: string) {
 
 interface TabLichProps {
   homNay: () => string; dangSua: string | null; ngay: string; setNgay: (val: string) => void;
+  // Khai báo props ngayCuoi
+  ngayCuoi: string; setNgayCuoi: (val: string) => void;
   gio: string; setGio: (val: string) => void; tenKhach: string; setTenKhach: (val: string) => void;
   soDienThoai: string; setSoDienThoai: (val: string) => void; soDienThoai2: string; setSoDienThoai2: (val: string) => void;
   theLoai: string; setTheLoai: (val: string) => void; theLoaiKhac: string; setTheLoaiKhac: (val: string) => void;
@@ -29,7 +31,7 @@ interface TabLichProps {
 }
 
 export default function TabLich({
-  homNay, dangSua, ngay, setNgay, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
+  homNay, dangSua, ngay, setNgay, ngayCuoi, setNgayCuoi, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
   theLoai, setTheLoai, theLoaiKhac, setTheLoaiKhac, goiChup, setGoiChup, giaTien, setGiaTien, formatTienInput,
   themHoacSuaLich, resetForm, lichTheoNgay, suaLich, capNhatTrangThai,
   hoSoCuaToi, themThuHuong, laAdmin, xoaLich, lichLamViec, danhSachPhatSinh
@@ -52,7 +54,6 @@ export default function TabLich({
   const [tuKhoa, setTuKhoa] = useState(""); 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   
-  // STATE CHO TIỀN CỌC VÀ DỊCH VỤ THÊM
   const [tienCoc, setTienCoc] = useState("");
   const [dichVuThem, setDichVuThem] = useState("");
   const [tienDichVuThem, setTienDichVuThem] = useState("");
@@ -122,6 +123,7 @@ export default function TabLich({
   const openAddModal = () => { 
     resetForm(); 
     setNgay(selectedDate); 
+    setNgayCuoi(""); // Thêm dòng này
     setTienCoc(""); 
     setDichVuThem(""); 
     setTienDichVuThem(""); 
@@ -131,6 +133,7 @@ export default function TabLich({
 
   const suaLichNangCao = (item: any) => { 
     suaLich(item); 
+    setNgayCuoi(item.ngayCuoi || ""); // Thêm dòng này
     setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
     setDichVuThem(item.dichVuThem || ""); 
     setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
@@ -170,13 +173,15 @@ export default function TabLich({
 
     const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
     
+    // ĐÃ THÊM: Lưu biến ngayCuoi vào CSDL
     const duLieuLich: any = { 
       ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
       theLoai: theLoaiCuoi, goiChup, 
       giaTien: chuyenTienVeSo(giaTien) || 0, 
       tienCoc: chuyenTienVeSo(tienCoc) || 0,
       dichVuThem,
-      tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0
+      tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0,
+      ngayCuoi
     };
 
     if (!dangSua) {
@@ -186,7 +191,7 @@ export default function TabLich({
     try {
       if (dangSua) { await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); } 
       else { await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch!"); } 
-      setShowModal(false); resetForm(); setTienCoc(""); setDichVuThem(""); setTienDichVuThem("");
+      setShowModal(false); resetForm(); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); setNgayCuoi("");
     } catch (error) { toast.error("Có lỗi mạng"); }
   };
 
@@ -268,7 +273,6 @@ export default function TabLich({
               "Hủy lịch": "bg-rose-100 text-rose-600" 
             };
             
-            // Tính toán tổng tiền mới (Đã bao gồm tiền Dịch vụ thêm)
             const tongTienCaLich = (item.giaTien || 0) + ((item as any).tienDichVuThem || 0);
             const tienNo = tongTienCaLich - (item.tienCoc || 0);
             
@@ -307,7 +311,14 @@ export default function TabLich({
                 </div>
 
                 <div className="grid gap-2 text-sm ml-2 mt-1">
-                  {/* ĐÃ THÊM NÚT COPY CHO SĐT 1 VÀ SĐT 2 */}
+                  
+                  {/* ĐÃ THÊM: Ngày cưới nổi bật nếu có */}
+                  {(item as any).ngayCuoi && (
+                    <div className="text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-xl mb-1 text-xs w-fit border border-rose-100 flex items-center gap-1.5 shadow-sm">
+                      💍 Ngày Cưới: {(item as any).ngayCuoi.split('-').reverse().join('/')}
+                    </div>
+                  )}
+
                   {item.soDienThoai && (
                     <div className="text-slate-500 font-medium flex items-center gap-2">
                       SĐT 1: <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a>
@@ -356,7 +367,8 @@ export default function TabLich({
 
       <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} />
       
-      <ModalThemLich showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} ngay={ngay} setNgay={setNgay} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} dichVuThem={dichVuThem} setDichVuThem={setDichVuThem} tienDichVuThem={tienDichVuThem} setTienDichVuThem={setTienDichVuThem} errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} />
+      {/* ĐÃ CẬP NHẬT TRUYỀN THÊM ngayCuoi VÀO MODAL */}
+      <ModalThemLich showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} ngay={ngay} setNgay={setNgay} ngayCuoi={ngayCuoi} setNgayCuoi={setNgayCuoi} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} dichVuThem={dichVuThem} setDichVuThem={setDichVuThem} tienDichVuThem={tienDichVuThem} setTienDichVuThem={setTienDichVuThem} errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} />
       
       <ModalQuanLyGoi showGoiModal={showGoiModal} setShowGoiModal={setShowGoiModal} dangSuaGoi={dangSuaGoi} setDangSuaGoi={setDangSuaGoi} tenGoiMoi={tenGoiMoi} setTenGoiMoi={setTenGoiMoi} chiTietGoiMoi={chiTietGoiMoi} setChiTietGoiMoi={setChiTietGoiMoi} giaGoiMoi={giaGoiMoi} setGiaGoiMoi={setGiaGoiMoi} formatTienInput={formatTienInput} luuGoiDichVu={luuGoiDichVu} danhSachGoiDichVu={danhSachGoiDichVu} xoaGoiDichVu={xoaGoiDichVu} laAdmin={laAdmin} />
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
