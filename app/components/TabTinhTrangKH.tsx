@@ -2,7 +2,6 @@ import { useState } from "react";
 import NutCopy from "./NutCopy";
 import toast from "react-hot-toast";
 import { PhatSinh, TaiKhoan, ThuHuong } from "../../types";
-// ĐÃ THÊM: Các icon mới để trang trí thẻ
 import { ChevronDown, ChevronUp, History, User, Banknote } from "lucide-react"; 
 
 interface TabTinhTrangKHProps {
@@ -10,7 +9,6 @@ interface TabTinhTrangKHProps {
   canTraHomNay: PhatSinh[];
   dangThue: PhatSinh[];
   danhDauDaTraDo: (id: string) => Promise<void>;
-  // CÁC PROP MỚI THÊM VÀO ĐỂ TÍNH HOA HỒNG & LỊCH SỬ
   danhSachPhatSinh?: PhatSinh[];
   hoSoCuaToi?: TaiKhoan | null;
   themThuHuong?: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
@@ -30,7 +28,6 @@ export default function TabTinhTrangKH({
 
   const [showLichSu, setShowLichSu] = useState(false);
 
-  // Lọc ra các món đồ Khách Đã Trả (Có chữ thuê và daTraDo = true)
   const lichSuTraDo = danhSachPhatSinh
     .filter(ps => ps.daTraDo && ps.loai && ps.loai.toLowerCase().includes("thuê"))
     .sort((a,b) => (b.ngayTra || "").localeCompare(a.ngayTra || ""));
@@ -59,7 +56,7 @@ export default function TabTinhTrangKH({
     }
   };
 
-  // HÀM: XỬ LÝ NHÂN VIÊN NHẬN 10% HOA HỒNG
+  // HÀM: XỬ LÝ NHÂN VIÊN NHẬN 10% HOA HỒNG (CHỈ DÀNH CHO THUÊ VÁY)
   const nhanHoaHong = (ps: PhatSinh) => {
     if (!hoSoCuaToi || !themThuHuong) { toast.error("Lỗi xác thực tài khoản!"); return; }
     
@@ -110,7 +107,8 @@ export default function TabTinhTrangKH({
             </h3>
             <div className="space-y-3">
               {quaHan.map((ps: PhatSinh) => {
-                const isVayVest = ps.loai?.toLowerCase().includes("váy") || ps.loai?.toLowerCase().includes("vest");
+                // ĐÃ SỬA: Chỉ nhận diện là "Váy" mới bật tính năng hoa hồng 10%
+                const isVayOnly = ps.loai?.toLowerCase().includes("váy");
                 const tienHoaHong = (ps.soTien || 0) * 0.1;
                 const moTa = `[HH 10%] Cho thuê ${ps.loai} - KH: ${ps.tenKhach} (${ps.id?.slice(-4)})`;
                 const daNhan = danhSachThuHuong.some(th => th.uid === hoSoCuaToi?.id && th.moTa === moTa);
@@ -128,7 +126,6 @@ export default function TabTinhTrangKH({
                       </div>
                     </div>
 
-                    {/* HIỂN THỊ NV XUẤT ĐỒ & GIÁ TIỀN */}
                     <div className="bg-slate-50 rounded-lg p-2.5 mt-3 border border-slate-100">
                       <div className="flex justify-between items-center text-xs mb-2 pb-2 border-b border-slate-200">
                          <span className="flex items-center gap-1.5 text-slate-500"><User size={14}/> NV Xuất: <strong className="text-slate-700">{ps.nguoiGhi?.split('@')[0] || "Admin"}</strong></span>
@@ -149,7 +146,7 @@ export default function TabTinhTrangKH({
                       <button onClick={() => ps.id && xacNhanTraDoNangCao(ps.id, ps.tenKhach, ps.ngayTra)} className="flex-[1.5] bg-red-50 text-red-600 font-bold py-2.5 rounded-lg border border-red-200 hover:bg-red-500 hover:text-white transition-colors flex justify-center items-center gap-1 text-xs">
                         ✓ Khách đã trả đồ
                       </button>
-                      {isVayVest && (
+                      {isVayOnly && (
                         <button onClick={() => nhanHoaHong(ps)} disabled={daNhan} className={`flex-1 font-bold py-2.5 rounded-lg border transition-colors flex justify-center items-center gap-1 text-xs ${daNhan ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-500 hover:text-white'}`}>
                            <Banknote size={14} /> {daNhan ? 'Đã nhận HH' : `Nhận ${formatTien(tienHoaHong)}đ`}
                         </button>
@@ -170,7 +167,8 @@ export default function TabTinhTrangKH({
             </h3>
             <div className="space-y-3">
               {canTraHomNay.map((ps: PhatSinh) => {
-                const isVayVest = ps.loai?.toLowerCase().includes("váy") || ps.loai?.toLowerCase().includes("vest");
+                // ĐÃ SỬA: Chỉ nhận diện là "Váy" mới bật tính năng hoa hồng 10%
+                const isVayOnly = ps.loai?.toLowerCase().includes("váy");
                 const tienHoaHong = (ps.soTien || 0) * 0.1;
                 const moTa = `[HH 10%] Cho thuê ${ps.loai} - KH: ${ps.tenKhach} (${ps.id?.slice(-4)})`;
                 const daNhan = danhSachThuHuong.some(th => th.uid === hoSoCuaToi?.id && th.moTa === moTa);
@@ -208,7 +206,7 @@ export default function TabTinhTrangKH({
                       <button onClick={() => ps.id && xacNhanTraDoNangCao(ps.id, ps.tenKhach, ps.ngayTra)} className="flex-[1.5] bg-orange-50 text-orange-600 font-bold py-2.5 rounded-lg border border-orange-200 hover:bg-orange-500 hover:text-white transition-colors flex justify-center items-center gap-1 text-xs">
                         ✓ Khách đã trả đồ
                       </button>
-                      {isVayVest && (
+                      {isVayOnly && (
                         <button onClick={() => nhanHoaHong(ps)} disabled={daNhan} className={`flex-1 font-bold py-2.5 rounded-lg border transition-colors flex justify-center items-center gap-1 text-xs ${daNhan ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-500 hover:text-white'}`}>
                            <Banknote size={14} /> {daNhan ? 'Đã nhận HH' : `Nhận ${formatTien(tienHoaHong)}đ`}
                         </button>
@@ -223,9 +221,7 @@ export default function TabTinhTrangKH({
 
       </div>
 
-      {/* ==============================================
-          BLOCK 3: LỊCH SỬ ĐÃ TRẢ ĐỒ (ACCORDION)
-      =============================================== */}
+      {/* BLOCK 3: LỊCH SỬ ĐÃ TRẢ ĐỒ (ACCORDION) */}
       <div className="mt-8 border-t border-slate-200 pt-6">
         <button
           onClick={() => setShowLichSu(!showLichSu)}
@@ -245,7 +241,8 @@ export default function TabTinhTrangKH({
                 <div className="text-center py-6 text-slate-400 text-sm font-medium border border-dashed border-slate-200 rounded-2xl bg-white">Chưa có lịch sử khách trả đồ.</div>
             ) : (
                 lichSuTraDo.map(ps => {
-                  const isVayVest = ps.loai?.toLowerCase().includes("váy") || ps.loai?.toLowerCase().includes("vest");
+                  // ĐÃ SỬA: Chỉ nhận diện là "Váy" mới bật tính năng hoa hồng 10%
+                  const isVayOnly = ps.loai?.toLowerCase().includes("váy");
                   const tienHoaHong = (ps.soTien || 0) * 0.1;
                   const moTa = `[HH 10%] Cho thuê ${ps.loai} - KH: ${ps.tenKhach} (${ps.id?.slice(-4)})`;
                   const daNhan = danhSachThuHuong.some(th => th.uid === hoSoCuaToi?.id && th.moTa === moTa);
@@ -268,8 +265,7 @@ export default function TabTinhTrangKH({
                          <span className="font-black text-slate-500">Đồ: {ps.loai} ({formatTien(ps.soTien || 0)}đ)</span>
                       </div>
 
-                      {/* Nút nhận hoa hồng cho lịch sử (Phòng trường hợp quên bấm lúc trước) */}
-                      {isVayVest && (
+                      {isVayOnly && (
                         <button onClick={() => nhanHoaHong(ps)} disabled={daNhan} className={`w-full mt-2 font-bold py-2.5 rounded-lg border transition-colors flex justify-center items-center gap-1 text-xs ${daNhan ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-500 hover:text-white'}`}>
                             <Banknote size={14} /> {daNhan ? 'Đã nhận HH' : `Nhận ${formatTien(tienHoaHong)}đ`}
                         </button>
