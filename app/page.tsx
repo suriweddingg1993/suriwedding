@@ -376,9 +376,7 @@ export default function HomePage() {
           )}
 
 
-          {/* ========================================================
-              BLOCK ĐÃ SỬA: TÌNH TRẠNG STUDIO (GỌN GÀNG - DẠNG THANH NGANG)
-          ======================================================== */}
+          {/* TÌNH TRẠNG STUDIO */}
           <div>
             <div className="flex items-center justify-between mb-3 px-1">
               <h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng hôm nay</h2>
@@ -386,7 +384,6 @@ export default function HomePage() {
             
             <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-2 flex items-center justify-between">
               
-              {/* CỘT 1: LỊCH CHỤP */}
               <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group">
                 <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                   <CalendarDays size={20} strokeWidth={2} />
@@ -399,7 +396,6 @@ export default function HomePage() {
 
               <div className="w-[1px] h-12 bg-slate-100"></div>
 
-              {/* CỘT 2: TRẢ ĐỒ HÔM NAY */}
               <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">
                 {canTraHomNay.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>}
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
@@ -413,7 +409,6 @@ export default function HomePage() {
 
               <div className="w-[1px] h-12 bg-slate-100"></div>
 
-              {/* CỘT 3: QUÁ HẠN */}
               <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">
                 {quaHan.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${quaHan.length > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-50 text-slate-400"}`}>
@@ -445,13 +440,14 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* KHU VỰC RENDER CÁC TAB - ĐÃ THÊM THÔNG TIN CHO TabTinhTrangKH */}
       <div id="noi-dung-tab" className="mt-2">
         {tab === "lich" && <TabLich homNay={homNay} dangSua={dangSua} ngay={ngay} setNgay={setNgay} ngayCuoi={ngayCuoi} setNgayCuoi={setNgayCuoi} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} danhSachThuHuong={danhSachThuHuong} />}
         {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} lichLamViec={lichLamViec} />}
         {tab === "chamCong" && <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />}
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
         {tab === "nhanVien" && laAdmin && <TabNhanVien uidNhanVien={uidNhanVien} setUidNhanVien={setUidNhanVien} emailNhanVien={emailNhanVien} setEmailNhanVien={setEmailNhanVien} hoTenNhanVien={hoTenNhanVien} setHoTenNhanVien={setHoTenNhanVien} soDienThoaiNhanVien={soDienThoaiNhanVien} setSoDienThoaiNhanVien={setSoDienThoaiNhanVien} luongCungNhanVien={luongCungNhanVien} setLuongCungNhanVien={setLuongCungNhanVien} thuongChuyenCanNhanVien={thuongChuyenCanNhanVien} setThuongChuyenCanNhanVien={setThuongChuyenCanNhanVien} quyenNhanVien={quyenNhanVien} setQuyenNhanVien={setQuyenNhanVien} taoHoSoNhanVien={taoHoSoNhanVien} dangSuaNhanVien={dangSuaNhanVien} danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} suaHoSoNhanVien={suaHoSoNhanVien} formatTienInput={formatTienInput} />}
-        {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
+        {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} danhSachPhatSinh={danhSachPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhSachThuHuong={danhSachThuHuong} />}
         {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}
       </div>
 
