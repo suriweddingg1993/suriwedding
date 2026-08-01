@@ -7,8 +7,8 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "f
 import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
-import { Role, TabType, TaiKhoan } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle } from "lucide-react";
+import { Role, TabType, TaiKhoan, Lich } from "../types";
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -149,12 +149,48 @@ export default function HomePage() {
   const tongThuNhapPhatSinh = phatSinhTrongThang.reduce((sum, item) => sum + Number(item.soTien || 0), 0);
   const tongThuNhap = tongThuNhapLich + tongThuNhapPhatSinh;
   
-  const ngayHomNay = homNay();
+  const ngayHomNayStr = homNay();
   const isThueDoCheck = (loai: string) => loai && loai.toLowerCase().includes("thuê");
-  const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra === ngayHomNay);
-  const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNay);
-  const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNay);
+  const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra === ngayHomNayStr);
+  const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNayStr);
+  const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNayStr);
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi"); } };
+
+  // ============================================================================
+  // LOGIC MỚI: QUẢN LÝ DÒNG TIỀN / CÔNG NỢ
+  // ============================================================================
+  const khachNoTien = lichLamViec.filter((item) => {
+    // 1. Tính tổng tiền và tiền nợ
+    const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
+    const tienNo = tongTien - Number(item.tienCoc || 0);
+    
+    // Nếu khách đã trả đủ hoặc dư -> Không liệt kê
+    if (tienNo <= 0) return false;
+
+    // 2. Xác định Mốc thời gian để đòi nợ
+    // Nếu có Ngày Cưới -> Đợi qua Ngày cưới. Nếu không -> Đợi qua Ngày chụp.
+    const ngayMocSoSanh = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
+    
+    // Chỉ cảnh báo nếu "Ngày hiện tại" ĐÃ BƯỚC QUA "Ngày mốc" 
+    // Dùng dấu "<" để đảm bảo đúng ngày chụp/cưới sẽ không báo (để tránh phiền lúc đang bận làm việc)
+    return ngayMocSoSanh < ngayHomNayStr;
+  });
+
+  // HÀM: Xóa nợ cho khách (Gán Tiền Cọc = Tổng Tiền)
+  const xacNhanThuDuTien = async (item: Lich) => {
+    if (!laAdmin) { toast.error("Chỉ Admin mới được xác nhận tiền!"); return; }
+    if (!confirm(`Xác nhận đã thu đủ số tiền còn nợ của khách: ${item.tenKhach}?`)) return;
+    
+    const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
+    
+    try {
+      await updateDoc(doc(db, "lichStudio", item.id!), { tienCoc: tongTien });
+      toast.success("✅ Đã tất toán nợ thành công!");
+    } catch (error) {
+      toast.error("Lỗi hệ thống khi cập nhật!");
+    }
+  };
+
 
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
   if (!user) { 
@@ -208,6 +244,51 @@ export default function HomePage() {
 
       {tab === "home" && (
         <div className="animate-fade-in space-y-6">
+          
+          {/* ========================================================
+              BLOCK MỚI: HIỂN THỊ DANH SÁCH KHÁCH NỢ TIỀN
+          ======================================================== */}
+          {khachNoTien.length > 0 && laAdmin && (
+            <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden">
+              <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5">💸</div>
+              <h2 className="font-black text-lg mb-3 text-rose-600 tracking-tight flex items-center gap-2">
+                <Banknote size={24} /> Báo Động Nợ Tồn Đọng ({khachNoTien.length})
+              </h2>
+              <div className="flex flex-col gap-3 relative z-10">
+                {khachNoTien.map(item => {
+                  const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
+                  const tienNo = tongTien - Number(item.tienCoc || 0);
+                  const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
+                  const loaiMoc = (item as any).ngayCuoi ? 'Ngày Cưới' : 'Ngày Chụp';
+                  
+                  return (
+                    <div key={item.id} className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
+                      <div>
+                        <div className="font-black text-slate-900 leading-tight">
+                          {item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5">
+                          <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                            Qua {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}
+                          </span>
+                          <span className="text-sm font-black text-rose-600">
+                            Đang Nợ: {formatTienInput(String(tienNo))}đ
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => xacNhanThuDuTien(item)} 
+                        className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0 ml-3"
+                      >
+                        Đã Thu Xong
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between mb-3 px-1"><h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng công việc</h2></div>
             <div className="grid grid-cols-2 gap-3">
@@ -237,7 +318,7 @@ export default function HomePage() {
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${quaHan.length > 0 ? "bg-rose-100 text-rose-600 animate-pulse" : "bg-slate-50 text-slate-400"}`}><AlertCircle size={24} strokeWidth={2} /></div>
                 <div className="text-left">
                   <div className={`text-3xl font-black leading-none mb-1.5 ${quaHan.length > 0 ? "text-rose-700" : "text-slate-800"}`}>{quaHan.length}</div>
-                  <div className={`text-[11px] font-bold uppercase tracking-wider ${quaHan.length > 0 ? "text-rose-600" : "text-slate-400"}`}>Quá hạn trả</div>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${quaHan.length > 0 ? "text-rose-600" : "text-slate-400"}`}>Quá hạn trả đồ</div>
                 </div>
               </button>
             </div>
@@ -261,7 +342,6 @@ export default function HomePage() {
       )}
 
       <div id="noi-dung-tab" className="mt-2">
-        {/* ĐÃ SỬA: Bổ sung danhSachThuHuong={danhSachThuHuong} vào thẻ TabLich bên dưới */}
         {tab === "lich" && <TabLich homNay={homNay} dangSua={dangSua} ngay={ngay} setNgay={setNgay} ngayCuoi={ngayCuoi} setNgayCuoi={setNgayCuoi} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} formatTienInput={formatTienInput} themHoacSuaLich={themHoacSuaLich} resetForm={resetForm} lichTheoNgay={lichTheoNgay} suaLich={suaLich} capNhatTrangThai={capNhatTrangThai} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} laAdmin={laAdmin} xoaLich={xoaLich} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} danhSachThuHuong={danhSachThuHuong} />}
         {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} lichLamViec={lichLamViec} />}
         {tab === "chamCong" && <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />}
