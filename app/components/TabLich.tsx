@@ -371,7 +371,8 @@ export default function TabLich({
 
       <button onClick={openAddModal} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-200/50 flex items-center justify-center text-3xl z-40 hover:scale-110 active:scale-90 transition-all">+</button>
 
-      <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} />
+      {/* ĐÃ CẬP NHẬT: Thêm trường lichLamViec={lichLamViec} vào đây */}
+      <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} lichLamViec={lichLamViec} />
       
       <ModalThemLich showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} ngay={ngay} setNgay={setNgay} ngayCuoi={ngayCuoi} setNgayCuoi={setNgayCuoi} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} dichVuThem={dichVuThem} setDichVuThem={setDichVuThem} tienDichVuThem={tienDichVuThem} setTienDichVuThem={setTienDichVuThem} errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} />
       
