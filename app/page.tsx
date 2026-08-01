@@ -8,7 +8,8 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, TaiKhoan, Lich } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote } from "lucide-react";
+// ĐÃ THÊM: ChevronDown, ChevronUp để làm icon Mũi tên thu gọn/mở rộng
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -38,6 +39,9 @@ export default function HomePage() {
   const [tab, setTab] = useState<TabType>("home");
   const [coBanCapNhat, setCoBanCapNhat] = useState(false);
   const [hoSoCuaToi, setHoSoCuaToi] = useState<TaiKhoan | null>(null);
+
+  // ĐÃ THÊM: State để quản lý việc Ẩn/Hiện danh sách nợ
+  const [showKhachNo, setShowKhachNo] = useState(false);
 
   const laAdmin = role === "admin";
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan } = useAppData(user, laAdmin);
@@ -156,40 +160,35 @@ export default function HomePage() {
   const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNayStr);
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi"); } };
 
-  // ============================================================================
-  // LOGIC MỚI: QUẢN LÝ DÒNG TIỀN / CÔNG NỢ
-  // ============================================================================
+  // Logic: Khách Nợ Tiền
   const khachNoTien = lichLamViec.filter((item) => {
-    // 1. Tính tổng tiền và tiền nợ
     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
     const tienNo = tongTien - Number(item.tienCoc || 0);
-    
-    // Nếu khách đã trả đủ hoặc dư -> Không liệt kê
     if (tienNo <= 0) return false;
-
-    // 2. Xác định Mốc thời gian để đòi nợ
-    // Nếu có Ngày Cưới -> Đợi qua Ngày cưới. Nếu không -> Đợi qua Ngày chụp.
     const ngayMocSoSanh = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
-    
-    // Chỉ cảnh báo nếu "Ngày hiện tại" ĐÃ BƯỚC QUA "Ngày mốc" 
-    // Dùng dấu "<" để đảm bảo đúng ngày chụp/cưới sẽ không báo (để tránh phiền lúc đang bận làm việc)
     return ngayMocSoSanh < ngayHomNayStr;
   });
 
-  // HÀM: Xóa nợ cho khách (Gán Tiền Cọc = Tổng Tiền)
   const xacNhanThuDuTien = async (item: Lich) => {
     if (!laAdmin) { toast.error("Chỉ Admin mới được xác nhận tiền!"); return; }
     if (!confirm(`Xác nhận đã thu đủ số tiền còn nợ của khách: ${item.tenKhach}?`)) return;
-    
     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
-    
     try {
       await updateDoc(doc(db, "lichStudio", item.id!), { tienCoc: tongTien });
       toast.success("✅ Đã tất toán nợ thành công!");
-    } catch (error) {
-      toast.error("Lỗi hệ thống khi cập nhật!");
-    }
+      // Nếu sau khi thu xong mà không còn nợ, tự động đóng accordion
+      if (khachNoTien.length <= 1) setShowKhachNo(false);
+    } catch (error) { toast.error("Lỗi hệ thống khi cập nhật!"); }
   };
+
+  // Logic: TÌM VIỆC CỦA TÔI HÔM NAY (NOTIFICATION)
+  const tenCuaToi = hoSoCuaToi?.hoTen || hoSoCuaToi?.email?.split('@')[0] || "";
+  const viecCuaToiHomNay = lichLamViec.filter(lich => {
+    if (lich.ngay !== ngayHomNayStr) return false;
+    const phanCong = (lich as any).phanCong;
+    if (!phanCong) return false;
+    return Object.values(phanCong).includes(tenCuaToi);
+  }).sort((a, b) => a.gio.localeCompare(b.gio));
 
 
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
@@ -238,66 +237,125 @@ export default function HomePage() {
 
       {/* HEADER TỐI GIẢN */}
       <div className="flex justify-between items-center gap-4 mb-6">
-        <div><h1 className="text-2xl font-black text-slate-900 tracking-tight">Suri Wedding</h1><p className="text-xs font-bold text-slate-500 mt-1">{user.email?.split('@')[0]} • {laAdmin ? "Admin" : "Nhân viên"}</p></div>
+        <div><h1 className="text-2xl font-black text-slate-900 tracking-tight">Suri Wedding</h1><p className="text-xs font-bold text-slate-500 mt-1">{tenCuaToi} • {laAdmin ? "Admin" : "Nhân viên"}</p></div>
         <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm"><LogOut size={18} strokeWidth={2.5} /></button>
       </div>
 
       {tab === "home" && (
         <div className="animate-fade-in space-y-6">
-          
-          {/* ========================================================
-              BLOCK MỚI: HIỂN THỊ DANH SÁCH KHÁCH NỢ TIỀN
-          ======================================================== */}
-          {khachNoTien.length > 0 && laAdmin && (
-            <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden">
-              <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5">💸</div>
-              <h2 className="font-black text-lg mb-3 text-rose-600 tracking-tight flex items-center gap-2">
-                <Banknote size={24} /> Báo Động Nợ Tồn Đọng ({khachNoTien.length})
+
+          {/* THÔNG BÁO CÔNG VIỆC CỦA NHÂN VIÊN */}
+          {viecCuaToiHomNay.length > 0 ? (
+            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl p-5 shadow-lg shadow-blue-200 text-white relative overflow-hidden">
+              <div className="absolute -right-4 -top-4 text-8xl opacity-10">🎯</div>
+              
+              <h2 className="font-black text-lg mb-4 flex items-center gap-2 relative z-10">
+                🎯 Lịch của bạn hôm nay ({viecCuaToiHomNay.length})
               </h2>
+              
               <div className="flex flex-col gap-3 relative z-10">
-                {khachNoTien.map(item => {
-                  const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
-                  const tienNo = tongTien - Number(item.tienCoc || 0);
-                  const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
-                  const loaiMoc = (item as any).ngayCuoi ? 'Ngày Cưới' : 'Ngày Chụp';
-                  
+                {viecCuaToiHomNay.map(lich => {
+                  const phanCong = (lich as any).phanCong || {};
+                  const nhiemVuCuaToi = Object.entries(phanCong)
+                    .filter(([role, name]) => name === tenCuaToi)
+                    .map(([role]) => role); 
+
                   return (
-                    <div key={item.id} className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
-                      <div>
-                        <div className="font-black text-slate-900 leading-tight">
-                          {item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5">
-                          <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                            Qua {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}
-                          </span>
-                          <span className="text-sm font-black text-rose-600">
-                            Đang Nợ: {formatTienInput(String(tienNo))}đ
-                          </span>
-                        </div>
+                    <div key={lich.id} className="bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl p-4 flex flex-col gap-2">
+                      <div className="flex justify-between items-start">
+                        <span className="bg-white text-blue-700 text-xs font-black px-2.5 py-1 rounded-lg shadow-sm">
+                          ⏰ {lich.gio}
+                        </span>
+                        <span className="text-[10px] font-bold bg-black/20 px-2 py-1 rounded-md uppercase text-blue-50">
+                          {lich.theLoai}
+                        </span>
                       </div>
-                      <button 
-                        onClick={() => xacNhanThuDuTien(item)} 
-                        className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0 ml-3"
-                      >
-                        Đã Thu Xong
-                      </button>
+                      <div className="font-black text-xl leading-tight drop-shadow-sm">{lich.tenKhach}</div>
+                      
+                      <div className="text-xs font-medium text-blue-50 flex items-center gap-1.5 flex-wrap mt-1">
+                        <span className="opacity-80">Nhiệm vụ:</span> 
+                        <span className="font-bold text-white bg-white/20 border border-white/20 px-2 py-0.5 rounded-md">
+                          {nhiemVuCuaToi.join(", ")}
+                        </span>
+                      </div>
                     </div>
                   )
                 })}
               </div>
             </div>
+          ) : (
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 bg-emerald-50 border border-emerald-100 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl shrink-0">🏝️</div>
+              <div>
+                <div className="font-black text-slate-800 text-sm">Không có ca phân công</div>
+                <div className="text-xs font-medium text-slate-500 mt-0.5 leading-relaxed">Hôm nay bạn chưa có lịch làm việc nào. Có thể tự nhận thêm ở Tab Lịch nhé!</div>
+              </div>
+            </div>
+          )}
+
+
+          {/* ========================================================
+              BLOCK ĐÃ SỬA: BÁO ĐỘNG NỢ TỒN ĐỌNG DẠNG ACCORDION
+          ======================================================== */}
+          {khachNoTien.length > 0 && laAdmin && (
+            <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300">
+              <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5 pointer-events-none">💸</div>
+              
+              <button 
+                onClick={() => setShowKhachNo(!showKhachNo)}
+                className="w-full flex justify-between items-center relative z-10 text-left outline-none"
+              >
+                <h2 className="font-black text-lg text-rose-600 tracking-tight flex items-center gap-2">
+                  <Banknote size={24} /> Báo Động Nợ Tồn Đọng ({khachNoTien.length})
+                </h2>
+                <div className="bg-rose-50 text-rose-600 p-1.5 rounded-full transition-transform">
+                  {showKhachNo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </div>
+              </button>
+
+              {showKhachNo && (
+                <div className="flex flex-col gap-3 relative z-10 mt-4 animate-fade-in">
+                  {khachNoTien.map(item => {
+                    const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
+                    const tienNo = tongTien - Number(item.tienCoc || 0);
+                    const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
+                    const loaiMoc = (item as any).ngayCuoi ? 'Ngày Cưới' : 'Ngày Chụp';
+                    
+                    return (
+                      <div key={item.id} className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
+                        <div className="min-w-0 pr-2">
+                          <div className="font-black text-slate-900 leading-tight break-words">
+                            {item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5">
+                            <span className="text-[10px] font-bold text-slate-500 bg-white w-fit px-2 py-0.5 rounded-md border border-slate-200">
+                              Qua {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}
+                            </span>
+                            <span className="text-sm font-black text-rose-600 w-fit">
+                              Đang Nợ: {formatTienInput(String(tienNo))}đ
+                            </span>
+                          </div>
+                        </div>
+                        <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">
+                          Đã Thu Xong
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           <div>
-            <div className="flex items-center justify-between mb-3 px-1"><h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng công việc</h2></div>
+            <div className="flex items-center justify-between mb-3 px-1"><h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng Studio</h2></div>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="col-span-2 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-between group relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500 rounded-l-3xl"></div>
                 <div className="flex items-center gap-4 ml-2">
                   <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"><CalendarDays size={28} strokeWidth={1.5} /></div>
                   <div className="text-left">
-                    <div className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">Lịch chụp hôm nay</div>
+                    <div className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">Tổng Lịch chụp hôm nay</div>
                     <div className="text-2xl font-black text-slate-800 leading-none">
                       {lichLamViec.filter((item) => item.ngay === homNay()).length > 0 ? <span className="text-indigo-600">{lichLamViec.filter((item) => item.ngay === homNay()).length} <span className="text-lg text-slate-600 font-semibold tracking-tight">khách hàng</span></span> : <span className="text-slate-400 text-lg tracking-tight">Lịch trống</span>}
                     </div>
@@ -310,7 +368,7 @@ export default function HomePage() {
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}><ClipboardList size={24} strokeWidth={2} /></div>
                 <div className="text-left">
                   <div className={`text-3xl font-black leading-none mb-1.5 ${canTraHomNay.length > 0 ? "text-amber-700" : "text-slate-800"}`}>{canTraHomNay.length}</div>
-                  <div className={`text-[11px] font-bold uppercase tracking-wider ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-400"}`}>Trả đồ hôm nay</div>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-400"}`}>Khách Trả đồ hôm nay</div>
                 </div>
               </button>
 
@@ -318,7 +376,7 @@ export default function HomePage() {
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${quaHan.length > 0 ? "bg-rose-100 text-rose-600 animate-pulse" : "bg-slate-50 text-slate-400"}`}><AlertCircle size={24} strokeWidth={2} /></div>
                 <div className="text-left">
                   <div className={`text-3xl font-black leading-none mb-1.5 ${quaHan.length > 0 ? "text-rose-700" : "text-slate-800"}`}>{quaHan.length}</div>
-                  <div className={`text-[11px] font-bold uppercase tracking-wider ${quaHan.length > 0 ? "text-rose-600" : "text-slate-400"}`}>Quá hạn trả đồ</div>
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${quaHan.length > 0 ? "text-rose-600" : "text-slate-400"}`}>Khách Quá hạn trả đồ</div>
                 </div>
               </button>
             </div>
