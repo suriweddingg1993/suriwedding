@@ -21,13 +21,11 @@ const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading:
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const APP_VERSION = "v1.0.8"; 
 
-// HÀM LẤY NGÀY HÔM NAY
 function homNay() { 
   const d = new Date(); 
   const offset = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - offset).toISOString().slice(0, 10); 
 }
-// HÀM LẤY NGÀY MAI
 function ngayMai() { 
   const d = new Date(); 
   d.setDate(d.getDate() + 1);
@@ -49,8 +47,6 @@ export default function HomePage() {
   const [hoSoCuaToi, setHoSoCuaToi] = useState<TaiKhoan | null>(null);
 
   const [showKhachNo, setShowKhachNo] = useState(false);
-  
-  // STATE ĐỂ CHUYỂN ĐỔI TAB "HÔM NAY" VÀ "NGÀY MAI"
   const [tabViecCuaToi, setTabViecCuaToi] = useState<"homNay" | "ngayMai">("homNay");
 
   const laAdmin = role === "admin";
@@ -164,14 +160,13 @@ export default function HomePage() {
   const tongThuNhap = tongThuNhapLich + tongThuNhapPhatSinh;
   
   const ngayHomNayStr = homNay();
-  const ngayMaiStr = ngayMai(); // <-- BIẾN NGÀY MAI
+  const ngayMaiStr = ngayMai(); 
   const isThueDoCheck = (loai: string) => loai && loai.toLowerCase().includes("thuê");
   const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra === ngayHomNayStr);
   const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNayStr);
   const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNayStr);
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi"); } };
 
-  // Logic: Khách Nợ Tiền
   const khachNoTien = lichLamViec.filter((item) => {
     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
     const tienNo = tongTien - Number(item.tienCoc || 0);
@@ -191,12 +186,8 @@ export default function HomePage() {
     } catch (error) { toast.error("Lỗi hệ thống khi cập nhật!"); }
   };
 
-  // ============================================================================
-  // LOGIC MỚI: VIỆC CỦA TÔI (HÔM NAY VÀ NGÀY MAI)
-  // ============================================================================
   const tenCuaToi = hoSoCuaToi?.hoTen || hoSoCuaToi?.email?.split('@')[0] || "";
   
-  // Lọc việc hôm nay
   const viecCuaToiHomNay = lichLamViec.filter(lich => {
     if (lich.ngay !== ngayHomNayStr) return false;
     const phanCong = (lich as any).phanCong;
@@ -204,7 +195,6 @@ export default function HomePage() {
     return Object.values(phanCong).includes(tenCuaToi);
   }).sort((a, b) => a.gio.localeCompare(b.gio));
 
-  // Lọc việc ngày mai
   const viecCuaToiNgayMai = lichLamViec.filter(lich => {
     if (lich.ngay !== ngayMaiStr) return false;
     const phanCong = (lich as any).phanCong;
@@ -212,9 +202,7 @@ export default function HomePage() {
     return Object.values(phanCong).includes(tenCuaToi);
   }).sort((a, b) => a.gio.localeCompare(b.gio));
 
-  // Quyết định danh sách sẽ render dựa trên nút bấm
   const danhSachViecHienThi = tabViecCuaToi === "homNay" ? viecCuaToiHomNay : viecCuaToiNgayMai;
-
 
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
   if (!user) { 
@@ -260,7 +248,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* HEADER TỐI GIẢN */}
+      {/* HEADER */}
       <div className="flex justify-between items-center gap-4 mb-6">
         <div><h1 className="text-2xl font-black text-slate-900 tracking-tight">Suri Wedding</h1><p className="text-xs font-bold text-slate-500 mt-1">{tenCuaToi} • {laAdmin ? "Admin" : "Nhân viên"}</p></div>
         <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm"><LogOut size={18} strokeWidth={2.5} /></button>
@@ -269,9 +257,7 @@ export default function HomePage() {
       {tab === "home" && (
         <div className="animate-fade-in space-y-6">
 
-          {/* ========================================================
-              BLOCK ĐÃ SỬA: THÔNG BÁO CÔNG VIỆC CÓ TAB "NGÀY MAI"
-          ======================================================== */}
+          {/* THÔNG BÁO CÔNG VIỆC CỦA NHÂN VIÊN */}
           {(viecCuaToiHomNay.length > 0 || viecCuaToiNgayMai.length > 0) ? (
             <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl p-5 shadow-lg shadow-blue-200 text-white relative overflow-hidden">
               <div className="absolute -right-4 -top-4 text-8xl opacity-10 pointer-events-none">🎯</div>
@@ -338,7 +324,6 @@ export default function HomePage() {
             </div>
           )}
 
-
           {/* BÁO ĐỘNG NỢ TỒN ĐỌNG DẠNG ACCORDION */}
           {khachNoTien.length > 0 && laAdmin && (
             <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300">
@@ -390,38 +375,56 @@ export default function HomePage() {
             </div>
           )}
 
+
+          {/* ========================================================
+              BLOCK ĐÃ SỬA: TÌNH TRẠNG STUDIO (GỌN GÀNG - DẠNG THANH NGANG)
+          ======================================================== */}
           <div>
-            <div className="flex items-center justify-between mb-3 px-1"><h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng Studio</h2></div>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="col-span-2 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-between group relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500 rounded-l-3xl"></div>
-                <div className="flex items-center gap-4 ml-2">
-                  <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"><CalendarDays size={28} strokeWidth={1.5} /></div>
-                  <div className="text-left">
-                    <div className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-1">Tổng Lịch chụp hôm nay</div>
-                    <div className="text-2xl font-black text-slate-800 leading-none">
-                      {lichLamViec.filter((item) => item.ngay === homNay()).length > 0 ? <span className="text-indigo-600">{lichLamViec.filter((item) => item.ngay === homNay()).length} <span className="text-lg text-slate-600 font-semibold tracking-tight">khách hàng</span></span> : <span className="text-slate-400 text-lg tracking-tight">Lịch trống</span>}
-                    </div>
-                  </div>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng hôm nay</h2>
+            </div>
+            
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-2 flex items-center justify-between">
+              
+              {/* CỘT 1: LỊCH CHỤP */}
+              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group">
+                <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                  <CalendarDays size={20} strokeWidth={2} />
                 </div>
-                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></div>
+                <div className="text-2xl font-black text-slate-800 leading-none mb-1">
+                  {lichLamViec.filter((item) => item.ngay === homNay()).length}
+                </div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Lịch Chụp</div>
               </button>
 
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-5 rounded-3xl border shadow-sm transition-all active:scale-95 flex flex-col gap-4 ${canTraHomNay.length > 0 ? "bg-gradient-to-b from-amber-50 to-orange-50 border-amber-200" : "bg-white border-slate-100"}`}>
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}><ClipboardList size={24} strokeWidth={2} /></div>
-                <div className="text-left">
-                  <div className={`text-3xl font-black leading-none mb-1.5 ${canTraHomNay.length > 0 ? "text-amber-700" : "text-slate-800"}`}>{canTraHomNay.length}</div>
-                  <div className={`text-[11px] font-bold uppercase tracking-wider ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-400"}`}>Khách Trả đồ hôm nay</div>
+              <div className="w-[1px] h-12 bg-slate-100"></div>
+
+              {/* CỘT 2: TRẢ ĐỒ HÔM NAY */}
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">
+                {canTraHomNay.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
+                  <ClipboardList size={20} strokeWidth={2} />
                 </div>
+                <div className={`text-2xl font-black leading-none mb-1 ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-800"}`}>
+                  {canTraHomNay.length}
+                </div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Trả đồ</div>
               </button>
 
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className={`p-5 rounded-3xl border shadow-sm transition-all active:scale-95 flex flex-col gap-4 ${quaHan.length > 0 ? "bg-gradient-to-b from-rose-50 to-red-50 border-rose-200" : "bg-white border-slate-100"}`}>
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${quaHan.length > 0 ? "bg-rose-100 text-rose-600 animate-pulse" : "bg-slate-50 text-slate-400"}`}><AlertCircle size={24} strokeWidth={2} /></div>
-                <div className="text-left">
-                  <div className={`text-3xl font-black leading-none mb-1.5 ${quaHan.length > 0 ? "text-rose-700" : "text-slate-800"}`}>{quaHan.length}</div>
-                  <div className={`text-[11px] font-bold uppercase tracking-wider ${quaHan.length > 0 ? "text-rose-600" : "text-slate-400"}`}>Khách Quá hạn trả đồ</div>
+              <div className="w-[1px] h-12 bg-slate-100"></div>
+
+              {/* CỘT 3: QUÁ HẠN */}
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">
+                {quaHan.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${quaHan.length > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-50 text-slate-400"}`}>
+                  <AlertCircle size={20} strokeWidth={2} />
                 </div>
+                <div className={`text-2xl font-black leading-none mb-1 ${quaHan.length > 0 ? "text-rose-600" : "text-slate-800"}`}>
+                  {quaHan.length}
+                </div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Quá hạn</div>
               </button>
+
             </div>
           </div>
 
