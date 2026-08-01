@@ -8,7 +8,6 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, TaiKhoan, Lich } from "../types";
-// ĐÃ THÊM: ChevronDown, ChevronUp để làm icon Mũi tên thu gọn/mở rộng
 import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -22,11 +21,20 @@ const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading:
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const APP_VERSION = "v1.0.8"; 
 
+// HÀM LẤY NGÀY HÔM NAY
 function homNay() { 
   const d = new Date(); 
   const offset = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - offset).toISOString().slice(0, 10); 
 }
+// HÀM LẤY NGÀY MAI
+function ngayMai() { 
+  const d = new Date(); 
+  d.setDate(d.getDate() + 1);
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().slice(0, 10); 
+}
+
 function formatTienInput(value: string) { const so = value.replace(/\D/g, ""); return so.replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
 function chuyenTienVeSo(value: string) { return Number(value.replace(/\./g, "")); }
 
@@ -40,8 +48,10 @@ export default function HomePage() {
   const [coBanCapNhat, setCoBanCapNhat] = useState(false);
   const [hoSoCuaToi, setHoSoCuaToi] = useState<TaiKhoan | null>(null);
 
-  // ĐÃ THÊM: State để quản lý việc Ẩn/Hiện danh sách nợ
   const [showKhachNo, setShowKhachNo] = useState(false);
+  
+  // STATE ĐỂ CHUYỂN ĐỔI TAB "HÔM NAY" VÀ "NGÀY MAI"
+  const [tabViecCuaToi, setTabViecCuaToi] = useState<"homNay" | "ngayMai">("homNay");
 
   const laAdmin = role === "admin";
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan } = useAppData(user, laAdmin);
@@ -154,6 +164,7 @@ export default function HomePage() {
   const tongThuNhap = tongThuNhapLich + tongThuNhapPhatSinh;
   
   const ngayHomNayStr = homNay();
+  const ngayMaiStr = ngayMai(); // <-- BIẾN NGÀY MAI
   const isThueDoCheck = (loai: string) => loai && loai.toLowerCase().includes("thuê");
   const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra === ngayHomNayStr);
   const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNayStr);
@@ -176,19 +187,33 @@ export default function HomePage() {
     try {
       await updateDoc(doc(db, "lichStudio", item.id!), { tienCoc: tongTien });
       toast.success("✅ Đã tất toán nợ thành công!");
-      // Nếu sau khi thu xong mà không còn nợ, tự động đóng accordion
       if (khachNoTien.length <= 1) setShowKhachNo(false);
     } catch (error) { toast.error("Lỗi hệ thống khi cập nhật!"); }
   };
 
-  // Logic: TÌM VIỆC CỦA TÔI HÔM NAY (NOTIFICATION)
+  // ============================================================================
+  // LOGIC MỚI: VIỆC CỦA TÔI (HÔM NAY VÀ NGÀY MAI)
+  // ============================================================================
   const tenCuaToi = hoSoCuaToi?.hoTen || hoSoCuaToi?.email?.split('@')[0] || "";
+  
+  // Lọc việc hôm nay
   const viecCuaToiHomNay = lichLamViec.filter(lich => {
     if (lich.ngay !== ngayHomNayStr) return false;
     const phanCong = (lich as any).phanCong;
     if (!phanCong) return false;
     return Object.values(phanCong).includes(tenCuaToi);
   }).sort((a, b) => a.gio.localeCompare(b.gio));
+
+  // Lọc việc ngày mai
+  const viecCuaToiNgayMai = lichLamViec.filter(lich => {
+    if (lich.ngay !== ngayMaiStr) return false;
+    const phanCong = (lich as any).phanCong;
+    if (!phanCong) return false;
+    return Object.values(phanCong).includes(tenCuaToi);
+  }).sort((a, b) => a.gio.localeCompare(b.gio));
+
+  // Quyết định danh sách sẽ render dựa trên nút bấm
+  const danhSachViecHienThi = tabViecCuaToi === "homNay" ? viecCuaToiHomNay : viecCuaToiNgayMai;
 
 
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
@@ -244,17 +269,30 @@ export default function HomePage() {
       {tab === "home" && (
         <div className="animate-fade-in space-y-6">
 
-          {/* THÔNG BÁO CÔNG VIỆC CỦA NHÂN VIÊN */}
-          {viecCuaToiHomNay.length > 0 ? (
+          {/* ========================================================
+              BLOCK ĐÃ SỬA: THÔNG BÁO CÔNG VIỆC CÓ TAB "NGÀY MAI"
+          ======================================================== */}
+          {(viecCuaToiHomNay.length > 0 || viecCuaToiNgayMai.length > 0) ? (
             <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl p-5 shadow-lg shadow-blue-200 text-white relative overflow-hidden">
-              <div className="absolute -right-4 -top-4 text-8xl opacity-10">🎯</div>
+              <div className="absolute -right-4 -top-4 text-8xl opacity-10 pointer-events-none">🎯</div>
               
-              <h2 className="font-black text-lg mb-4 flex items-center gap-2 relative z-10">
-                🎯 Lịch của bạn hôm nay ({viecCuaToiHomNay.length})
-              </h2>
+              <div className="flex gap-2 mb-4 relative z-10 bg-black/10 p-1.5 rounded-xl w-fit">
+                <button 
+                  onClick={() => setTabViecCuaToi("homNay")} 
+                  className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${tabViecCuaToi === 'homNay' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}
+                >
+                  Hôm nay ({viecCuaToiHomNay.length})
+                </button>
+                <button 
+                  onClick={() => setTabViecCuaToi("ngayMai")} 
+                  className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${tabViecCuaToi === 'ngayMai' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}
+                >
+                  Ngày mai ({viecCuaToiNgayMai.length})
+                </button>
+              </div>
               
               <div className="flex flex-col gap-3 relative z-10">
-                {viecCuaToiHomNay.map(lich => {
+                {danhSachViecHienThi.length > 0 ? danhSachViecHienThi.map(lich => {
                   const phanCong = (lich as any).phanCong || {};
                   const nhiemVuCuaToi = Object.entries(phanCong)
                     .filter(([role, name]) => name === tenCuaToi)
@@ -280,7 +318,14 @@ export default function HomePage() {
                       </div>
                     </div>
                   )
-                })}
+                }) : (
+                  <div className="text-center py-6 bg-white/10 rounded-2xl border border-white/20">
+                    <div className="text-3xl mb-2 opacity-50">🏝️</div>
+                    <div className="text-xs font-medium text-blue-100">
+                      Chưa có lịch phân công cho {tabViecCuaToi === 'homNay' ? 'hôm nay' : 'ngày mai'}.
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -288,15 +333,13 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-emerald-50 border border-emerald-100 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl shrink-0">🏝️</div>
               <div>
                 <div className="font-black text-slate-800 text-sm">Không có ca phân công</div>
-                <div className="text-xs font-medium text-slate-500 mt-0.5 leading-relaxed">Hôm nay bạn chưa có lịch làm việc nào. Có thể tự nhận thêm ở Tab Lịch nhé!</div>
+                <div className="text-xs font-medium text-slate-500 mt-0.5 leading-relaxed">Hôm nay và ngày mai bạn chưa có lịch làm việc nào!</div>
               </div>
             </div>
           )}
 
 
-          {/* ========================================================
-              BLOCK ĐÃ SỬA: BÁO ĐỘNG NỢ TỒN ĐỌNG DẠNG ACCORDION
-          ======================================================== */}
+          {/* BÁO ĐỘNG NỢ TỒN ĐỌNG DẠNG ACCORDION */}
           {khachNoTien.length > 0 && laAdmin && (
             <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300">
               <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5 pointer-events-none">💸</div>
