@@ -22,13 +22,14 @@ export default function TabChamCong({
 }: TabChamCongProps) {
   
   const todayStr = homNay();
+  // ĐÃ SỬA: Chuyển tháng thành State để có thể chọn xem lại lịch sử
+  const [thangChon, setThangChon] = useState(todayStr.slice(0, 7));
+
   const [currentTime, setCurrentTime] = useState(() => 
     new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
   );
   
-  // Trạng thái cho Accordion Lịch sử của Admin
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
-
   const [showModalYeuCau, setShowModalYeuCau] = useState(false);
   
   // FORM YÊU CẦU
@@ -45,7 +46,6 @@ export default function TabChamCong({
   const [editCheckOut, setEditCheckOut] = useState("");
   const [editTenNhanVien, setEditTenNhanVien] = useState("");
 
-  // Cập nhật đồng hồ realtime
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }));
@@ -55,9 +55,6 @@ export default function TabChamCong({
 
   const myRecordToday = danhSachChamCong.find((cc) => cc.uid === hoSoCuaToi?.id && cc.ngay === todayStr);
 
-  // ==========================================
-  // 1. LƯU CHECK-IN / CHECK-OUT
-  // ==========================================
   const handleCheckIn = async () => {
     if (!hoSoCuaToi) return toast.error("Lỗi tài khoản!");
     if (myRecordToday?.checkIn) return toast.error("Bạn đã Check-in hôm nay rồi!");
@@ -91,9 +88,6 @@ export default function TabChamCong({
     } catch (error) { toast.error("Lỗi mạng!"); }
   };
 
-  // ==========================================
-  // 2. NHÂN VIÊN GỬI YÊU CẦU
-  // ==========================================
   const guiYeuCau = async () => {
     if (!ycLoai || !ycLyDo) return toast.error("Vui lòng điền đủ loại và lý do!");
     if (!hoSoCuaToi) return;
@@ -119,9 +113,6 @@ export default function TabChamCong({
     } catch (error) { toast.error("Lỗi gửi yêu cầu!"); }
   };
 
-  // ==========================================
-  // 3. ADMIN DUYỆT YÊU CẦU
-  // ==========================================
   const duyetYeuCau = async (yc: ChamCong, trangThai: "Đã duyệt" | "Từ chối") => {
     if (!confirm(`Bạn chắc chắn muốn ${trangThai.toLowerCase()} yêu cầu này?`)) return;
     try {
@@ -146,9 +137,6 @@ export default function TabChamCong({
     } catch (error) { toast.error("Lỗi cập nhật!"); }
   };
 
-  // ==========================================
-  // 4. ADMIN SỬA GIỜ THỦ CÔNG
-  // ==========================================
   const moFormAdminSua = (cc: ChamCong, tenNV: string) => {
     setEditId(cc.id!); setEditNgay(cc.ngay);
     setEditCheckIn(cc.checkIn || ""); setEditCheckOut(cc.checkOut || "");
@@ -183,10 +171,29 @@ export default function TabChamCong({
     else setExpandedUser(uid);
   };
 
-  // DATA
+  // ==========================================
+  // DATA LỌC THEO THÁNG
+  // ==========================================
   const yeuCauChoDuyet = danhSachChamCong.filter(cc => cc.trangThaiGiaiTrinh === "Chờ duyệt");
-  const lichSuCuaToi = danhSachChamCong.filter(cc => cc.uid === hoSoCuaToi?.id).sort((a, b) => b.ngay.localeCompare(a.ngay)).slice(0, 15); 
+  const lichSuCuaToi = danhSachChamCong
+    .filter(cc => cc.uid === hoSoCuaToi?.id && cc.ngay.startsWith(thangChon))
+    .sort((a, b) => b.ngay.localeCompare(a.ngay)); 
   const danhSachNhanVien = danhSachTaiKhoan.filter(tk => tk.role !== "admin");
+
+  // THUẬT TOÁN ĐẾM NGÀY ĐỂ HIỂN THỊ CHÍNH XÁC NHƯ BẢNG LƯONG
+  const year = parseInt(thangChon.split("-")[0]);
+  const month = parseInt(thangChon.split("-")[1]);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const isCurrentMonth = thangChon === todayStr.slice(0, 7);
+  const currentDayNum = parseInt(todayStr.slice(8, 10));
+  // Chỉ quét đến ngày hôm qua đối với tháng hiện tại
+  const limitDay = isCurrentMonth ? currentDayNum : daysInMonth + 1;
+  const pastDates: string[] = [];
+  
+  for (let i = 1; i < limitDay; i++) {
+    const d = i < 10 ? `0${i}` : `${i}`;
+    pastDates.push(`${thangChon}-${d}`);
+  }
 
   return (
     <div className="pb-24 px-2 pt-4">
@@ -229,7 +236,7 @@ export default function TabChamCong({
         </div>
       </div>
 
-      {/* 2. ADMIN: YÊU CẦU & BẢNG CÔNG TỔNG */}
+      {/* 2. ADMIN: YÊU CẦU & BẢNG CÔNG TỔNG HÔM NAY */}
       {laAdmin && (
         <>
           {yeuCauChoDuyet.length > 0 && (
@@ -256,7 +263,7 @@ export default function TabChamCong({
                         <span className="italic leading-relaxed">"{yc.lyDoGiaiTrinh}"</span>
                       </div>
                       <div className="flex gap-2 ml-2">
-                        <button onClick={() => duyetYeuCau(yc, "Đã duyệt")} className="flex-1 bg-emerald-50 text-emerald-700 font-black py-2.5 rounded-xl border border-emerald-200 hover:bg-emerald-500 hover:text-white transition-all text-xs flex justify-center items-center gap-1.5 shadow-sm">
+                        <button onClick={() => duyetYeuCau(yc, "Đã duyệt")} className="flex-1 bg-emerald-50 text-emerald-700 font-black py-2.5 rounded-xl border border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 transition-all text-xs flex justify-center items-center gap-1.5 shadow-sm">
                           <CheckCircle2 size={16} /> Duyệt ngay
                         </button>
                         <button onClick={() => duyetYeuCau(yc, "Từ chối")} className="px-4 bg-white text-rose-600 font-bold py-2.5 rounded-xl border border-slate-200 hover:bg-rose-50 transition-all text-xs">Từ chối</button>
@@ -299,39 +306,78 @@ export default function TabChamCong({
       )}
 
       {/* ========================================================
-          3. LỊCH SỬ CHẤM CÔNG (ĐÃ LÀM LẠI DẠNG ACCORDION CHO ADMIN)
+          3. LỊCH SỬ CHẤM CÔNG CÓ TÙY CHỌN THÁNG
       ======================================================== */}
       <div className="flex justify-between items-end mb-4 px-1 mt-8 border-t border-slate-200 pt-6">
         <h3 className="font-black text-slate-800 text-sm uppercase flex items-center gap-2">
-          <History size={18} className="text-slate-400" /> {laAdmin ? "Quản lý Lịch sử Nhân sự" : "Lịch sử của tôi"}
+          <History size={18} className="text-slate-400" /> {laAdmin ? "Lịch sử Nhân sự" : "Lịch sử của tôi"}
         </h3>
-        {!laAdmin && (
-          <button onClick={() => setShowModalYeuCau(true)} className="bg-slate-800 text-white text-[10px] font-bold px-3 py-2 rounded-lg shadow-sm hover:bg-slate-700 active:scale-95 transition-all flex items-center gap-1">
-            <FileText size={12} /> Báo Giải Trình
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Ô Chọn Tháng */}
+          <input 
+            type="month" 
+            value={thangChon} 
+            onChange={(e) => setThangChon(e.target.value)} 
+            className="bg-white border border-slate-200 text-slate-700 text-[11px] font-bold px-2 py-1.5 rounded-lg outline-none focus:ring-2 focus:ring-blue-200 shadow-sm transition-all cursor-pointer"
+          />
+          {!laAdmin && (
+            <button onClick={() => setShowModalYeuCau(true)} className="bg-slate-800 text-white text-[10px] font-bold px-3 py-2 rounded-lg shadow-sm hover:bg-slate-700 active:scale-95 transition-all flex items-center gap-1">
+              <FileText size={12} /> Báo Giải Trình
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">
         {laAdmin ? (
-          /* GIAO DIỆN ADMIN: HIỂN THỊ DẠNG ACCORDION TỪNG NHÂN VIÊN */
+          /* GIAO DIỆN ADMIN: DẠNG ACCORDION CÓ THỐNG KÊ VẮNG/MUỘN */
           danhSachNhanVien.map(tk => {
             const isExpanded = expandedUser === tk.id;
-            const hsNhanVien = danhSachChamCong.filter(cc => cc.uid === tk.id).sort((a,b) => b.ngay.localeCompare(a.ngay)).slice(0, 31); // Hiển thị 1 tháng gần nhất
+            
+            // Lấy toàn bộ records của nhân viên trong tháng được chọn
+            const hsNhanVien = danhSachChamCong
+              .filter(cc => cc.uid === tk.id && cc.ngay.startsWith(thangChon))
+              .sort((a,b) => b.ngay.localeCompare(a.ngay));
+
+            // THUẬT TOÁN ĐẾM VẮNG / MUỘN
+            let soNgayNghi = 0;
+            let soLanMuon = 0;
+            const chamCongMap: Record<string, ChamCong> = {};
+            hsNhanVien.forEach(cc => { chamCongMap[cc.ngay] = cc; });
+            
+            pastDates.forEach(date => {
+              const record = chamCongMap[date];
+              if (!record) {
+                soNgayNghi++; 
+              } else {
+                if (record.trangThaiGiaiTrinh === "Đã duyệt") {
+                  if (record.loaiGiaiTrinh === "Xin nghỉ phép") soNgayNghi++;
+                } else {
+                  if (!record.checkIn || !record.checkOut) soNgayNghi++;
+                  else if (record.diMuon) soLanMuon++;
+                }
+              }
+            });
 
             return (
               <div key={tk.id} className={`bg-white rounded-2xl border transition-all duration-300 overflow-hidden ${isExpanded ? "border-indigo-200 shadow-md" : "border-slate-100 shadow-sm"}`}>
                 <button onClick={() => toggleUser(tk.id!)} className={`w-full flex items-center justify-between p-4 outline-none transition-colors ${isExpanded ? "bg-indigo-50/50" : "hover:bg-slate-50"}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-full flex items-center justify-center shrink-0">
                       <User size={18} strokeWidth={2.5} />
                     </div>
                     <div className="text-left">
-                      <div className="font-black text-slate-800 text-sm">{tk.hoTen || tk.email}</div>
-                      <div className="text-[10px] text-slate-500 font-bold mt-0.5">{hsNhanVien.length} bản ghi gần nhất</div>
+                      <div className="font-black text-slate-800 text-sm flex items-center gap-2 flex-wrap mb-0.5">
+                        {tk.hoTen || tk.email}
+                        <div className="flex gap-1.5 mt-0.5 sm:mt-0">
+                          {soNgayNghi > 0 && <span className="text-[9px] bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-100 font-bold whitespace-nowrap">Vắng: {soNgayNghi}</span>}
+                          {soLanMuon > 0 && <span className="text-[9px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100 font-bold whitespace-nowrap">Muộn: {soLanMuon}</span>}
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-bold">{hsNhanVien.length} bản ghi (Tháng {thangChon.split('-')[1]})</div>
                     </div>
                   </div>
-                  <div className={`p-1.5 rounded-full transition-transform duration-300 ${isExpanded ? "bg-indigo-100 text-indigo-600 rotate-180" : "bg-slate-50 text-slate-400"}`}>
+                  <div className={`p-1.5 rounded-full transition-transform duration-300 shrink-0 ${isExpanded ? "bg-indigo-100 text-indigo-600 rotate-180" : "bg-slate-50 text-slate-400"}`}>
                     <ChevronDown size={18} />
                   </div>
                 </button>
@@ -339,7 +385,7 @@ export default function TabChamCong({
                 {isExpanded && (
                   <div className="bg-slate-50 p-4 border-t border-slate-100 space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
                     {hsNhanVien.length === 0 ? (
-                      <div className="text-center py-6 text-slate-400 text-xs font-medium italic bg-white rounded-xl border border-dashed border-slate-200">Chưa có dữ liệu chấm công.</div>
+                      <div className="text-center py-6 text-slate-400 text-xs font-medium italic bg-white rounded-xl border border-dashed border-slate-200">Không có dữ liệu trong tháng này.</div>
                     ) : (
                       hsNhanVien.map(cc => {
                         const quenCheckOut = cc.checkIn && !cc.checkOut && cc.ngay < todayStr && cc.trangThaiGiaiTrinh !== "Đã duyệt";
@@ -382,9 +428,9 @@ export default function TabChamCong({
             )
           })
         ) : (
-          /* GIAO DIỆN NHÂN VIÊN: HIỂN THỊ DẠNG LIST CỦA CÁ NHÂN */
+          /* GIAO DIỆN NHÂN VIÊN: DẠNG LIST */
           lichSuCuaToi.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-white text-xs font-medium">Chưa có dữ liệu chấm công.</div>
+            <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-white text-xs font-medium">Tháng này bạn chưa có lịch sử đi làm.</div>
           ) : (
             lichSuCuaToi.map(cc => {
               const quenCheckOut = cc.checkIn && !cc.checkOut && cc.ngay < todayStr && cc.trangThaiGiaiTrinh !== "Đã duyệt";
