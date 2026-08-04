@@ -1,36 +1,60 @@
+import { useState } from "react";
 import NutCopy from "./NutCopy";
 import { Role, TaiKhoan } from "../../types";
-import { deleteDoc, doc } from "firebase/firestore";
+import { deleteDoc, doc, setDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import toast from "react-hot-toast";
 
+function chuyenTienVeSo(value: string) { return Number(value.replace(/\./g, "")); }
+
 interface TabNhanVienProps {
-  uidNhanVien: string; setUidNhanVien: (val: string) => void;
-  emailNhanVien: string; setEmailNhanVien: (val: string) => void;
-  hoTenNhanVien: string; setHoTenNhanVien: (val: string) => void;
-  soDienThoaiNhanVien: string; setSoDienThoaiNhanVien: (val: string) => void;
-  luongCungNhanVien: string; setLuongCungNhanVien: (val: string) => void;
-  thuongChuyenCanNhanVien: string; setThuongChuyenCanNhanVien: (val: string) => void;
-  quyenNhanVien: Role; setQuyenNhanVien: (val: Role) => void;
-  taoHoSoNhanVien: () => void;
-  dangSuaNhanVien: string | null;
   danhSachTaiKhoan: TaiKhoan[];
   laAdmin: boolean;
-  suaHoSoNhanVien: (tk: TaiKhoan) => void;
   formatTienInput: (val: string) => string;
 }
 
 export default function TabNhanVien({
-  uidNhanVien, setUidNhanVien, emailNhanVien, setEmailNhanVien,
-  hoTenNhanVien, setHoTenNhanVien, soDienThoaiNhanVien, setSoDienThoaiNhanVien,
-  luongCungNhanVien, setLuongCungNhanVien, thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien,
-  quyenNhanVien, setQuyenNhanVien, taoHoSoNhanVien, dangSuaNhanVien,
-  danhSachTaiKhoan, laAdmin, suaHoSoNhanVien, formatTienInput
+  danhSachTaiKhoan, laAdmin, formatTienInput
 }: TabNhanVienProps) {
 
-  // HÀM XÓA NHÂN VIÊN VÀ BẢO VỆ ADMIN
+  // BỐC STATE TỪ PAGE.TSX SANG ĐÂY
+  const [uidNhanVien, setUidNhanVien] = useState("");
+  const [emailNhanVien, setEmailNhanVien] = useState("");
+  const [hoTenNhanVien, setHoTenNhanVien] = useState("");
+  const [soDienThoaiNhanVien, setSoDienThoaiNhanVien] = useState("");
+  const [luongCungNhanVien, setLuongCungNhanVien] = useState("3.000.000");
+  const [thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien] = useState("300.000");
+  const [quyenNhanVien, setQuyenNhanVien] = useState<Role>("staff");
+  const [dangSuaNhanVien, setDangSuaNhanVien] = useState<string | null>(null);
+
+  const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
+
+  // HÀM TẠO/SỬA NHÂN VIÊN
+  const taoHoSoNhanVien = async () => {
+    if (!laAdmin) { toast.error("Chỉ admin mới được quản lý"); return; }
+    if (!uidNhanVien || !emailNhanVien) { toast.error("Nhập UID và email"); return; }
+    try { 
+      await setDoc(doc(db, "users", uidNhanVien), { 
+        email: emailNhanVien, hoTen: hoTenNhanVien, soDienThoai: soDienThoaiNhanVien, 
+        luongCung: chuyenTienVeSo(luongCungNhanVien), thuongChuyenCan: chuyenTienVeSo(thuongChuyenCanNhanVien), 
+        role: emailNhanVien === ADMIN_CHINH_EMAIL ? "admin" : quyenNhanVien 
+      }, { merge: true }); 
+      setUidNhanVien(""); setEmailNhanVien(""); setHoTenNhanVien(""); setSoDienThoaiNhanVien(""); 
+      setLuongCungNhanVien("3.000.000"); setThuongChuyenCanNhanVien("300.000"); setQuyenNhanVien("staff"); 
+      setDangSuaNhanVien(null); toast.success("Thành công"); 
+    } catch (error) { toast.error("Lỗi cập nhật hồ sơ"); }
+  };
+
+  const suaHoSoNhanVien = (tk: TaiKhoan) => { 
+    setDangSuaNhanVien(tk.id); setUidNhanVien(tk.id); setEmailNhanVien(tk.email || ""); 
+    setHoTenNhanVien(tk.hoTen || ""); setSoDienThoaiNhanVien(tk.soDienThoai || ""); 
+    setLuongCungNhanVien(formatTienInput(String(tk.luongCung || 3000000))); 
+    setThuongChuyenCanNhanVien(formatTienInput(String(tk.thuongChuyenCan || 300000))); 
+    setQuyenNhanVien(tk.role || "staff"); window.scrollTo({ top: 0, behavior: "smooth" }); 
+  };
+
   const xoaNhanVienTaiKhoan = async (id: string, email: string) => {
-    if (email === "dangngocan93@gmail.com") {
+    if (email === ADMIN_CHINH_EMAIL) {
       toast.error("⚠️ KHÔNG ĐƯỢC PHÉP: Đây là tài khoản Quản trị Gốc!");
       return;
     }
@@ -109,7 +133,7 @@ export default function TabNhanVien({
             <select 
               value={quyenNhanVien} 
               onChange={(e) => setQuyenNhanVien(e.target.value as Role)} 
-              disabled={dangSuaNhanVien !== null && emailNhanVien === "dangngocan93@gmail.com"} // BẢO VỆ ADMIN: KHÔNG CHO HẠ QUYỀN
+              disabled={dangSuaNhanVien !== null && emailNhanVien === "dangngocan93@gmail.com"} 
               className="border border-gray-200 p-3 rounded-xl w-full bg-white text-gray-900 font-bold focus:ring-2 focus:ring-blue-400 outline-none disabled:bg-gray-100 disabled:text-gray-400"
             >
               <option value="staff">Nhân viên (Chỉ xem lịch, tạo phát sinh, chấm công)</option>
@@ -162,7 +186,6 @@ export default function TabNhanVien({
               {laAdmin && (
                 <div className="flex flex-col gap-2">
                   <button onClick={() => suaHoSoNhanVien(tk)} className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-yellow-50 hover:text-yellow-600 transition-colors border border-gray-100" title="Sửa thông tin">✏️</button>
-                  {/* NÚT XÓA */}
                   <button onClick={() => xoaNhanVienTaiKhoan(tk.id, tk.email)} className="p-2 bg-gray-50 text-gray-500 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors border border-gray-100" title="Xóa nhân viên">🗑</button>
                 </div>
               )}

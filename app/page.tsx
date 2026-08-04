@@ -52,17 +52,7 @@ export default function HomePage() {
   const laAdmin = role === "admin";
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan } = useAppData(user, laAdmin);
 
-  // CÁC STATE THỪA CỦA LỊCH ĐÃ BỊ XOÁ BỎ, TRẢ LẠI SỰ THANH THOÁT CHO PAGE
   const [thangThongKe, setThangThongKe] = useState("");
-  const [uidNhanVien, setUidNhanVien] = useState(""); const [emailNhanVien, setEmailNhanVien] = useState("");
-  const [hoTenNhanVien, setHoTenNhanVien] = useState(""); const [soDienThoaiNhanVien, setSoDienThoaiNhanVien] = useState("");
-  const [quyenNhanVien, setQuyenNhanVien] = useState<Role>("staff"); const [dangSuaNhanVien, setDangSuaNhanVien] = useState<string | null>(null);
-  const [luongCungNhanVien, setLuongCungNhanVien] = useState("3.000.000"); const [thuongChuyenCanNhanVien, setThuongChuyenCanNhanVien] = useState("300.000");
-
-  const [psNgay, setPsNgay] = useState(homNay()); const [psTenKhach, setPsTenKhach] = useState("");
-  const [psSoDienThoai, setPsSoDienThoai] = useState(""); const [psLoai, setPsLoai] = useState("");
-  const [psNgayTra, setPsNgayTra] = useState(""); const [psSoTien, setPsSoTien] = useState("");
-  const [psGhiChu, setPsGhiChu] = useState("");
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "system", "appVersion"), (snap) => {
@@ -106,19 +96,6 @@ export default function HomePage() {
   const xoaThuHuong = async (id: string) => { if (!confirm("Xóa khoản tiền này?")) return; await deleteDoc(doc(db, "thuHuong", id)); toast.success("Đã xóa khoản thụ hưởng"); };
   const dangNhap = async () => { if (!email || !matKhau) { toast.error("Nhập email và mật khẩu"); return; } try { await signInWithEmailAndPassword(auth, email, matKhau); } catch (error) { toast.error("Sai email hoặc mật khẩu"); } };
   const dangXuat = async () => { await signOut(auth); };
-
-  const taoHoSoNhanVien = async () => {
-    if (!laAdmin) { toast.error("Chỉ admin mới được quản lý"); return; }
-    if (!uidNhanVien || !emailNhanVien) { toast.error("Nhập UID và email"); return; }
-    try { await setDoc(doc(db, "users", uidNhanVien), { email: emailNhanVien, hoTen: hoTenNhanVien, soDienThoai: soDienThoaiNhanVien, luongCung: chuyenTienVeSo(luongCungNhanVien), thuongChuyenCan: chuyenTienVeSo(thuongChuyenCanNhanVien), role: emailNhanVien === ADMIN_CHINH_EMAIL ? "admin" : quyenNhanVien }, { merge: true }); setUidNhanVien(""); setEmailNhanVien(""); setHoTenNhanVien(""); setSoDienThoaiNhanVien(""); setLuongCungNhanVien("3.000.000"); setThuongChuyenCanNhanVien("300.000"); setQuyenNhanVien("staff"); setDangSuaNhanVien(null); toast.success("Thành công"); } catch (error) { toast.error("Lỗi"); }
-  };
-  const suaHoSoNhanVien = (tk: TaiKhoan) => { setDangSuaNhanVien(tk.id); setUidNhanVien(tk.id); setEmailNhanVien(tk.email || ""); setHoTenNhanVien(tk.hoTen || ""); setSoDienThoaiNhanVien(tk.soDienThoai || ""); setLuongCungNhanVien(formatTienInput(String(tk.luongCung || 3000000))); setThuongChuyenCanNhanVien(formatTienInput(String(tk.thuongChuyenCan || 300000))); setQuyenNhanVien(tk.role || "staff"); window.scrollTo({ top: 0, behavior: "smooth" }); };
-
-  const themPhatSinh = async () => {
-    if (!psNgay || !psLoai || !psSoTien) { toast.error("Nhập ngày, loại và số tiền"); return; }
-    try { await addDoc(collection(db, "phatSinh"), { ngay: psNgay, tenKhach: psTenKhach, soDienThoai: psSoDienThoai, loai: psLoai, ngayTra: psNgayTra, soTien: chuyenTienVeSo(psSoTien), nguoiGhi: user?.email || "", ghiChu: psGhiChu }); setPsNgay(homNay()); setPsTenKhach(""); setPsSoDienThoai(""); setPsLoai(""); setPsNgayTra(""); setPsSoTien(""); setPsGhiChu(""); toast.success("Đã lưu khoản phát sinh"); } catch (error) { toast.error("Lỗi"); }
-  };
-  const xoaPhatSinh = async (id?: string) => { if (!id) return; if (!laAdmin) { toast.error("Chỉ admin mới được xóa"); return; } if (!confirm("Xóa khoản này?")) return; await deleteDoc(doc(db, "phatSinh", id)); toast.success("Đã xóa"); };
 
   const ngayHomNayStr = homNay();
   const ngayMaiStr = ngayMai(); 
@@ -188,7 +165,7 @@ export default function HomePage() {
   const nutMenu = [
     { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
     { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
-    { key: "phatSinh", icon: Wallet, label: "Thu / Chi", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
+    { key: "phatSinh", icon: Wallet, label: "Dịch vụ phát sinh", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
     { key: "tinhTrangKH", icon: ClipboardList, label: "Kho đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
     { key: "chamCong", icon: Clock, label: "Chấm công", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
     { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
@@ -417,10 +394,29 @@ export default function HomePage() {
           />
         )}
         
-        {tab === "phatSinh" && <TabPhatSinh psNgay={psNgay} setPsNgay={setPsNgay} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach} psSoDienThoai={psSoDienThoai} setPsSoDienThoai={setPsSoDienThoai} psLoai={psLoai} setPsLoai={setPsLoai} psNgayTra={psNgayTra} setPsNgayTra={setPsNgayTra} psSoTien={psSoTien} setPsSoTien={setPsSoTien} psGhiChu={psGhiChu} setPsGhiChu={setPsGhiChu} formatTienInput={formatTienInput} themPhatSinh={themPhatSinh} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} xoaPhatSinh={xoaPhatSinh} hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} lichLamViec={lichLamViec} />}
+        {tab === "phatSinh" && (
+          <TabPhatSinh 
+            formatTienInput={formatTienInput} 
+            danhSachPhatSinh={danhSachPhatSinh} 
+            laAdmin={laAdmin} 
+            hoSoCuaToi={hoSoCuaToi} 
+            themThuHuong={themThuHuong} 
+            danhDauDaTraDo={danhDauDaTraDo} 
+            lichLamViec={lichLamViec} 
+          />
+        )}
+
         {tab === "chamCong" && <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />}
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
-        {tab === "nhanVien" && laAdmin && <TabNhanVien uidNhanVien={uidNhanVien} setUidNhanVien={setUidNhanVien} emailNhanVien={emailNhanVien} setEmailNhanVien={setEmailNhanVien} hoTenNhanVien={hoTenNhanVien} setHoTenNhanVien={setHoTenNhanVien} soDienThoaiNhanVien={soDienThoaiNhanVien} setSoDienThoaiNhanVien={setSoDienThoaiNhanVien} luongCungNhanVien={luongCungNhanVien} setLuongCungNhanVien={setLuongCungNhanVien} thuongChuyenCanNhanVien={thuongChuyenCanNhanVien} setThuongChuyenCanNhanVien={setThuongChuyenCanNhanVien} quyenNhanVien={quyenNhanVien} setQuyenNhanVien={setQuyenNhanVien} taoHoSoNhanVien={taoHoSoNhanVien} dangSuaNhanVien={dangSuaNhanVien} danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} suaHoSoNhanVien={suaHoSoNhanVien} formatTienInput={formatTienInput} />}
+        
+        {tab === "nhanVien" && laAdmin && (
+          <TabNhanVien 
+            danhSachTaiKhoan={danhSachTaiKhoan} 
+            laAdmin={laAdmin} 
+            formatTienInput={formatTienInput} 
+          />
+        )}
+
         {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
         {tab === "thongKe" && laAdmin && (
           <TabThongKe 
@@ -440,7 +436,7 @@ export default function HomePage() {
         {[
           { key: "home", icon: Home, label: "Trang chủ" },
           { key: "lich", icon: CalendarDays, label: "Lịch chụp" },
-          { key: "phatSinh", icon: Wallet, label: "Thu / Chi" },
+          { key: "phatSinh", icon: Wallet, label: "Phát sinh" },
           { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
         ].map((nav) => {
           const IconComponent = nav.icon;

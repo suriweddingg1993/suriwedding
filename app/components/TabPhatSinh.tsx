@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { collection, addDoc, doc, deleteDoc } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 import { PhatSinh, TaiKhoan, Lich } from "../../types";
 
 import ModalThemPhatSinh from "./ModalThemPhatSinh";
@@ -8,18 +10,9 @@ import ModalHoaHongPhatSinh from "./ModalHoaHongPhatSinh";
 function chuyenTienVeSo(value: string) { return Number(value.replace(/\./g, "")); }
 
 interface TabPhatSinhProps {
-  psNgay: string; setPsNgay: (val: string) => void;
-  psTenKhach: string; setPsTenKhach: (val: string) => void;
-  psSoDienThoai: string; setPsSoDienThoai: (val: string) => void;
-  psLoai: string; setPsLoai: (val: string) => void;
-  psNgayTra: string; setPsNgayTra: (val: string) => void;
-  psSoTien: string; setPsSoTien: (val: string) => void;
-  psGhiChu: string; setPsGhiChu: (val: string) => void;
   formatTienInput: (val: string) => string;
-  themPhatSinh: () => Promise<void>;
   danhSachPhatSinh: PhatSinh[];
   laAdmin: boolean;
-  xoaPhatSinh: (id: string) => Promise<void>;
   hoSoCuaToi: TaiKhoan | null;
   themThuHuong: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
   danhDauDaTraDo: (id: string) => Promise<void>;
@@ -27,10 +20,7 @@ interface TabPhatSinhProps {
 }
 
 export default function TabPhatSinh({
-  psNgay, setPsNgay, psTenKhach, setPsTenKhach, psSoDienThoai, setPsSoDienThoai, 
-  psLoai, setPsLoai, psNgayTra, setPsNgayTra, psSoTien, setPsSoTien, psGhiChu, setPsGhiChu, 
-  formatTienInput, themPhatSinh, danhSachPhatSinh, laAdmin, xoaPhatSinh,
-  hoSoCuaToi, themThuHuong, danhDauDaTraDo, lichLamViec
+  formatTienInput, danhSachPhatSinh, laAdmin, hoSoCuaToi, themThuHuong, danhDauDaTraDo, lichLamViec
 }: TabPhatSinhProps) {
 
   const getLocalToday = () => {
@@ -43,6 +33,15 @@ export default function TabPhatSinh({
 
   const [selectedDate, setSelectedDate] = useState(localToday);
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
+
+  // BỐC STATE TỪ PAGE.TSX SANG ĐÂY
+  const [psNgay, setPsNgay] = useState(localToday);
+  const [psTenKhach, setPsTenKhach] = useState("");
+  const [psSoDienThoai, setPsSoDienThoai] = useState("");
+  const [psLoai, setPsLoai] = useState("");
+  const [psNgayTra, setPsNgayTra] = useState("");
+  const [psSoTien, setPsSoTien] = useState("");
+  const [psGhiChu, setPsGhiChu] = useState("");
 
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
@@ -80,6 +79,29 @@ export default function TabPhatSinh({
   const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
   const goToToday = () => { setCurrentMonth(new Date(localToday)); setSelectedDate(localToday); setTuKhoa(""); };
+
+  // CÁC HÀM CRUD ĐƯA TỪ PAGE.TSX SANG ĐÂY
+  const themPhatSinh = async () => {
+    if (!psNgay || !psLoai || !psSoTien) { toast.error("Nhập ngày, loại và số tiền"); return; }
+    try { 
+      await addDoc(collection(db, "phatSinh"), { 
+        ngay: psNgay, tenKhach: psTenKhach, soDienThoai: psSoDienThoai, 
+        loai: psLoai, ngayTra: psNgayTra, soTien: chuyenTienVeSo(psSoTien), 
+        nguoiGhi: hoSoCuaToi?.email || "", ghiChu: psGhiChu 
+      }); 
+      setPsNgay(localToday); setPsTenKhach(""); setPsSoDienThoai(""); setPsLoai(""); 
+      setPsNgayTra(""); setPsSoTien(""); setPsGhiChu(""); 
+      toast.success("Đã lưu dịch vụ phát sinh"); 
+    } catch (error) { toast.error("Lỗi cập nhật CSDL"); }
+  };
+
+  const xoaPhatSinh = async (id?: string) => { 
+    if (!id) return; 
+    if (!laAdmin) { toast.error("Chỉ admin mới được xóa"); return; } 
+    if (!confirm("Xóa khoản này?")) return; 
+    await deleteDoc(doc(db, "phatSinh", id)); 
+    toast.success("Đã xóa"); 
+  };
 
   const xacNhanNhanTien = () => {
     if (!tienHoaHong) { toast.error("Vui lòng nhập số tiền hoa hồng!"); return; }
@@ -238,7 +260,7 @@ export default function TabPhatSinh({
 
       <div className="mb-4 flex justify-between items-end px-1 mt-6">
         <div>
-          <h3 className="font-black text-slate-800 text-lg">{tuKhoa.trim() ? "Kết quả tìm kiếm" : "Giao dịch phát sinh"}</h3>
+          <h3 className="font-black text-slate-800 text-lg">{tuKhoa.trim() ? "Kết quả tìm kiếm" : "Dịch vụ phát sinh"}</h3>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mt-1">
              {tuKhoa.trim() ? `Từ khóa: "${tuKhoa}"` : `Ngày ${selectedDate.split("-").reverse().join("/")}`}
           </p>
@@ -253,7 +275,7 @@ export default function TabPhatSinh({
           <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-10 text-center shadow-sm">
             <div className="text-5xl mb-4 opacity-50 grayscale">🧾</div>
             <h4 className="text-slate-600 font-bold text-base">{tuKhoa.trim() ? "Không có kết quả" : "Sổ quỹ trống"}</h4>
-            <p className="text-xs text-slate-400 mt-2">{tuKhoa.trim() ? "Thử tìm bằng SĐT hoặc Tên khác nhé." : "Không có khoản Thu nào trong ngày."}</p>
+            <p className="text-xs text-slate-400 mt-2">{tuKhoa.trim() ? "Thử tìm bằng SĐT hoặc Tên khác nhé." : "Không có dịch vụ phát sinh nào trong ngày."}</p>
           </div>
         ) : (
           [...dsGiaoDichNgayNay].reverse().map((item: PhatSinh) => {
@@ -261,12 +283,10 @@ export default function TabPhatSinh({
 
             return (
               <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-md group relative overflow-hidden">
-                {/* Viền trái: Cam cho đồ thuê, Xanh cho dịch vụ */}
                 <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${isThue ? "bg-orange-500" : "bg-blue-500"}`}></div>
                 
                 <div className="flex justify-between items-start pb-4 border-b border-slate-100 mb-4 ml-2">
                   <div>
-                    {/* Tag nhãn: Cam cho đồ thuê, Xanh cho dịch vụ */}
                     <div className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase w-fit mb-2 ${
                       isThue ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
                     }`}>
@@ -275,7 +295,6 @@ export default function TabPhatSinh({
                     {item.tenKhach && <div className="text-base font-black text-slate-900">{item.tenKhach}</div>}
                     {tuKhoa.trim() && <div className="text-xs font-bold text-blue-600 mt-1">📅 Ngày ghi: {item.ngay.split("-").reverse().join("/")}</div>}
                   </div>
-                  {/* Số tiền màu xanh lá */}
                   <div className="text-xl font-black text-green-600">
                     +{formatTienInput(String(item.soTien || 0))}
                   </div>
@@ -315,7 +334,6 @@ export default function TabPhatSinh({
         +
       </button>
 
-      {/* RENDER MODAL */}
       <ModalThemPhatSinh
         showModal={showModal} setShowModal={setShowModal} psNgay={psNgay} setPsNgay={setPsNgay}
         psLoai={psLoai} setPsLoai={setPsLoai} psTenKhach={psTenKhach} setPsTenKhach={setPsTenKhach}
