@@ -17,7 +17,6 @@ const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading:
 const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
-// ĐÃ THÊM: Import Tab Khách Hàng
 const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
@@ -50,12 +49,10 @@ export default function HomePage() {
 
   const [showKhachNo, setShowKhachNo] = useState(false);
   const [tabViecCuaToi, setTabViecCuaToi] = useState<"homNay" | "ngayMai">("homNay");
+  const [thangThongKe, setThangThongKe] = useState("");
 
   const laAdmin = role === "admin";
-  // ĐÃ THÊM: Lấy danhSachKhachHang từ hook
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachKhachHang } = useAppData(user, laAdmin);
-
-  const [thangThongKe, setThangThongKe] = useState("");
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "system", "appVersion"), (snap) => {
@@ -158,7 +155,7 @@ export default function HomePage() {
           <div className="grid gap-4">
             <div><label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5 block">Email</label><input type="email" placeholder="Nhập email..." value={email} onChange={(e) => setEmail(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-xl w-full text-slate-900 font-bold focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 outline-none transition-all" /></div>
             <div><label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5 block">Mật khẩu</label><input type="password" placeholder="Nhập mật khẩu..." value={matKhau} onChange={(e) => setMatKhau(e.target.value)} className="bg-slate-50 border border-transparent p-4 rounded-xl w-full text-slate-900 font-bold focus:bg-white focus:border-blue-200 focus:ring-4 focus:ring-blue-50 outline-none transition-all" /></div>
-            <button onClick={dangNhap} className="bg-blue-600 text-white p-4 rounded-xl font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all mt-2">ĐĂNG NHẬP</button>
+            <button onClick={dangNhap} className="bg-blue-600 text-white p-4 rounded-xl font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all mt-2">Đăng Nhập</button>
           </div>
         </div>
       </div> 
@@ -172,7 +169,6 @@ export default function HomePage() {
     { key: "tinhTrangKH", icon: ClipboardList, label: "Kho đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
     { key: "chamCong", icon: Clock, label: "Chấm công", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
     { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
-    // ĐÃ THÊM: Tab Khách hàng
     { key: "khachHang", icon: UserCheck, label: "Khách hàng", color: "text-amber-600", bg: "bg-amber-50", adminOnly: true },
     { key: "nhanVien", icon: Users, label: "Nhân sự", color: "text-pink-600", bg: "bg-pink-50", adminOnly: true },
     { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
@@ -193,7 +189,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* HEADER */}
       <div className="flex justify-between items-center gap-4 mb-6">
         <div><h1 className="text-2xl font-black text-slate-900 tracking-tight">Suri Wedding</h1><p className="text-xs font-bold text-slate-500 mt-1">{tenCuaToi} • {laAdmin ? "Admin" : "Nhân viên"}</p></div>
         <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm"><LogOut size={18} strokeWidth={2.5} /></button>
@@ -202,22 +197,15 @@ export default function HomePage() {
       {tab === "home" && (
         <div className="animate-fade-in space-y-6">
 
-          {/* THÔNG BÁO CÔNG VIỆC CỦA NHÂN VIÊN */}
           {(viecCuaToiHomNay.length > 0 || viecCuaToiNgayMai.length > 0) ? (
             <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl p-5 shadow-lg shadow-blue-200 text-white relative overflow-hidden">
               <div className="absolute -right-4 -top-4 text-8xl opacity-10 pointer-events-none">🎯</div>
               
               <div className="flex gap-2 mb-4 relative z-10 bg-black/10 p-1.5 rounded-xl w-fit">
-                <button 
-                  onClick={() => setTabViecCuaToi("homNay")} 
-                  className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${tabViecCuaToi === 'homNay' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}
-                >
+                <button onClick={() => setTabViecCuaToi("homNay")} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${tabViecCuaToi === 'homNay' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}>
                   Hôm nay ({viecCuaToiHomNay.length})
                 </button>
-                <button 
-                  onClick={() => setTabViecCuaToi("ngayMai")} 
-                  className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${tabViecCuaToi === 'ngayMai' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}
-                >
+                <button onClick={() => setTabViecCuaToi("ngayMai")} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${tabViecCuaToi === 'ngayMai' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}>
                   Ngày mai ({viecCuaToiNgayMai.length})
                 </button>
               </div>
@@ -225,93 +213,41 @@ export default function HomePage() {
               <div className="flex flex-col gap-3 relative z-10">
                 {danhSachViecHienThi.length > 0 ? danhSachViecHienThi.map(lich => {
                   const phanCong = (lich as any).phanCong || {};
-                  const nhiemVuCuaToi = Object.entries(phanCong)
-                    .filter(([role, name]) => name === tenCuaToi)
-                    .map(([role]) => role); 
-
+                  const nhiemVuCuaToi = Object.entries(phanCong).filter(([role, name]) => name === tenCuaToi).map(([role]) => role); 
                   return (
                     <div key={lich.id} className="bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl p-4 flex flex-col gap-2">
-                      <div className="flex justify-between items-start">
-                        <span className="bg-white text-blue-700 text-xs font-black px-2.5 py-1 rounded-lg shadow-sm">
-                          ⏰ {lich.gio}
-                        </span>
-                        <span className="text-[10px] font-bold bg-black/20 px-2 py-1 rounded-md uppercase text-blue-50">
-                          {lich.theLoai}
-                        </span>
-                      </div>
+                      <div className="flex justify-between items-start"><span className="bg-white text-blue-700 text-xs font-black px-2.5 py-1 rounded-lg shadow-sm">⏰ {lich.gio}</span><span className="text-[10px] font-bold bg-black/20 px-2 py-1 rounded-md uppercase text-blue-50">{lich.theLoai}</span></div>
                       <div className="font-black text-xl leading-tight drop-shadow-sm">{lich.tenKhach}</div>
-                      
-                      <div className="text-xs font-medium text-blue-50 flex items-center gap-1.5 flex-wrap mt-1">
-                        <span className="opacity-80">Nhiệm vụ:</span> 
-                        <span className="font-bold text-white bg-white/20 border border-white/20 px-2 py-0.5 rounded-md">
-                          {nhiemVuCuaToi.join(", ")}
-                        </span>
-                      </div>
+                      <div className="text-xs font-medium text-blue-50 flex items-center gap-1.5 flex-wrap mt-1"><span className="opacity-80">Nhiệm vụ:</span> <span className="font-bold text-white bg-white/20 border border-white/20 px-2 py-0.5 rounded-md">{nhiemVuCuaToi.join(", ")}</span></div>
                     </div>
                   )
                 }) : (
-                  <div className="text-center py-6 bg-white/10 rounded-2xl border border-white/20">
-                    <div className="text-3xl mb-2 opacity-50">🏝️</div>
-                    <div className="text-xs font-medium text-blue-100">
-                      Chưa có lịch phân công cho {tabViecCuaToi === 'homNay' ? 'hôm nay' : 'ngày mai'}.
-                    </div>
-                  </div>
+                  <div className="text-center py-6 bg-white/10 rounded-2xl border border-white/20"><div className="text-3xl mb-2 opacity-50">🏝️</div><div className="text-xs font-medium text-blue-100">Chưa có phân công.</div></div>
                 )}
               </div>
             </div>
           ) : (
             <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm flex items-center gap-4">
               <div className="w-12 h-12 bg-emerald-50 border border-emerald-100 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl shrink-0">🏝️</div>
-              <div>
-                <div className="font-black text-slate-800 text-sm">Không có ca phân công</div>
-                <div className="text-xs font-medium text-slate-500 mt-0.5 leading-relaxed">Hôm nay và ngày mai bạn chưa có lịch làm việc nào!</div>
-              </div>
+              <div><div className="font-black text-slate-800 text-sm">Không có ca phân công</div><div className="text-xs font-medium text-slate-500 mt-0.5 leading-relaxed">Hôm nay và ngày mai bạn chưa có lịch làm việc nào!</div></div>
             </div>
           )}
 
-          {/* BÁO ĐỘNG NỢ TỒN ĐỌNG DẠNG ACCORDION */}
           {khachNoTien.length > 0 && laAdmin && (
             <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300">
               <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5 pointer-events-none">💸</div>
-              
-              <button 
-                onClick={() => setShowKhachNo(!showKhachNo)}
-                className="w-full flex justify-between items-center relative z-10 text-left outline-none"
-              >
-                <h2 className="font-black text-lg text-rose-600 tracking-tight flex items-center gap-2">
-                  <Banknote size={24} /> Báo Động Nợ ({khachNoTien.length})
-                </h2>
-                <div className="bg-rose-50 text-rose-600 p-1.5 rounded-full transition-transform">
-                  {showKhachNo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </div>
-              </button>
-
+              <button onClick={() => setShowKhachNo(!showKhachNo)} className="w-full flex justify-between items-center relative z-10 text-left outline-none"><h2 className="font-black text-lg text-rose-600 tracking-tight flex items-center gap-2"><Banknote size={24} /> Báo Động Nợ ({khachNoTien.length})</h2><div className="bg-rose-50 text-rose-600 p-1.5 rounded-full transition-transform">{showKhachNo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</div></button>
               {showKhachNo && (
                 <div className="flex flex-col gap-3 relative z-10 mt-4 animate-fade-in">
                   {khachNoTien.map(item => {
-                    const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
-                    const tienNo = tongTien - Number(item.tienCoc || 0);
-                    const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
-                    const loaiMoc = (item as any).ngayCuoi ? 'Cưới' : 'Chụp';
-                    
+                    const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0); const tienNo = tongTien - Number(item.tienCoc || 0); const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay; const loaiMoc = (item as any).ngayCuoi ? 'Cưới' : 'Chụp';
                     return (
                       <div key={item.id} className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
                         <div className="min-w-0 pr-2">
-                          <div className="font-black text-slate-900 leading-tight break-words">
-                            {item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5">
-                            <span className="text-[10px] font-bold text-slate-500 bg-white w-fit px-2 py-0.5 rounded-md border border-slate-200">
-                              Qua ngày {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}
-                            </span>
-                            <span className="text-sm font-black text-rose-600 w-fit">
-                              Nợ: {formatTienInput(String(tienNo))}đ
-                            </span>
-                          </div>
+                          <div className="font-black text-slate-900 leading-tight break-words">{item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span></div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5"><span className="text-[10px] font-bold text-slate-500 bg-white w-fit px-2 py-0.5 rounded-md border border-slate-200">Qua ngày {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}</span><span className="text-sm font-black text-rose-600 w-fit">Nợ: {formatTienInput(String(tienNo))}đ</span></div>
                         </div>
-                        <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">
-                          Đã Thu
-                        </button>
+                        <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">Đã Thu</button>
                       </div>
                     )
                   })}
@@ -320,50 +256,14 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* TÌNH TRẠNG STUDIO */}
           <div>
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng hôm nay</h2>
-            </div>
-            
+            <div className="flex items-center justify-between mb-3 px-1"><h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng hôm nay</h2></div>
             <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-2 flex items-center justify-between">
-              
-              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group">
-                <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                  <CalendarDays size={20} strokeWidth={2} />
-                </div>
-                <div className="text-2xl font-black text-slate-800 leading-none mb-1">
-                  {lichLamViec.filter((item) => item.ngay === homNay()).length}
-                </div>
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Lịch Chụp</div>
-              </button>
-
+              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group"><div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform"><CalendarDays size={20} strokeWidth={2} /></div><div className="text-2xl font-black text-slate-800 leading-none mb-1">{lichLamViec.filter((item) => item.ngay === homNay()).length}</div><div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Lịch Chụp</div></button>
               <div className="w-[1px] h-12 bg-slate-100"></div>
-
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">
-                {canTraHomNay.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}>
-                  <ClipboardList size={20} strokeWidth={2} />
-                </div>
-                <div className={`text-2xl font-black leading-none mb-1 ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-800"}`}>
-                  {canTraHomNay.length}
-                </div>
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Trả đồ</div>
-              </button>
-
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">{canTraHomNay.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>}<div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}><ClipboardList size={20} strokeWidth={2} /></div><div className={`text-2xl font-black leading-none mb-1 ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-800"}`}>{canTraHomNay.length}</div><div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Trả đồ</div></button>
               <div className="w-[1px] h-12 bg-slate-100"></div>
-
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">
-                {quaHan.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${quaHan.length > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-50 text-slate-400"}`}>
-                  <AlertCircle size={20} strokeWidth={2} />
-                </div>
-                <div className={`text-2xl font-black leading-none mb-1 ${quaHan.length > 0 ? "text-rose-600" : "text-slate-800"}`}>
-                  {quaHan.length}
-                </div>
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Quá hạn</div>
-              </button>
-
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">{quaHan.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}<div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${quaHan.length > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-50 text-slate-400"}`}><AlertCircle size={20} strokeWidth={2} /></div><div className={`text-2xl font-black leading-none mb-1 ${quaHan.length > 0 ? "text-rose-600" : "text-slate-800"}`}>{quaHan.length}</div><div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Quá hạn</div></button>
             </div>
           </div>
 
@@ -373,10 +273,7 @@ export default function HomePage() {
               {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
                   const IconComponent = item.icon;
                   return ( 
-                    <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group">
-                      <div className={`p-2.5 rounded-xl bg-slate-50 group-hover:${item.bg} ${item.color} transition-colors duration-300 shrink-0`}><IconComponent size={20} strokeWidth={2} /></div>
-                      <div className="font-bold text-sm text-slate-700 text-left leading-tight">{item.label}</div>
-                    </button> 
+                    <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group"><div className={`p-2.5 rounded-xl bg-slate-50 group-hover:${item.bg} ${item.color} transition-colors duration-300 shrink-0`}><IconComponent size={20} strokeWidth={2} /></div><div className="font-bold text-sm text-slate-700 text-left leading-tight">{item.label}</div></button> 
                   );
               })}
             </div>
@@ -384,30 +281,20 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* KHU VỰC RENDER CÁC TAB */}
+      {/* RENDER CÁC TAB - TRUYỀN DỮ LIỆU CHUẨN XÁC */}
       <div id="noi-dung-tab" className="mt-2">
         {tab === "lich" && (
           <TabLich 
-            homNay={homNay} 
-            formatTienInput={formatTienInput} 
-            hoSoCuaToi={hoSoCuaToi} 
-            themThuHuong={themThuHuong} 
-            laAdmin={laAdmin} 
-            lichLamViec={lichLamViec} 
-            danhSachPhatSinh={danhSachPhatSinh} 
-            danhSachThuHuong={danhSachThuHuong} 
+            homNay={homNay} formatTienInput={formatTienInput} hoSoCuaToi={hoSoCuaToi} 
+            themThuHuong={themThuHuong} laAdmin={laAdmin} lichLamViec={lichLamViec} 
+            danhSachPhatSinh={danhSachPhatSinh} danhSachThuHuong={danhSachThuHuong} danhSachKhachHang={danhSachKhachHang}
           />
         )}
         
         {tab === "phatSinh" && (
           <TabPhatSinh 
-            formatTienInput={formatTienInput} 
-            danhSachPhatSinh={danhSachPhatSinh} 
-            laAdmin={laAdmin} 
-            hoSoCuaToi={hoSoCuaToi} 
-            themThuHuong={themThuHuong} 
-            danhDauDaTraDo={danhDauDaTraDo} 
-            lichLamViec={lichLamViec} 
+            formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} 
+            hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} lichLamViec={lichLamViec} 
           />
         )}
 
@@ -415,46 +302,24 @@ export default function HomePage() {
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
         
         {tab === "nhanVien" && laAdmin && (
-          <TabNhanVien 
-            danhSachTaiKhoan={danhSachTaiKhoan} 
-            laAdmin={laAdmin} 
-            formatTienInput={formatTienInput} 
-          />
+          <TabNhanVien danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} formatTienInput={formatTienInput} />
         )}
 
         {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
         
-        {/* ĐÃ THÊM: Render Tab Khách Hàng */}
         {tab === "khachHang" && laAdmin && (
-          <TabKhachHang 
-            danhSachKhachHang={danhSachKhachHang}
-            lichLamViec={lichLamViec}
-            danhSachPhatSinh={danhSachPhatSinh}
-            laAdmin={laAdmin}
-            formatTienInput={formatTienInput}
-          />
+          <TabKhachHang danhSachKhachHang={danhSachKhachHang} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} formatTienInput={formatTienInput} />
         )}
 
         {tab === "thongKe" && laAdmin && (
-          <TabThongKe 
-            homNay={homNay}
-            thangThongKe={thangThongKe} 
-            setThangThongKe={setThangThongKe} 
-            lichLamViec={lichLamViec} 
-            danhSachPhatSinh={danhSachPhatSinh}
-            danhSachTaiKhoan={danhSachTaiKhoan}
-            danhSachChamCong={danhSachChamCong}
-            danhSachThuHuong={danhSachThuHuong}
-          />
+          <TabThongKe homNay={homNay} thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} />
         )}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-2xl border-t border-slate-200/50 flex justify-around items-end pt-2 pb-6 md:pb-4 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] z-40">
         {[
-          { key: "home", icon: Home, label: "Trang chủ" },
-          { key: "lich", icon: CalendarDays, label: "Lịch chụp" },
-          { key: "phatSinh", icon: Wallet, label: "Phát sinh" },
-          { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
+          { key: "home", icon: Home, label: "Trang chủ" }, { key: "lich", icon: CalendarDays, label: "Lịch chụp" },
+          { key: "phatSinh", icon: Wallet, label: "Phát sinh" }, { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
         ].map((nav) => {
           const IconComponent = nav.icon;
           const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "nhanVien" || tab === "thongKe" || tab === "tinhTrangKH" || tab === "khachHang"));

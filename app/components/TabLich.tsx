@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
-import { Lich, TaiKhoan, GoiDichVu, PhatSinh, ThuHuong } from "../../types";
+import { Lich, TaiKhoan, GoiDichVu, PhatSinh, ThuHuong, KhachHang } from "../../types";
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
 import ModalHoaDon from "./ModalHoaDon";
-import ModalThemLich from "./ModalThemLich";
 import ModalQuanLyGoi from "./ModalQuanLyGoi";
 import ModalBaoCao from "./ModalBaoCao";
 import ModalPhanCong from "./ModalPhanCong"; 
 import NutCopy from "./NutCopy"; 
+import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck } from "lucide-react";
 
 function chuyenTienVeSo(value: string) { 
   return Number(value.replace(/\./g, "")); 
@@ -20,36 +20,31 @@ interface TabLichProps {
   formatTienInput: (val: string) => string;
   hoSoCuaToi: TaiKhoan | null;
   themThuHuong: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
-  laAdmin: boolean; 
+  laAdmin: boolean;
   lichLamViec: Lich[]; 
   danhSachPhatSinh: PhatSinh[]; 
   danhSachThuHuong: ThuHuong[];
+  danhSachKhachHang: KhachHang[]; 
 }
 
 export default function TabLich({
-  homNay, formatTienInput, hoSoCuaToi, themThuHuong, laAdmin, lichLamViec, danhSachPhatSinh, danhSachThuHuong
+  homNay, formatTienInput, hoSoCuaToi, themThuHuong, laAdmin, 
+  lichLamViec, danhSachPhatSinh, danhSachThuHuong, danhSachKhachHang
 }: TabLichProps) {
   
-  const getLocalToday = () => {
-    const d = new Date(); const offset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - offset).toISOString().slice(0, 10);
-  };
-
-  const localToday = getLocalToday();
+  const localToday = homNay();
   const [selectedDate, setSelectedDate] = useState(localToday);
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
   
-  // ===============================================
-  // CÁC STATE QUẢN LÝ FORM & MODAL CHUYỂN VỀ ĐÂY[cite: 5]
-  // ===============================================
   const [dangSua, setDangSua] = useState<string | null>(null);
-  const [ngay, setNgay] = useState("");
+  const [khachHangId, setKhachHangId] = useState<string | null>(null);
+  const [ngay, setNgay] = useState(localToday);
   const [ngayCuoi, setNgayCuoi] = useState("");
-  const [gio, setGio] = useState("");
+  const [gio, setGio] = useState("08:00");
   const [tenKhach, setTenKhach] = useState("");
   const [soDienThoai, setSoDienThoai] = useState("");
   const [soDienThoai2, setSoDienThoai2] = useState("");
-  const [theLoai, setTheLoai] = useState("");
+  const [theLoai, setTheLoai] = useState("Chụp ảnh cưới");
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
   const [goiChup, setGoiChup] = useState("");
   const [giaTien, setGiaTien] = useState("");
@@ -59,13 +54,12 @@ export default function TabLich({
 
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
-  const [showPhanCongModal, setShowPhanCongModal] = useState(false);
+  const [showPhanCongModal, setShowPhanCongModal] = useState(false); 
   const [lichDangChon, setLichDangChon] = useState<Lich | null>(null);
   
   const [tienHoaHong, setTienHoaHong] = useState("");
   const [vaiTro, setVaiTro] = useState("Chụp ảnh");
   const [tuKhoa, setTuKhoa] = useState(""); 
-  const [errors, setErrors] = useState<Record<string, boolean>>({});
   
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]);
   const [showGoiModal, setShowGoiModal] = useState(false);
@@ -79,7 +73,6 @@ export default function TabLich({
 
   const danhSachLichRef = useRef<HTMLDivElement>(null);
 
-  // Nhóm lịch theo ngày bằng useMemo để tối ưu render
   const lichTheoNgay = useMemo(() => {
     return lichLamViec.reduce((acc: Record<string, Lich[]>, item) => {
       if (!acc[item.ngay]) acc[item.ngay] = [];
@@ -89,20 +82,25 @@ export default function TabLich({
   }, [lichLamViec]);
 
   useEffect(() => {
-    if (showModal || showGoiModal || showHoaHongModal || showPhanCongModal || hoaDonData) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    if (showModal || showGoiModal || showHoaHongModal || showPhanCongModal || hoaDonData) { document.body.style.overflow = "hidden"; } 
+    else { document.body.style.overflow = ""; }
     return () => { document.body.style.overflow = ""; };
   }, [showModal, showGoiModal, showHoaHongModal, showPhanCongModal, hoaDonData]);
 
   useEffect(() => {
-    const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => {
-      setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]);
-    });
+    const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => { setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]); });
     return () => unsubGoi();
   }, []);
+
+  useEffect(() => {
+    if (!dangSua && soDienThoai.length >= 9) {
+      const khachCu = danhSachKhachHang.find(kh => kh.soDienThoai === soDienThoai);
+      if (khachCu) {
+        setKhachHangId(khachCu.id!); setTenKhach(khachCu.tenKhach);
+        if (khachCu.soDienThoai2) setSoDienThoai2(khachCu.soDienThoai2);
+      } else { setKhachHangId(null); }
+    } else if (soDienThoai.length < 9) { setKhachHangId(null); }
+  }, [soDienThoai, danhSachKhachHang, dangSua]);
 
   const year = currentMonth.getFullYear(); const month = currentMonth.getMonth();
   const firstDayOfMonth = new Date(year, month, 1); const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -126,10 +124,8 @@ export default function TabLich({
     if (!hoSoCuaToi) { toast.error("Không tìm thấy thông tin tài khoản!"); return; }
     if (!lichDangChon) return;
     const moTaJob = `[${vaiTro}] KH: ${lichDangChon.tenKhach} (${lichDangChon.theLoai})`;
-    
     const daBaoCao = danhSachThuHuong.some(th => th.uid === hoSoCuaToi.id && th.moTa === moTaJob);
     if (daBaoCao) { toast.error("Bạn đã nhận hoa hồng cho công đoạn này rồi!"); return; }
-
     themThuHuong(hoSoCuaToi.id, hoSoCuaToi.email, hoSoCuaToi.hoTen || "", lichDangChon.ngay, moTaJob, tienHoaHong);
     setShowHoaHongModal(false); setTienHoaHong(""); setVaiTro("Chụp ảnh");
   };
@@ -140,34 +136,28 @@ export default function TabLich({
     navigator.clipboard.writeText(text); toast.success("Đã copy tin nhắn nhắc khách!");
   };
 
-  const resetForm = () => {
-    setNgay(""); setNgayCuoi(""); setGio(""); setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); 
-    setTheLoai(""); setTheLoaiKhac(""); setGoiChup(""); setGiaTien(""); setDangSua(null);
-  }
-
-  const openAddModal = () => { 
-    resetForm(); setNgay(selectedDate); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); setErrors({}); setShowModal(true); 
+  const resetForm = () => { 
+    setDangSua(null); setKhachHangId(null); setNgay(selectedDate); setNgayCuoi(""); setGio("08:00"); 
+    setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); setTheLoai("Chụp ảnh cưới"); setTheLoaiKhac(""); 
+    setGoiChup(""); setGiaTien(""); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); 
   };
 
-  // Các hàm tương tác Database được đưa hết vào TabLich
+  const openAddModal = () => { resetForm(); setShowModal(true); };
+
   const suaLich = (item: any) => { 
     setNgay(item.ngay); setGio(item.gio); setTenKhach(item.tenKhach); setSoDienThoai(item.soDienThoai || ""); 
-    setSoDienThoai2(item.soDienThoai2 || ""); setTheLoai(item.theLoai || ""); setTheLoaiKhac(""); 
+    setSoDienThoai2(item.soDienThoai2 || ""); setTheLoai(item.theLoai || "Chụp ảnh cưới"); setTheLoaiKhac(""); 
     setGoiChup(item.goiChup || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); 
-    setDangSua(item.id || null);
-  };
-
-  const suaLichNangCao = (item: any) => { 
-    suaLich(item); setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
+    setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
     setDichVuThem(item.dichVuThem || ""); setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
-    setErrors({}); setShowModal(true); 
+    setDangSua(item.id || null); setKhachHangId(item.khachHangId || null);
+    setShowModal(true); 
   };
 
   const xoaLich = async (id: string) => { 
     if (!laAdmin) { toast.error("Chỉ admin mới được xóa lịch"); return; } 
     if (!confirm("Xóa lịch này?")) return; 
-    await deleteDoc(doc(db, "lichStudio", id)); 
-    toast.success("Đã xóa"); 
+    await deleteDoc(doc(db, "lichStudio", id)); toast.success("Đã xóa"); 
   };
 
   const capNhatTrangThai = async (id: string, trangThai: string) => { 
@@ -176,15 +166,7 @@ export default function TabLich({
   };
 
   const handleLuuLichThongMinh = async () => {
-    const newErrors: Record<string, boolean> = {};
-    if (!ngay) newErrors.ngay = true; if (!gio) newErrors.gio = true; if (!tenKhach) newErrors.tenKhach = true; 
-    
-    const phoneRegex = /^[0-9]{10,11}$/;
-    if (!soDienThoai || !phoneRegex.test(soDienThoai.replace(/\s/g, ""))) newErrors.soDienThoai = true;
-    if (soDienThoai2 && !phoneRegex.test(soDienThoai2.replace(/\s/g, ""))) newErrors.soDienThoai2 = true;
-
-    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); toast.error("Vui lòng điền đủ thông tin bắt buộc!"); return; }
-    setErrors({}); 
+    if (!ngay || !gio || !tenKhach || !soDienThoai) { toast.error("Vui lòng điền đủ Ngày, Giờ, SĐT và Tên!"); return; }
 
     const lichCungNgay = lichLamViec.filter((item) => item.ngay === ngay && item.id !== dangSua);
     const [h1, m1] = gio.split(":").map(Number);
@@ -197,24 +179,39 @@ export default function TabLich({
     });
 
     if (biTrung) {
-      const dongY = confirm(`⚠️ CẢNH BÁO OVERBOOK:\nCa chụp này quá sát giờ với khách "${biTrung.tenKhach}" lúc ${biTrung.gio}.\n\nBạn có chắc chắn nhận lịch không?`);
+      const dongY = confirm(`⚠️ CẢNH BÁO: Ca chụp này quá sát giờ với khách "${biTrung.tenKhach}" lúc ${biTrung.gio}.\n\nBạn có chắc chắn nhận lịch không?`);
       if (!dongY) return;
     }
 
-    const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
-    const duLieuLich: any = { 
-      ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
-      theLoai: theLoaiCuoi, goiChup, 
-      giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0,
-      dichVuThem, tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, ngayCuoi
-    };
-
-    if (!dangSua) duLieuLich.trangThai = "Đã chốt lịch";
+    let finalKhId = khachHangId;
 
     try {
-      if (dangSua) { await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); } 
-      else { await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch!"); } 
-      setShowModal(false); resetForm(); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); setNgayCuoi("");
+      if (!finalKhId && !dangSua) {
+        const khRef = await addDoc(collection(db, "khachHang"), {
+          tenKhach, soDienThoai, soDienThoai2, 
+          nguonKhach: "Tự động tạo từ Lịch", 
+          ngayTao: new Date().toISOString()
+        });
+        finalKhId = khRef.id;
+        toast.success(`Đã tự động tạo Hồ sơ CRM cho khách mới!`);
+      }
+
+      const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
+      const duLieuLich: any = { 
+        khachHangId: finalKhId, ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
+        theLoai: theLoaiCuoi, goiChup, 
+        giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0,
+        dichVuThem, tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, ngayCuoi
+      };
+
+      if (!dangSua) duLieuLich.trangThai = "Đã chốt lịch";
+
+      if (dangSua) { 
+        await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); 
+      } else { 
+        await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch!"); 
+      } 
+      setShowModal(false); resetForm();
     } catch (error) { toast.error("Có lỗi mạng"); }
   };
 
@@ -309,14 +306,19 @@ export default function TabLich({
                 <div className="flex justify-between items-start pb-4 border-b border-slate-100 mb-4 ml-2">
                   <div className="pr-2">
                     <div className="flex items-center gap-2 mb-2"><span className="bg-blue-50 text-blue-600 text-xs font-black px-2.5 py-1 rounded-lg">⏰ {item.gio}</span><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${trangThaiColors[currentTrangThai] || trangThaiColors["Đã chốt lịch"]}`}>{currentTrangThai}</span></div>
-                    <div className="text-lg font-black text-slate-900">{item.tenKhach}</div>
+                    
+                    <div className="text-lg font-black text-slate-900 flex items-center gap-1.5">
+                      {item.tenKhach} 
+                      {/* ĐÃ BỌC THẺ SPAN ĐỂ HẾT LỖI TITLE */}
+                      {item.khachHangId && <span title="Khách hàng đã có Hồ sơ CRM"><UserCheck size={16} className="text-emerald-500"/></span>}
+                    </div>
                     <div className="text-sm font-bold text-slate-500 mt-1">{item.theLoai}</div>
                   </div>
                   <div className="flex flex-col items-end gap-3 shrink-0">
                     <div className="flex gap-2">
                       {laAdmin && item.id && (<button onClick={() => xoaLich(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-full font-bold transition-all shadow-sm">🗑</button>)}
                       {!biKhoaVoiNhanVien && (
-                        <button onClick={() => suaLichNangCao(item)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-full font-bold transition-all shadow-sm">✏️</button>
+                        <button onClick={() => suaLich(item)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-full font-bold transition-all shadow-sm">✏️</button>
                       )}
                     </div>
                     <div className="text-right">
@@ -394,12 +396,123 @@ export default function TabLich({
 
       <button onClick={openAddModal} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-200/50 flex items-center justify-center text-3xl z-40 hover:scale-110 active:scale-90 transition-all">+</button>
 
+      {/* CÁC MODAL CON */}
       <ModalPhanCong showModal={showPhanCongModal} setShowModal={setShowPhanCongModal} lichDangChon={lichDangChon} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} />
-      
       <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} lichLamViec={lichLamViec} />
-      <ModalThemLich showModal={showModal} setShowModal={setShowModal} dangSua={dangSua} ngay={ngay} setNgay={setNgay} ngayCuoi={ngayCuoi} setNgayCuoi={setNgayCuoi} gio={gio} setGio={setGio} tenKhach={tenKhach} setTenKhach={setTenKhach} soDienThoai={soDienThoai} setSoDienThoai={setSoDienThoai} soDienThoai2={soDienThoai2} setSoDienThoai2={setSoDienThoai2} theLoai={theLoai} setTheLoai={setTheLoai} theLoaiKhac={theLoaiKhac} setTheLoaiKhac={setTheLoaiKhac} goiChup={goiChup} setGoiChup={setGoiChup} giaTien={giaTien} setGiaTien={setGiaTien} tienCoc={tienCoc} setTienCoc={setTienCoc} dichVuThem={dichVuThem} setDichVuThem={setDichVuThem} tienDichVuThem={tienDichVuThem} setTienDichVuThem={setTienDichVuThem} errors={errors} formatTienInput={formatTienInput} handleLuuLichThongMinh={handleLuuLichThongMinh} danhSachGoiDichVu={danhSachGoiDichVu} laAdmin={laAdmin} setShowGoiModal={setShowGoiModal} />
       <ModalQuanLyGoi showGoiModal={showGoiModal} setShowGoiModal={setShowGoiModal} dangSuaGoi={dangSuaGoi} setDangSuaGoi={setDangSuaGoi} tenGoiMoi={tenGoiMoi} setTenGoiMoi={setTenGoiMoi} chiTietGoiMoi={chiTietGoiMoi} setChiTietGoiMoi={setChiTietGoiMoi} giaGoiMoi={giaGoiMoi} setGiaGoiMoi={setGiaGoiMoi} formatTienInput={formatTienInput} luuGoiDichVu={luuGoiDichVu} danhSachGoiDichVu={danhSachGoiDichVu} xoaGoiDichVu={xoaGoiDichVu} laAdmin={laAdmin} />
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
+
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto custom-scrollbar border border-white">
+            <h3 className="text-xl font-black mb-6 text-slate-900 tracking-tight flex items-center gap-2">
+              {dangSua ? "✏️ Cập nhật Lịch" : "✨ Đặt lịch mới"}
+            </h3>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày (*)</label>
+                  <input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-200 transition-all" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Giờ (*)</label>
+                  <input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-200 transition-all" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">SĐT Khách Hàng (*)</label>
+                <div className="relative">
+                  <input type="tel" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} placeholder="Nhập SĐT để tìm kiếm tự động..." className={`bg-slate-50 border p-3.5 rounded-2xl w-full text-slate-900 font-black outline-none focus:ring-4 transition-all pr-24 ${khachHangId ? "border-emerald-200 focus:ring-emerald-50 bg-emerald-50/30" : "border-slate-100 focus:ring-indigo-50"}`} />
+                  {khachHangId && <span className="absolute right-3 top-3.5 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={12}/> Khách cũ</span>}
+                  {!khachHangId && soDienThoai.length >= 9 && <span className="absolute right-3 top-3.5 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-1 rounded-lg uppercase tracking-wider">✨ Tạo mới</span>}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5 flex justify-between">
+                  Tên Khách Hàng (*) 
+                  {khachHangId && <span className="text-emerald-500 italic lowercase">(Đã tự điền)</span>}
+                </label>
+                <input type="text" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} placeholder="Tên chú rể & cô dâu..." className={`border p-3.5 rounded-2xl w-full font-bold outline-none focus:ring-4 transition-all ${khachHangId ? "bg-emerald-50/30 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-100 text-slate-900 focus:ring-indigo-50"}`} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Loại hình</label>
+                  <select value={theLoai} onChange={(e) => setTheLoai(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all">
+                    <option value="Chụp ảnh cưới">Chụp ảnh cưới</option>
+                    <option value="Chụp gia đình">Chụp gia đình</option>
+                    <option value="Phóng sự cưới">Phóng sự cưới</option>
+                    <option value="Chụp thời trang">Chụp thời trang</option>
+                    <option value="Chụp em bé">Chụp em bé</option>
+                    <option value="Khác">Khác...</option>
+                  </select>
+                </div>
+                {theLoai === "Khác" ? (
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Nhập thể loại</label>
+                    <input type="text" value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} placeholder="VD: Khai trương..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none" />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">SĐT Phụ (Tùy chọn)</label>
+                    <input type="tel" value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} placeholder="098..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Gói chụp (*)</label>
+                  <input type="text" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} placeholder="Tên gói..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
+                  {laAdmin && <button onClick={() => setShowGoiModal(true)} className="absolute right-2 top-8 text-xs font-bold bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg">Gói</button>}
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Giá tiền (*)</label>
+                  <div className="relative">
+                    <input type="text" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} placeholder="5.000.000" className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 transition-all pr-8" />
+                    <span className="absolute right-3 top-3.5 text-slate-400 font-black">đ</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl mt-2">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Khách đã cọc</label>
+                  <div className="relative">
+                    <input type="text" value={tienCoc} onChange={(e) => setTienCoc(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-slate-200 p-3 rounded-xl w-full text-emerald-600 font-black outline-none focus:ring-2 focus:ring-emerald-100 pr-6" />
+                    <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Ngày cưới (Nếu có)</label>
+                  <input type="date" value={ngayCuoi} onChange={(e) => setNgayCuoi(e.target.value)} className="bg-white border border-slate-200 p-3 rounded-xl w-full text-rose-600 font-bold outline-none focus:ring-2 focus:ring-rose-100" />
+                </div>
+                
+                <div className="col-span-2 mt-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Mua/Thuê thêm dịch vụ</label>
+                  <div className="flex gap-2">
+                    <input type="text" value={dichVuThem} onChange={(e) => setDichVuThem(e.target.value)} placeholder="Tên dịch vụ..." className="bg-white border border-slate-200 p-3 rounded-xl flex-1 text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100" />
+                    <div className="relative w-32">
+                      <input type="text" value={tienDichVuThem} onChange={(e) => setTienDichVuThem(formatTienInput(e.target.value))} placeholder="Giá..." className="bg-white border border-slate-200 p-3 rounded-xl w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-6" />
+                      <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setShowModal(false)} className="px-6 py-4 bg-slate-100 font-bold text-slate-600 rounded-2xl hover:bg-slate-200 active:scale-95 transition-all">Hủy</button>
+                <button onClick={handleLuuLichThongMinh} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all">
+                  {dangSua ? "LƯU THAY ĐỔI" : "TẠO LỊCH NGAY"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
