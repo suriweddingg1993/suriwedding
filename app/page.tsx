@@ -162,9 +162,11 @@ export default function HomePage() {
   const ngayHomNayStr = homNay();
   const ngayMaiStr = ngayMai(); 
   const isThueDoCheck = (loai: string) => loai && loai.toLowerCase().includes("thuê");
+  
   const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra === ngayHomNayStr);
   const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNayStr);
   const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNayStr);
+  
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi"); } };
 
   const khachNoTien = lichLamViec.filter((item) => {
@@ -324,8 +326,10 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* BÁO ĐỘNG NỢ TỒN ĐỌNG DẠNG ACCORDION */}
-          {khachNoTien.length > 0 && laAdmin && (
+          {/* =======================================================
+              BÁO ĐỘNG NỢ TỒN ĐỌNG (HIỆN CHO CẢ NHÂN VIÊN)
+          ======================================================= */}
+          {khachNoTien.length > 0 && (
             <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300">
               <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5 pointer-events-none">💸</div>
               
@@ -334,7 +338,7 @@ export default function HomePage() {
                 className="w-full flex justify-between items-center relative z-10 text-left outline-none"
               >
                 <h2 className="font-black text-lg text-rose-600 tracking-tight flex items-center gap-2">
-                  <Banknote size={24} /> Báo Động Nợ Tồn Đọng ({khachNoTien.length})
+                  <Banknote size={24} /> Báo Động Nợ ({khachNoTien.length})
                 </h2>
                 <div className="bg-rose-50 text-rose-600 p-1.5 rounded-full transition-transform">
                   {showKhachNo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -347,7 +351,7 @@ export default function HomePage() {
                     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
                     const tienNo = tongTien - Number(item.tienCoc || 0);
                     const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
-                    const loaiMoc = (item as any).ngayCuoi ? 'Ngày Cưới' : 'Ngày Chụp';
+                    const loaiMoc = (item as any).ngayCuoi ? 'Cưới' : 'Chụp';
                     
                     return (
                       <div key={item.id} className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
@@ -357,16 +361,20 @@ export default function HomePage() {
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5">
                             <span className="text-[10px] font-bold text-slate-500 bg-white w-fit px-2 py-0.5 rounded-md border border-slate-200">
-                              Qua {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}
+                              Qua ngày {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}
                             </span>
                             <span className="text-sm font-black text-rose-600 w-fit">
-                              Đang Nợ: {formatTienInput(String(tienNo))}đ
+                              Nợ: {formatTienInput(String(tienNo))}đ
                             </span>
                           </div>
                         </div>
-                        <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">
-                          Đã Thu Xong
-                        </button>
+                        
+                        {/* CHỈ ADMIN MỚI THẤY NÚT "ĐÃ THU" ĐỂ TRÁNH NHÂN VIÊN BẤM NHẦM */}
+                        {laAdmin && (
+                          <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">
+                            Đã Thu
+                          </button>
+                        )}
                       </div>
                     )
                   })}
@@ -447,7 +455,6 @@ export default function HomePage() {
         {tab === "chamCong" && <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />}
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
         {tab === "nhanVien" && laAdmin && <TabNhanVien uidNhanVien={uidNhanVien} setUidNhanVien={setUidNhanVien} emailNhanVien={emailNhanVien} setEmailNhanVien={setEmailNhanVien} hoTenNhanVien={hoTenNhanVien} setHoTenNhanVien={setHoTenNhanVien} soDienThoaiNhanVien={soDienThoaiNhanVien} setSoDienThoaiNhanVien={setSoDienThoaiNhanVien} luongCungNhanVien={luongCungNhanVien} setLuongCungNhanVien={setLuongCungNhanVien} thuongChuyenCanNhanVien={thuongChuyenCanNhanVien} setThuongChuyenCanNhanVien={setThuongChuyenCanNhanVien} quyenNhanVien={quyenNhanVien} setQuyenNhanVien={setQuyenNhanVien} taoHoSoNhanVien={taoHoSoNhanVien} dangSuaNhanVien={dangSuaNhanVien} danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} suaHoSoNhanVien={suaHoSoNhanVien} formatTienInput={formatTienInput} />}
-        {/* ĐÃ CHỈNH SỬA: Loại bỏ props thừa của TabTinhTrangKH để khớp đúng file gốc */}
         {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
         {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}
       </div>
