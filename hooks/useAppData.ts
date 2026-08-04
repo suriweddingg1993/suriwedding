@@ -12,7 +12,7 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
   const [danhSachTaiKhoan, setDanhSachTaiKhoan] = useState<TaiKhoan[]>([]);
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]); 
 
-  // Fix 4: Đồng bộ Múi giờ Việt Nam cho mốc thời gian tải dữ liệu (6 tháng)
+  // GIỚI HẠN DỮ LIỆU: Chỉ tải 6 tháng gần nhất để chống lag[cite: 6]
   const mocThoiGian = useMemo(() => {
     const d = new Date(); 
     d.setMonth(d.getMonth() - 6);
@@ -23,6 +23,7 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
   useEffect(() => {
     if (!user) return;
 
+    // Áp dụng Query where("ngay", ">=", mocThoiGian) cho tất cả các bảng dữ liệu lớn[cite: 6]
     const unsubLich = onSnapshot(query(collection(db, "lichStudio"), where("ngay", ">=", mocThoiGian)), 
       (snapshot) => setLichLamViec(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Lich[])
     );
@@ -48,6 +49,7 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
     };
   }, [user, mocThoiGian]);
 
+  // Tài khoản load riêng cho Admin
   useEffect(() => {
     if (!laAdmin) return;
     const unsubTK = onSnapshot(collection(db, "users"), 

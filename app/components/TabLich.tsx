@@ -1,15 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 import { Lich, TaiKhoan, GoiDichVu, PhatSinh, ThuHuong } from "../../types";
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
-// Nhập Component đã tách
 import ModalHoaDon from "./ModalHoaDon";
 import ModalThemLich from "./ModalThemLich";
 import ModalQuanLyGoi from "./ModalQuanLyGoi";
 import ModalBaoCao from "./ModalBaoCao";
-import ModalPhanCong from "./ModalPhanCong"; // <--- COMPONENT MỚI THÊM
+import ModalPhanCong from "./ModalPhanCong"; 
 import NutCopy from "./NutCopy"; 
 
 function chuyenTienVeSo(value: string) { 
@@ -17,25 +16,18 @@ function chuyenTienVeSo(value: string) {
 }
 
 interface TabLichProps {
-  homNay: () => string; dangSua: string | null; ngay: string; setNgay: (val: string) => void;
-  ngayCuoi: string; setNgayCuoi: (val: string) => void;
-  gio: string; setGio: (val: string) => void; tenKhach: string; setTenKhach: (val: string) => void;
-  soDienThoai: string; setSoDienThoai: (val: string) => void; soDienThoai2: string; setSoDienThoai2: (val: string) => void;
-  theLoai: string; setTheLoai: (val: string) => void; theLoaiKhac: string; setTheLoaiKhac: (val: string) => void;
-  goiChup: string; setGoiChup: (val: string) => void; giaTien: string; setGiaTien: (val: string) => void;
-  formatTienInput: (val: string) => string; themHoacSuaLich: () => Promise<void>; resetForm: () => void;
-  lichTheoNgay: Record<string, Lich[]>; suaLich: (item: Lich) => void;
-  capNhatTrangThai: (id: string, trangThai: string) => Promise<void>; hoSoCuaToi: TaiKhoan | null;
+  homNay: () => string;
+  formatTienInput: (val: string) => string;
+  hoSoCuaToi: TaiKhoan | null;
   themThuHuong: (uid: string, email: string, hoTen: string, ngay: string, moTa: string, soTien: string) => Promise<void>;
-  laAdmin: boolean; xoaLich: (id: string) => Promise<void>; lichLamViec: Lich[]; 
-  danhSachPhatSinh: PhatSinh[]; danhSachThuHuong: ThuHuong[];
+  laAdmin: boolean; 
+  lichLamViec: Lich[]; 
+  danhSachPhatSinh: PhatSinh[]; 
+  danhSachThuHuong: ThuHuong[];
 }
 
 export default function TabLich({
-  homNay, dangSua, ngay, setNgay, ngayCuoi, setNgayCuoi, gio, setGio, tenKhach, setTenKhach, soDienThoai, setSoDienThoai, soDienThoai2, setSoDienThoai2,
-  theLoai, setTheLoai, theLoaiKhac, setTheLoaiKhac, goiChup, setGoiChup, giaTien, setGiaTien, formatTienInput,
-  themHoacSuaLich, resetForm, lichTheoNgay, suaLich, capNhatTrangThai,
-  hoSoCuaToi, themThuHuong, laAdmin, xoaLich, lichLamViec, danhSachPhatSinh, danhSachThuHuong
+  homNay, formatTienInput, hoSoCuaToi, themThuHuong, laAdmin, lichLamViec, danhSachPhatSinh, danhSachThuHuong
 }: TabLichProps) {
   
   const getLocalToday = () => {
@@ -47,19 +39,33 @@ export default function TabLich({
   const [selectedDate, setSelectedDate] = useState(localToday);
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
   
+  // ===============================================
+  // CÁC STATE QUẢN LÝ FORM & MODAL CHUYỂN VỀ ĐÂY[cite: 5]
+  // ===============================================
+  const [dangSua, setDangSua] = useState<string | null>(null);
+  const [ngay, setNgay] = useState("");
+  const [ngayCuoi, setNgayCuoi] = useState("");
+  const [gio, setGio] = useState("");
+  const [tenKhach, setTenKhach] = useState("");
+  const [soDienThoai, setSoDienThoai] = useState("");
+  const [soDienThoai2, setSoDienThoai2] = useState("");
+  const [theLoai, setTheLoai] = useState("");
+  const [theLoaiKhac, setTheLoaiKhac] = useState("");
+  const [goiChup, setGoiChup] = useState("");
+  const [giaTien, setGiaTien] = useState("");
+  const [tienCoc, setTienCoc] = useState("");
+  const [dichVuThem, setDichVuThem] = useState("");
+  const [tienDichVuThem, setTienDichVuThem] = useState("");
+
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
-  const [showPhanCongModal, setShowPhanCongModal] = useState(false); // <--- STATE MỚI
+  const [showPhanCongModal, setShowPhanCongModal] = useState(false);
   const [lichDangChon, setLichDangChon] = useState<Lich | null>(null);
   
   const [tienHoaHong, setTienHoaHong] = useState("");
   const [vaiTro, setVaiTro] = useState("Chụp ảnh");
   const [tuKhoa, setTuKhoa] = useState(""); 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  
-  const [tienCoc, setTienCoc] = useState("");
-  const [dichVuThem, setDichVuThem] = useState("");
-  const [tienDichVuThem, setTienDichVuThem] = useState("");
   
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]);
   const [showGoiModal, setShowGoiModal] = useState(false);
@@ -72,6 +78,15 @@ export default function TabLich({
   const [hdDiaChi, setHdDiaChi] = useState("");
 
   const danhSachLichRef = useRef<HTMLDivElement>(null);
+
+  // Nhóm lịch theo ngày bằng useMemo để tối ưu render
+  const lichTheoNgay = useMemo(() => {
+    return lichLamViec.reduce((acc: Record<string, Lich[]>, item) => {
+      if (!acc[item.ngay]) acc[item.ngay] = [];
+      acc[item.ngay].push(item);
+      return acc;
+    }, {});
+  }, [lichLamViec]);
 
   useEffect(() => {
     if (showModal || showGoiModal || showHoaHongModal || showPhanCongModal || hoaDonData) {
@@ -125,12 +140,39 @@ export default function TabLich({
     navigator.clipboard.writeText(text); toast.success("Đã copy tin nhắn nhắc khách!");
   };
 
+  const resetForm = () => {
+    setNgay(""); setNgayCuoi(""); setGio(""); setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); 
+    setTheLoai(""); setTheLoaiKhac(""); setGoiChup(""); setGiaTien(""); setDangSua(null);
+  }
+
   const openAddModal = () => { 
-    resetForm(); setNgay(selectedDate); setNgayCuoi(""); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); setErrors({}); setShowModal(true); 
+    resetForm(); setNgay(selectedDate); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); setErrors({}); setShowModal(true); 
+  };
+
+  // Các hàm tương tác Database được đưa hết vào TabLich
+  const suaLich = (item: any) => { 
+    setNgay(item.ngay); setGio(item.gio); setTenKhach(item.tenKhach); setSoDienThoai(item.soDienThoai || ""); 
+    setSoDienThoai2(item.soDienThoai2 || ""); setTheLoai(item.theLoai || ""); setTheLoaiKhac(""); 
+    setGoiChup(item.goiChup || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); 
+    setDangSua(item.id || null);
   };
 
   const suaLichNangCao = (item: any) => { 
-    suaLich(item); setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); setDichVuThem(item.dichVuThem || ""); setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); setErrors({}); setShowModal(true); 
+    suaLich(item); setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
+    setDichVuThem(item.dichVuThem || ""); setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
+    setErrors({}); setShowModal(true); 
+  };
+
+  const xoaLich = async (id: string) => { 
+    if (!laAdmin) { toast.error("Chỉ admin mới được xóa lịch"); return; } 
+    if (!confirm("Xóa lịch này?")) return; 
+    await deleteDoc(doc(db, "lichStudio", id)); 
+    toast.success("Đã xóa"); 
+  };
+
+  const capNhatTrangThai = async (id: string, trangThai: string) => { 
+    try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } 
+    catch (error) { toast.error("Lỗi cập nhật"); } 
   };
 
   const handleLuuLichThongMinh = async () => {
@@ -315,7 +357,6 @@ export default function TabLich({
                   )}
                 </div>
 
-                {/* KHU VỰC HIỂN THỊ NGƯỜI ĐƯỢC PHÂN CÔNG */}
                 {phanCongData && Object.keys(phanCongData).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-4 ml-2">
                     {Object.entries(phanCongData).map(([role, name]) => name ? (
@@ -340,7 +381,6 @@ export default function TabLich({
                     <option value="Hủy lịch">Hủy lịch</option>
                   </select>
                   
-                  {/* NÚT PHÂN CÔNG MỚI */}
                   <button onClick={() => { setLichDangChon(item); setShowPhanCongModal(true); }} className="bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">👥 Phân công</button>
                   <button onClick={() => { setHoaDonData(item); setHdDiaChi(""); }} className="bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">🧾 Hóa Đơn</button>
                   <button onClick={() => copyNhacLich(item)} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">💬 Nhắc khách</button>
