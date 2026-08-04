@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ChamCong, ThuHuong, TaiKhoan } from "../../types";
-// ĐÃ THÊM: Import icon Chevron cho hiệu ứng xổ xuống
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Maximize2 } from "lucide-react";
 
 interface BangLuong extends TaiKhoan {
   soNgayNghi: number;
@@ -38,9 +37,10 @@ export default function TabLuong({
 
   const homNayStr = homNay();
   const [thangChon, setThangChon] = useState(homNayStr.slice(0, 7));
-
-  // ĐÃ THÊM: State quản lý Accordion (ID của nhân viên đang được mở)
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+
+  // ĐÃ THÊM: State để quản lý Modal xem chi tiết Hoa hồng toàn màn hình
+  const [modalChiTietUid, setModalChiTietUid] = useState<string | null>(null);
 
   const [showModal, setShowModal] = useState(false);
   const [thUid, setThUid] = useState(""); const [thEmail, setThEmail] = useState("");
@@ -127,11 +127,17 @@ export default function TabLuong({
   const tongQuyLuong = laAdmin ? bangLuongNhanVien.reduce((sum, nv) => sum + nv.luongTamTinh, 0) : 0;
   const luongCuaToi = !laAdmin && hoSoCuaToi ? tinhLuongNhanVien(hoSoCuaToi) : null;
 
-  // HÀM BẬT/TẮT ACCORDION
   const toggleRow = (id: string) => {
     if (expandedRowId === id) setExpandedRowId(null);
     else setExpandedRowId(id);
   };
+
+  // Dữ liệu cho Modal Chi Tiết Hoa Hồng
+  const userDetails = laAdmin 
+    ? bangLuongNhanVien.find(nv => nv.id === modalChiTietUid) 
+    : (luongCuaToi?.id === modalChiTietUid ? luongCuaToi : null);
+  const listThuHuongModal = userDetails?.thuHuongThang || [];
+  const tenNVModal = userDetails?.hoTen || userDetails?.email.split('@')[0] || "";
 
   return (
     <div className="pb-24 px-2 pt-4">
@@ -164,7 +170,6 @@ export default function TabLuong({
               return (
                 <div key={nv.id} className={`border rounded-2xl transition-all duration-300 overflow-hidden ${isExpanded ? "border-indigo-200 bg-indigo-50/30 shadow-md" : "border-slate-100 bg-white shadow-sm hover:shadow-md"}`}>
                   
-                  {/* THANH HIỂN THỊ THU GỌN */}
                   <div 
                     onClick={() => toggleRow(nv.id!)}
                     className="p-4 flex items-center justify-between cursor-pointer select-none"
@@ -188,7 +193,6 @@ export default function TabLuong({
                     </div>
                   </div>
 
-                  {/* NỘI DUNG XỔ XUỐNG KHI BẤM VÀO */}
                   {isExpanded && (
                     <div className="px-4 pb-4 animate-fade-in">
                       <div className="border-t border-indigo-100 pt-4 mt-2">
@@ -223,28 +227,37 @@ export default function TabLuong({
 
                         <div className="bg-white border border-slate-100 rounded-xl p-3 shadow-sm">
                           <div className="flex justify-between items-center mb-3">
-                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Chi tiết Hoa hồng & Ứng</div>
-                            <button onClick={() => moModalThuHuong(nv.id!, nv.email, nv.hoTen || "")} className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2 py-1 rounded text-[10px] font-black transition-colors uppercase tracking-wider">+ Thêm Giao Dịch</button>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Hoa hồng & Ứng ({nv.thuHuongThang.length})</div>
+                            <div className="flex gap-2">
+                              {/* NÚT PHÓNG TO */}
+                              <button onClick={() => setModalChiTietUid(nv.id!)} className="bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors uppercase tracking-wider flex items-center gap-1"><Maximize2 size={12}/> Phóng to</button>
+                              <button onClick={() => moModalThuHuong(nv.id!, nv.email, nv.hoTen || "")} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors uppercase tracking-wider">+ Thêm</button>
+                            </div>
                           </div>
                           
-                          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                          <div onClick={() => setModalChiTietUid(nv.id!)} className="space-y-2 max-h-[160px] overflow-hidden relative cursor-pointer group">
                             {nv.thuHuongThang.length === 0 ? (
                               <div className="text-center text-xs font-medium text-slate-400 py-3 italic">Chưa có giao dịch nào trong tháng này.</div>
                             ) : (
                               nv.thuHuongThang.map((th: ThuHuong) => (
-                                <div key={th.id} className={`flex justify-between items-center text-xs p-2.5 rounded-lg border transition-all hover:shadow-sm ${th.soTien && th.soTien < 0 ? "bg-rose-50 border-rose-100" : "bg-emerald-50 border-emerald-100"}`}>
-                                  <div className="min-w-0 pr-2">
+                                <div key={th.id} className={`flex justify-between items-start text-xs p-2.5 rounded-lg border transition-all ${th.soTien && th.soTien < 0 ? "bg-rose-50 border-rose-100" : "bg-emerald-50 border-emerald-100"}`}>
+                                  <div className="min-w-0 pr-2 flex-1">
                                     <div className="font-bold text-slate-700 truncate">{th.moTa}</div>
-                                    <div className="text-[9px] text-slate-500 mt-0.5">{th.ngay.split("-").reverse().join("/")}</div>
+                                    <div className="text-[9px] text-slate-500 mt-1">{th.ngay.split("-").reverse().join("/")}</div>
                                   </div>
-                                  <div className="flex items-center gap-3 shrink-0">
+                                  <div className="flex items-start gap-3 shrink-0 mt-0.5">
                                     <span className={`font-black text-sm ${th.soTien && th.soTien < 0 ? "text-rose-600" : "text-emerald-600"}`}>
                                       {th.soTien && th.soTien < 0 ? "-" : "+"}{formatTienInput(String(Math.abs(th.soTien || 0)))}đ
                                     </span>
-                                    <button onClick={() => th.id && xoaThuHuong(th.id)} className="w-6 h-6 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-400 hover:text-rose-600 hover:border-rose-300 transition-colors shadow-sm">✕</button>
                                   </div>
                                 </div>
                               ))
+                            )}
+                            {/* Overlay báo hiệu có thể click để xem đầy đủ */}
+                            {nv.thuHuongThang.length > 0 && (
+                              <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent flex items-end justify-center pb-2 opacity-90 group-hover:opacity-100 transition-opacity">
+                                <span className="bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-md">Chạm để xem chi tiết đầy đủ</span>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -302,31 +315,41 @@ export default function TabLuong({
             <div className="border border-indigo-100 bg-white rounded-2xl p-4 shadow-sm">
               <div className="flex justify-between items-center border-b border-indigo-50 pb-3 mb-3">
                 <div>
-                  <h3 className="font-bold text-slate-500 uppercase tracking-widest text-[10px] mb-1">Chi tiết Hoa hồng & Ứng</h3>
+                  <h3 className="font-bold text-slate-500 uppercase tracking-widest text-[10px] mb-1">Hoa hồng & Ứng</h3>
                   <div className={`font-black text-xl ${luongCuaToi.tongThuHuong >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
                     {luongCuaToi.tongThuHuong >= 0 ? "+" : "-"}{formatTienInput(String(Math.abs(luongCuaToi.tongThuHuong)))}đ
                   </div>
                 </div>
-                <button onClick={() => hoSoCuaToi && uidCuaToi && moModalThuHuong(uidCuaToi, hoSoCuaToi.email, hoSoCuaToi.hoTen || "")} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 active:scale-95 text-xs font-black px-4 py-2.5 rounded-xl shadow-sm transition-all uppercase tracking-wide">Thêm HH</button>
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  <button onClick={() => hoSoCuaToi && uidCuaToi && moModalThuHuong(uidCuaToi, hoSoCuaToi.email, hoSoCuaToi.hoTen || "")} className="bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 text-[10px] font-black px-4 py-2 rounded-lg shadow-sm transition-all uppercase tracking-wide">Thêm HH</button>
+                  {/* NÚT PHÓNG TO CHO NHÂN VIÊN */}
+                  <button onClick={() => setModalChiTietUid(luongCuaToi.id!)} className="bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95 text-[10px] font-black px-4 py-2 rounded-lg transition-all uppercase tracking-wide flex items-center justify-center gap-1"><Maximize2 size={12}/> Phóng to</button>
+                </div>
               </div>
-              <div className="space-y-2 mt-3 max-h-[250px] overflow-y-auto pr-1">
+              
+              <div onClick={() => setModalChiTietUid(luongCuaToi.id!)} className="space-y-2 mt-3 max-h-[160px] overflow-hidden relative cursor-pointer group">
                 {luongCuaToi.thuHuongThang.length === 0 ? (
                   <div className="text-center text-xs font-medium text-slate-400 py-4 italic bg-slate-50 rounded-xl border border-dashed border-slate-200">Chưa có giao dịch hoa hồng nào.</div>
                 ) : (
                   luongCuaToi.thuHuongThang.map((th: ThuHuong) => (
-                    <div key={th.id} className={`flex justify-between items-center p-3 rounded-xl border shadow-sm text-sm transition-all hover:shadow-md ${th.soTien && th.soTien < 0 ? "bg-rose-50 border-rose-100" : "bg-emerald-50 border-emerald-100"}`}>
-                      <div className="flex flex-col min-w-0 pr-2">
+                    <div key={th.id} className={`flex justify-between items-start p-3 rounded-xl border shadow-sm text-sm transition-all ${th.soTien && th.soTien < 0 ? "bg-rose-50 border-rose-100" : "bg-emerald-50 border-emerald-100"}`}>
+                      <div className="flex flex-col min-w-0 pr-2 flex-1">
                         <span className="font-bold text-slate-700 truncate">{th.moTa}</span>
-                        <span className="text-[10px] font-bold text-slate-400 mt-0.5">{th.ngay.split("-").reverse().join("/")}</span>
+                        <span className="text-[10px] font-bold text-slate-400 mt-1">{th.ngay.split("-").reverse().join("/")}</span>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-start gap-3 shrink-0 mt-0.5">
                         <span className={`font-black text-base ${th.soTien && th.soTien < 0 ? "text-rose-600" : "text-emerald-600"}`}>
                           {th.soTien && th.soTien < 0 ? "-" : "+"}{formatTienInput(String(Math.abs(th.soTien || 0)))}đ
                         </span>
-                        <button onClick={() => th.id && xoaThuHuong(th.id)} className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-400 hover:text-rose-600 hover:border-rose-300 transition-colors shadow-sm">✕</button>
                       </div>
                     </div>
                   ))
+                )}
+                {/* Overlay báo hiệu có thể click để xem đầy đủ */}
+                {luongCuaToi.thuHuongThang.length > 0 && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent flex items-end justify-center pb-2 opacity-90 group-hover:opacity-100 transition-opacity">
+                    <span className="bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-md">Chạm để xem chi tiết đầy đủ</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -334,9 +357,54 @@ export default function TabLuong({
         )
       )}
 
+      {/* ==============================================
+          MODAL XEM CHI TIẾT HOA HỒNG TOÀN MÀN HÌNH
+      =============================================== */}
+      {modalChiTietUid && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+          <div className="bg-slate-50 rounded-[2rem] w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] animate-fade-in overflow-hidden border border-white">
+            
+            {/* Header Modal */}
+            <div className="p-5 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 relative">
+              <div>
+                <h3 className="text-lg font-black text-slate-800 tracking-tight">Chi tiết Giao dịch</h3>
+                <div className="text-xs font-bold text-indigo-600 mt-1 uppercase tracking-wider">{tenNVModal}</div>
+              </div>
+              <button onClick={() => setModalChiTietUid(null)} className="w-10 h-10 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-full text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shadow-sm active:scale-95">✕</button>
+            </div>
+
+            {/* Content Modal hiển thị siêu to khổng lồ */}
+            <div className="overflow-y-auto p-5 space-y-4 custom-scrollbar flex-1">
+              {listThuHuongModal.length === 0 ? (
+                <div className="text-center text-sm font-medium text-slate-400 py-10 italic">Chưa có dữ liệu giao dịch.</div>
+              ) : (
+                listThuHuongModal.map((th: ThuHuong) => (
+                  <div key={th.id} className={`flex flex-col gap-3 p-5 rounded-2xl border bg-white shadow-sm transition-all hover:shadow-md ${th.soTien && th.soTien < 0 ? "border-rose-100" : "border-emerald-100"}`}>
+                    
+                    <div className="flex justify-between items-start gap-4">
+                      {/* Cho phép text xuống dòng tự do với whitespace-pre-wrap */}
+                      <div className="font-bold text-slate-700 text-sm leading-relaxed whitespace-pre-wrap flex-1">{th.moTa}</div>
+                      <button onClick={() => th.id && xoaThuHuong(th.id)} className="w-8 h-8 shrink-0 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-full text-slate-400 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition-colors active:scale-95">✕</button>
+                    </div>
+                    
+                    <div className="flex justify-between items-end mt-1 border-t border-slate-100 pt-3">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{th.ngay.split("-").reverse().join("/")}</span>
+                      <span className={`font-black text-xl ${th.soTien && th.soTien < 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                        {th.soTien && th.soTien < 0 ? "-" : "+"}{formatTienInput(String(Math.abs(th.soTien || 0)))}đ
+                      </span>
+                    </div>
+
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL CẤP TIỀN HOẶC TRỪ TIỀN */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[120] p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border border-white animate-fade-in">
             <h3 className="text-xl font-black mb-1 text-slate-900 tracking-tight">{laAdmin ? "Tùy chỉnh Quỹ" : "Khai báo Hoa hồng"}</h3>
             <p className="text-xs font-bold text-slate-500 mb-6 bg-slate-50 py-1.5 px-3 rounded-lg w-fit border border-slate-100">
