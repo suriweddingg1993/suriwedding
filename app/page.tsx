@@ -152,23 +152,21 @@ export default function HomePage() {
     const dungTuKhoa = keyword ? (item.tenKhach || "").toLowerCase().includes(keyword) || (item.soDienThoai || "").includes(keyword) : true; 
     return dungNgay && dungTuKhoa; 
   });
+  
   const lichTheoNgay = danhSachHienThi.reduce((acc: Record<string, any[]>, item) => { if (!acc[item.ngay]) acc[item.ngay] = []; acc[item.ngay].push(item); return acc; }, {});
-  const lichTrongThang = thangThongKe ? lichLamViec.filter((item) => item.ngay.startsWith(thangThongKe)) : [];
-  const phatSinhTrongThang = thangThongKe ? danhSachPhatSinh.filter((item) => item.ngay.startsWith(thangThongKe)) : [];
-  const tongThuNhapLich = lichTrongThang.reduce((sum, item) => sum + Number(item.giaTien || 0), 0);
-  const tongThuNhapPhatSinh = phatSinhTrongThang.reduce((sum, item) => sum + Number(item.soTien || 0), 0);
-  const tongThuNhap = tongThuNhapLich + tongThuNhapPhatSinh;
   
   const ngayHomNayStr = homNay();
   const ngayMaiStr = ngayMai(); 
   const isThueDoCheck = (loai: string) => loai && loai.toLowerCase().includes("thuê");
   
+  // Dữ liệu lọc cho Tab Kho đồ
   const canTraHomNay = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra === ngayHomNayStr);
   const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNayStr);
   const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNayStr);
   
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi"); } };
 
+  // Khách nợ tiền
   const khachNoTien = lichLamViec.filter((item) => {
     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
     const tienNo = tongTien - Number(item.tienCoc || 0);
@@ -190,6 +188,7 @@ export default function HomePage() {
 
   const tenCuaToi = hoSoCuaToi?.hoTen || hoSoCuaToi?.email?.split('@')[0] || "";
   
+  // Việc hôm nay / ngày mai
   const viecCuaToiHomNay = lichLamViec.filter(lich => {
     if (lich.ngay !== ngayHomNayStr) return false;
     const phanCong = (lich as any).phanCong;
@@ -326,10 +325,8 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* =======================================================
-              BÁO ĐỘNG NỢ TỒN ĐỌNG (HIỆN CHO CẢ NHÂN VIÊN)
-          ======================================================= */}
-          {khachNoTien.length > 0 && (
+          {/* BÁO ĐỘNG NỢ TỒN ĐỌNG DẠNG ACCORDION */}
+          {khachNoTien.length > 0 && laAdmin && (
             <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300">
               <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5 pointer-events-none">💸</div>
               
@@ -368,13 +365,9 @@ export default function HomePage() {
                             </span>
                           </div>
                         </div>
-                        
-                        {/* CHỈ ADMIN MỚI THẤY NÚT "ĐÃ THU" ĐỂ TRÁNH NHÂN VIÊN BẤM NHẦM */}
-                        {laAdmin && (
-                          <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">
-                            Đã Thu
-                          </button>
-                        )}
+                        <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">
+                          Đã Thu
+                        </button>
                       </div>
                     )
                   })}
@@ -382,7 +375,6 @@ export default function HomePage() {
               )}
             </div>
           )}
-
 
           {/* TÌNH TRẠNG STUDIO */}
           <div>
@@ -456,7 +448,20 @@ export default function HomePage() {
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
         {tab === "nhanVien" && laAdmin && <TabNhanVien uidNhanVien={uidNhanVien} setUidNhanVien={setUidNhanVien} emailNhanVien={emailNhanVien} setEmailNhanVien={setEmailNhanVien} hoTenNhanVien={hoTenNhanVien} setHoTenNhanVien={setHoTenNhanVien} soDienThoaiNhanVien={soDienThoaiNhanVien} setSoDienThoaiNhanVien={setSoDienThoaiNhanVien} luongCungNhanVien={luongCungNhanVien} setLuongCungNhanVien={setLuongCungNhanVien} thuongChuyenCanNhanVien={thuongChuyenCanNhanVien} setThuongChuyenCanNhanVien={setThuongChuyenCanNhanVien} quyenNhanVien={quyenNhanVien} setQuyenNhanVien={setQuyenNhanVien} taoHoSoNhanVien={taoHoSoNhanVien} dangSuaNhanVien={dangSuaNhanVien} danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} suaHoSoNhanVien={suaHoSoNhanVien} formatTienInput={formatTienInput} />}
         {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
-        {tab === "thongKe" && laAdmin && <TabThongKe thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichTrongThang={lichTrongThang} tongThuNhapLich={tongThuNhapLich} tongThuNhapPhatSinh={tongThuNhapPhatSinh} tongThuNhap={tongThuNhap} />}
+        
+        {/* ĐÃ CẬP NHẬT ĐẦY ĐỦ PROPS ĐỂ TÍNH LỢI NHUẬN THUẦN */}
+        {tab === "thongKe" && laAdmin && (
+          <TabThongKe 
+            homNay={homNay}
+            thangThongKe={thangThongKe} 
+            setThangThongKe={setThangThongKe} 
+            lichLamViec={lichLamViec} 
+            danhSachPhatSinh={danhSachPhatSinh}
+            danhSachTaiKhoan={danhSachTaiKhoan}
+            danhSachChamCong={danhSachChamCong}
+            danhSachThuHuong={danhSachThuHuong}
+          />
+        )}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-2xl border-t border-slate-200/50 flex justify-around items-end pt-2 pb-6 md:pb-4 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] z-40">
