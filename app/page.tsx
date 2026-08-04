@@ -8,7 +8,7 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, TaiKhoan, Lich } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp } from "lucide-react";
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -17,6 +17,8 @@ const TabNhanVien = dynamic(() => import("./components/TabNhanVien"), { loading:
 const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+// ĐÃ THÊM: Import Tab Khách Hàng
+const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const APP_VERSION = "v1.0.8"; 
@@ -50,7 +52,8 @@ export default function HomePage() {
   const [tabViecCuaToi, setTabViecCuaToi] = useState<"homNay" | "ngayMai">("homNay");
 
   const laAdmin = role === "admin";
-  const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan } = useAppData(user, laAdmin);
+  // ĐÃ THÊM: Lấy danhSachKhachHang từ hook
+  const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachKhachHang } = useAppData(user, laAdmin);
 
   const [thangThongKe, setThangThongKe] = useState("");
 
@@ -169,6 +172,8 @@ export default function HomePage() {
     { key: "tinhTrangKH", icon: ClipboardList, label: "Kho đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
     { key: "chamCong", icon: Clock, label: "Chấm công", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
     { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
+    // ĐÃ THÊM: Tab Khách hàng
+    { key: "khachHang", icon: UserCheck, label: "Khách hàng", color: "text-amber-600", bg: "bg-amber-50", adminOnly: true },
     { key: "nhanVien", icon: Users, label: "Nhân sự", color: "text-pink-600", bg: "bg-pink-50", adminOnly: true },
     { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
   ] as const;
@@ -418,6 +423,18 @@ export default function HomePage() {
         )}
 
         {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
+        
+        {/* ĐÃ THÊM: Render Tab Khách Hàng */}
+        {tab === "khachHang" && laAdmin && (
+          <TabKhachHang 
+            danhSachKhachHang={danhSachKhachHang}
+            lichLamViec={lichLamViec}
+            danhSachPhatSinh={danhSachPhatSinh}
+            laAdmin={laAdmin}
+            formatTienInput={formatTienInput}
+          />
+        )}
+
         {tab === "thongKe" && laAdmin && (
           <TabThongKe 
             homNay={homNay}
@@ -440,7 +457,7 @@ export default function HomePage() {
           { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
         ].map((nav) => {
           const IconComponent = nav.icon;
-          const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "nhanVien" || tab === "thongKe" || tab === "tinhTrangKH"));
+          const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "nhanVien" || tab === "thongKe" || tab === "tinhTrangKH" || tab === "khachHang"));
           return (
             <button key={nav.key} onClick={() => { setTab(nav.key === "luong" ? "luong" : (nav.key as TabType)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group transition-all duration-300">
               {isActive && <span className="absolute -top-3 w-1.5 h-1.5 bg-blue-600 rounded-full animate-fade-in shadow-sm shadow-blue-300"></span>}

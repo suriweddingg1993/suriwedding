@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { User } from "firebase/auth";
 import { db } from "../lib/firebase"; 
-import { Lich, PhatSinh, ChamCong, ThuHuong, TaiKhoan, GoiDichVu } from "../types";
+// ĐÃ THÊM: Import KhachHang
+import { Lich, PhatSinh, ChamCong, ThuHuong, TaiKhoan, GoiDichVu, KhachHang } from "../types";
 
 export const useAppData = (user: User | null, laAdmin: boolean) => {
   const [lichLamViec, setLichLamViec] = useState<Lich[]>([]);
@@ -11,8 +12,10 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
   const [danhSachThuHuong, setDanhSachThuHuong] = useState<ThuHuong[]>([]);
   const [danhSachTaiKhoan, setDanhSachTaiKhoan] = useState<TaiKhoan[]>([]);
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]); 
+  // ĐÃ THÊM: State cho Khách Hàng
+  const [danhSachKhachHang, setDanhSachKhachHang] = useState<KhachHang[]>([]);
 
-  // GIỚI HẠN DỮ LIỆU: Chỉ tải 6 tháng gần nhất để chống lag[cite: 6]
+  // GIỚI HẠN DỮ LIỆU: Chỉ tải 6 tháng gần nhất để chống lag[cite: 5]
   const mocThoiGian = useMemo(() => {
     const d = new Date(); 
     d.setMonth(d.getMonth() - 6);
@@ -23,7 +26,7 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
   useEffect(() => {
     if (!user) return;
 
-    // Áp dụng Query where("ngay", ">=", mocThoiGian) cho tất cả các bảng dữ liệu lớn[cite: 6]
+    // Áp dụng Query where("ngay", ">=", mocThoiGian) cho tất cả các bảng dữ liệu lớn[cite: 5]
     const unsubLich = onSnapshot(query(collection(db, "lichStudio"), where("ngay", ">=", mocThoiGian)), 
       (snapshot) => setLichLamViec(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Lich[])
     );
@@ -44,12 +47,17 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
       (snapshot) => setDanhSachGoiDichVu(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as GoiDichVu[])
     );
 
+    // ĐÃ THÊM: Tải toàn bộ danh sách Khách Hàng (Không giới hạn thời gian để lưu data vĩnh viễn)
+    const unsubKhachHang = onSnapshot(collection(db, "khachHang"), 
+      (snapshot) => setDanhSachKhachHang(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as KhachHang[])
+    );
+
     return () => {
-      unsubLich(); unsubPhatSinh(); unsubChamCong(); unsubThuHuong(); unsubGoiDichVu();
+      unsubLich(); unsubPhatSinh(); unsubChamCong(); unsubThuHuong(); unsubGoiDichVu(); unsubKhachHang();
     };
   }, [user, mocThoiGian]);
 
-  // Tài khoản load riêng cho Admin
+  // Tài khoản load riêng cho Admin[cite: 5]
   useEffect(() => {
     if (!laAdmin) return;
     const unsubTK = onSnapshot(collection(db, "users"), 
@@ -58,5 +66,6 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
     return () => unsubTK();
   }, [laAdmin]);
 
-  return { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachGoiDichVu }; 
+  // ĐÃ THÊM: Trả về danhSachKhachHang ra ngoài
+  return { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachGoiDichVu, danhSachKhachHang }; 
 };

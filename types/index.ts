@@ -1,6 +1,7 @@
 // Định nghĩa các loại quyền và tab
 export type Role = "admin" | "staff";
-export type TabType = "home" | "lich" | "phatSinh" | "tinhTrangKH" | "chamCong" | "luong" | "nhanVien" | "thongKe";
+// ĐÃ THÊM: Tab "khachHang" cho hệ thống CRM
+export type TabType = "home" | "lich" | "phatSinh" | "tinhTrangKH" | "chamCong" | "luong" | "nhanVien" | "thongKe" | "khachHang";
 
 // Chuẩn hóa cho Hồ sơ nhân viên
 export interface TaiKhoan {
@@ -13,7 +14,19 @@ export interface TaiKhoan {
   role: Role;
 }
 
-// BỔ SUNG: Cấu trúc Gói Dịch Vụ
+// BỔ SUNG: Cấu trúc Hồ Sơ Khách Hàng (CRM)
+export interface KhachHang {
+  id?: string;
+  tenKhach: string;
+  soDienThoai: string;
+  soDienThoai2?: string;
+  diaChi?: string;
+  nguonKhach?: string; // Ví dụ: Facebook, Zalo, Người quen giới thiệu...
+  ghiChu?: string;
+  ngayTao: string;
+}
+
+// Cấu trúc Gói Dịch Vụ
 export interface GoiDichVu {
   id?: string;
   tenGoi: string;
@@ -21,9 +34,10 @@ export interface GoiDichVu {
   giaTien: number;
 }
 
-// Chuẩn hóa cho Lịch chụp (Bổ sung tiền cọc)
+// Chuẩn hóa cho Lịch chụp
 export interface Lich {
   id?: string;
+  khachHangId?: string; // ĐÃ THÊM: Dùng để liên kết với bảng KhachHang
   ngay: string;
   gio: string;
   tenKhach: string;
@@ -34,11 +48,16 @@ export interface Lich {
   giaTien?: number;
   tienCoc?: number; 
   trangThai?: string;
+  ngayCuoi?: string;
+  dichVuThem?: string;
+  tienDichVuThem?: number;
+  phanCong?: Record<string, string>;
 }
 
 // Chuẩn hóa cho Thu Chi / Phát sinh
 export interface PhatSinh {
   id?: string;
+  khachHangId?: string; // ĐÃ THÊM: Dùng để liên kết với bảng KhachHang
   ngay: string;
   tenKhach: string;
   soDienThoai?: string;
@@ -67,6 +86,7 @@ export interface ChamCong {
   loaiGiaiTrinh?: string;
   lyDoGiaiTrinh?: string;
   trangThaiGiaiTrinh?: string;
+  thoiGianDeXuat?: string;
 }
 
 // Chuẩn hóa cho Thụ hưởng (Hoa hồng)
