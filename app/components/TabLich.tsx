@@ -45,11 +45,10 @@ export default function TabLich({
   const [soDienThoai, setSoDienThoai] = useState("");
   const [soDienThoai2, setSoDienThoai2] = useState("");
   
-  // Ẩn state "theLoai" riêng vì bây giờ Thể Loại sẽ được quyết định bởi Gói Chụp
   const [goiChup, setGoiChup] = useState("");
   const [chiTietGoi, setChiTietGoi] = useState("");
   const [giaTien, setGiaTien] = useState("");
-  const [theLoaiDaChon, setTheLoaiDaChon] = useState("Chưa phân loại"); // Tự nhận diện từ Gói
+  const [theLoaiDaChon, setTheLoaiDaChon] = useState("Khác"); 
   
   const [tienCoc, setTienCoc] = useState("");
   const [dichVuThem, setDichVuThem] = useState("");
@@ -90,20 +89,24 @@ export default function TabLich({
     return () => unsubGoi();
   }, []);
 
+  // THUẬT TOÁN NHẬN DIỆN KHÁCH HÀNG (Cho phép chọn nếu trùng số điện thoại)
   useEffect(() => {
     if (!dangSua && soDienThoai.length >= 9) {
-      const khachCu = danhSachKhachHang.find(kh => kh.soDienThoai === soDienThoai);
-      if (khachCu) {
-        setKhachHangId(khachCu.id!); setTenKhach(khachCu.tenKhach);
-        if (khachCu.soDienThoai2) setSoDienThoai2(khachCu.soDienThoai2);
-      } else { setKhachHangId(null); }
-    } else if (soDienThoai.length < 9) { setKhachHangId(null); }
+      const matches = danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai);
+      if (matches.length === 1 && khachHangId !== "NEW") {
+        setKhachHangId(matches[0].id!); setTenKhach(matches[0].tenKhach);
+        if (matches[0].soDienThoai2) setSoDienThoai2(matches[0].soDienThoai2);
+      } else if (matches.length === 0) {
+        setKhachHangId(null);
+      }
+    } else if (soDienThoai.length < 9) { 
+      setKhachHangId(null); 
+    }
   }, [soDienThoai, danhSachKhachHang, dangSua]);
 
   const year = currentMonth.getFullYear(); const month = currentMonth.getMonth();
   const firstDayOfMonth = new Date(year, month, 1); const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayIndex = (firstDayOfMonth.getDay() + 6) % 7; 
-
   const daysArray: (string | null)[] = [];
   for (let i = 0; i < firstDayIndex; i++) { daysArray.push(null); }
   for (let i = 1; i <= daysInMonth; i++) { daysArray.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`); }
@@ -111,11 +114,7 @@ export default function TabLich({
   const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
   const goToToday = () => { setCurrentMonth(new Date(localToday)); setSelectedDate(localToday); setTuKhoa(""); };
-
-  const chonNgayVaCuon = (dateStr: string) => {
-    setSelectedDate(dateStr);
-    setTimeout(() => { danhSachLichRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 150); 
-  };
+  const chonNgayVaCuon = (dateStr: string) => { setSelectedDate(dateStr); setTimeout(() => { danhSachLichRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 150); };
 
   const xacNhanNhanTien = () => {
     if (!tienHoaHong) { toast.error("Vui lòng nhập số tiền!"); return; }
@@ -153,22 +152,11 @@ export default function TabLich({
     setShowModal(true); 
   };
 
-  const xoaLich = async (id: string) => { 
-    if (!laAdmin) { toast.error("Chỉ admin mới được xóa lịch"); return; } 
-    if (!confirm("Xóa lịch này?")) return; 
-    await deleteDoc(doc(db, "lichStudio", id)); toast.success("Đã xóa"); 
-  };
-
-  const capNhatTrangThai = async (id: string, trangThai: string) => { 
-    try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } 
-    catch (error) { toast.error("Lỗi cập nhật"); } 
-  };
+  const xoaLich = async (id: string) => { if (!laAdmin) { toast.error("Chỉ admin mới được xóa lịch"); return; } if (!confirm("Xóa lịch này?")) return; await deleteDoc(doc(db, "lichStudio", id)); toast.success("Đã xóa"); };
+  const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
   const handleLuuLichThongMinh = async () => {
-    if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { 
-      toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); 
-      return; 
-    }
+    if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); return; }
 
     const lichCungNgay = lichLamViec.filter((item) => item.ngay === ngay && item.id !== dangSua);
     const [h1, m1] = gio.split(":").map(Number);
@@ -185,54 +173,30 @@ export default function TabLich({
       if (!dongY) return;
     }
 
-    let finalKhId = khachHangId;
+    let finalKhId = khachHangId === "NEW" ? null : khachHangId;
 
     try {
       if (!finalKhId && !dangSua) {
         try {
           const khRef = await addDoc(collection(db, "khachHang"), {
-            tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
-            nguonKhach: "Tự động tạo từ Lịch", ngayTao: new Date().toISOString()
+            tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", nguonKhach: "Tự động tạo từ Lịch", ngayTao: new Date().toISOString()
           });
           finalKhId = khRef.id;
-        } catch (crmError) {
-          console.warn("⚠️ Bỏ qua lỗi CRM:", crmError);
-        }
+        } catch (crmError) { console.warn("⚠️ Bỏ qua lỗi CRM:", crmError); }
       }
       
       const duLieuLich: any = { 
-        khachHangId: finalKhId || null, 
-        ngay: ngay || "", 
-        gio: gio || "", 
-        tenKhach: tenKhach || "", 
-        soDienThoai: soDienThoai || "", 
-        soDienThoai2: soDienThoai2 || "", 
-        theLoai: theLoaiDaChon || "Khác", 
-        goiChup: goiChup || "", 
-        chiTietGoi: chiTietGoi || "", 
-        giaTien: chuyenTienVeSo(giaTien) || 0, 
-        tienCoc: chuyenTienVeSo(tienCoc) || 0,
-        dichVuThem: dichVuThem || "", 
-        tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, 
-        ngayCuoi: ngayCuoi || ""
+        khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
+        theLoai: theLoaiDaChon || "Khác", goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
+        giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, dichVuThem: dichVuThem || "", tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, ngayCuoi: ngayCuoi || ""
       };
 
-      if (!dangSua) {
-        duLieuLich.trangThai = "Đã chốt lịch";
-        await addDoc(collection(db, "lichStudio"), duLieuLich); 
-        toast.success("Đã thêm lịch thành công!"); 
-      } else { 
-        await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); 
-        toast.success("Đã lưu thay đổi!"); 
-      } 
-      setShowModal(false); 
-      resetForm();
-    } catch (error: any) { 
-      toast.error("Lỗi: " + (error?.message || "Không xác định"));
-    }
+      if (!dangSua) { duLieuLich.trangThai = "Đã chốt lịch"; await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch thành công!"); } 
+      else { await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); } 
+      setShowModal(false); resetForm();
+    } catch (error: any) { toast.error("Lỗi: " + (error?.message || "Không xác định")); }
   };
 
-  // LOGIC NHÓM DỮ LIỆU ĐỂ HIỂN THỊ DROPDOWN SIÊU NGẮN GỌN
   const groupedPackagesLich = danhSachGoiDichVu.reduce((acc, goi) => {
     const loai = (goi as any).theLoai || "Khác";
     if (!acc[loai]) acc[loai] = [];
@@ -288,7 +252,6 @@ export default function TabLich({
           <div className="bg-white border border-dashed border-gray-200 rounded-3xl p-10 text-center shadow-sm">
             <div className="text-5xl mb-4 opacity-50 grayscale">😴</div>
             <h4 className="text-gray-600 font-bold text-base">{tuKhoa.trim() ? "Không tìm thấy khách hàng" : "Lịch trống"}</h4>
-            <p className="text-xs text-gray-400 mt-2">{tuKhoa.trim() ? "Vui lòng kiểm tra lại tên hoặc SĐT." : "Chưa có lịch hẹn nào được tạo trong ngày này."}</p>
           </div>
         ) : (
           [...dsLichNgayNay].sort((a, b) => a.gio.localeCompare(b.gio)).map((item: Lich) => {
@@ -311,14 +274,12 @@ export default function TabLich({
             return (
               <div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 transition-all hover:shadow-md group relative overflow-hidden">
                 <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-blue-500"></div>
-                
                 <div className="flex justify-between items-start pb-4 border-b border-slate-100 mb-4 ml-2">
                   <div className="pr-2">
                     <div className="flex items-center gap-2 mb-2"><span className="bg-blue-50 text-blue-600 text-xs font-black px-2.5 py-1 rounded-lg">⏰ {item.gio}</span><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${trangThaiColors[currentTrangThai] || trangThaiColors["Đã chốt lịch"]}`}>{currentTrangThai}</span></div>
                     
                     <div className="text-lg font-black text-slate-900 flex items-center gap-1.5">
-                      {item.tenKhach} 
-                      {item.khachHangId && <span title="Khách hàng đã có Hồ sơ CRM"><UserCheck size={16} className="text-emerald-500"/></span>}
+                      {item.tenKhach} {item.khachHangId && <span title="Đã có Hồ sơ CRM"><UserCheck size={16} className="text-emerald-500"/></span>}
                     </div>
                     <div className="text-sm font-bold text-slate-500 mt-1">{item.theLoai}</div>
                   </div>
@@ -342,59 +303,29 @@ export default function TabLich({
 
                 <div className="grid gap-2 text-sm ml-2 mt-1">
                   {(item as any).ngayCuoi && (
-                    <div className="text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-xl mb-1 text-xs w-fit border border-rose-100 flex items-center gap-1.5 shadow-sm">
-                      💍 Ngày Cưới: {(item as any).ngayCuoi.split('-').reverse().join('/')}
-                    </div>
+                    <div className="text-rose-600 font-bold bg-rose-50 px-3 py-1.5 rounded-xl mb-1 text-xs w-fit border border-rose-100 flex items-center gap-1.5 shadow-sm">💍 Ngày Cưới: {(item as any).ngayCuoi.split('-').reverse().join('/')}</div>
                   )}
-
                   {item.soDienThoai && (
-                    <div className="text-slate-500 font-medium flex items-center gap-2">
-                      SĐT 1: <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a>
-                      <NutCopy textCanCopy={item.soDienThoai} />
-                    </div>
+                    <div className="text-slate-500 font-medium flex items-center gap-2">SĐT 1: <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a><NutCopy textCanCopy={item.soDienThoai} /></div>
                   )}
-                  {item.soDienThoai2 && (
-                    <div className="text-slate-500 font-medium flex items-center gap-2">
-                      SĐT 2: <a href={`tel:${item.soDienThoai2}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai2}</a>
-                      <NutCopy textCanCopy={item.soDienThoai2} />
-                    </div>
-                  )}
-                  
                   {(item as any).dichVuThem && (
-                    <div className="text-orange-600 font-bold bg-orange-50 px-3 py-2 rounded-xl mt-1 text-xs">
-                      🔥 Phát sinh: {(item as any).dichVuThem} (+{formatTienInput(String((item as any).tienDichVuThem || 0))}đ)
-                    </div>
+                    <div className="text-orange-600 font-bold bg-orange-50 px-3 py-2 rounded-xl mt-1 text-xs">🔥 Phát sinh: {(item as any).dichVuThem} (+{formatTienInput(String((item as any).tienDichVuThem || 0))}đ)</div>
                   )}
                 </div>
 
                 {phanCongData && Object.keys(phanCongData).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-4 ml-2">
-                    {Object.entries(phanCongData).map(([role, name]) => name ? (
-                      <span key={role} className="text-[10px] bg-slate-50 text-slate-600 px-2 py-1 rounded-lg border border-slate-200 font-medium shadow-sm">
-                        <strong className="text-slate-800">{role}:</strong> {name as string}
-                      </span>
-                    ) : null)}
+                    {Object.entries(phanCongData).map(([role, name]) => name ? (<span key={role} className="text-[10px] bg-slate-50 text-slate-600 px-2 py-1 rounded-lg border border-slate-200 font-medium shadow-sm"><strong className="text-slate-800">{role}:</strong> {name as string}</span>) : null)}
                   </div>
                 )}
 
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
-                  <select 
-                    disabled={biKhoaVoiNhanVien}
-                    value={currentTrangThai} 
-                    onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)} 
-                    className={`flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl outline-none min-w-[110px] ${biKhoaVoiNhanVien ? "opacity-60 cursor-not-allowed bg-slate-100" : "focus:ring-2 focus:ring-blue-200"}`}
-                  >
-                    <option value="Đã chốt lịch">Đã chốt lịch</option>
-                    <option value="Đã nhắc lịch">Đã nhắc lịch</option>
-                    <option value="Đã chụp xong">Đã chụp xong</option>
-                    <option value="Hoàn thành">Hoàn thành</option>
-                    <option value="Hủy lịch">Hủy lịch</option>
+                  <select disabled={biKhoaVoiNhanVien} value={currentTrangThai} onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)} className={`flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl outline-none min-w-[110px] ${biKhoaVoiNhanVien ? "opacity-60 cursor-not-allowed bg-slate-100" : "focus:ring-2 focus:ring-blue-200"}`}>
+                    <option value="Đã chốt lịch">Đã chốt lịch</option><option value="Đã nhắc lịch">Đã nhắc lịch</option><option value="Đã chụp xong">Đã chụp xong</option><option value="Hoàn thành">Hoàn thành</option><option value="Hủy lịch">Hủy lịch</option>
                   </select>
-                  
                   <button onClick={() => { setLichDangChon(item); setShowPhanCongModal(true); }} className="bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">👥 Phân công</button>
                   <button onClick={() => { setHoaDonData(item); setHdDiaChi(""); }} className="bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">🧾 Hóa Đơn</button>
                   <button onClick={() => copyNhacLich(item)} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">💬 Nhắc khách</button>
-                  <button onClick={() => { setLichDangChon(item); setTienHoaHong(""); setVaiTro("Chụp ảnh"); setShowHoaHongModal(true); }} className="flex-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-2.5 rounded-xl hover:bg-blue-100 transition-colors shadow-sm min-w-[100px]">🙋‍♂️ Báo cáo</button>
                 </div>
               </div>
             );
@@ -414,9 +345,7 @@ export default function TabLich({
             
             <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm z-10">
               <button onClick={() => setShowModal(false)} className="text-slate-500 font-bold px-4 py-2 hover:bg-slate-200 rounded-xl transition-all">Hủy</button>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                {dangSua ? "✏️ Cập nhật" : "✨ Đặt lịch mới"}
-              </h3>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">{dangSua ? "✏️ Cập nhật" : "✨ Đặt lịch mới"}</h3>
               <button onClick={handleLuuLichThongMinh} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 font-black px-4 py-2 rounded-xl transition-all">LƯU</button>
             </div>
 
@@ -424,30 +353,44 @@ export default function TabLich({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày (*)</label>
-                  <input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-200 transition-all" />
+                  <input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Giờ (*)</label>
-                  <input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-200 transition-all" />
+                  <input type="time" value={gio} onChange={(e) => setGio(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
                 </div>
               </div>
 
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">SĐT Khách Hàng (*)</label>
                 <div className="relative">
-                  <input type="tel" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} placeholder="Nhập SĐT để tìm kiếm tự động..." className={`bg-slate-50 border p-3.5 rounded-2xl w-full text-slate-900 font-black outline-none focus:ring-4 transition-all pr-24 ${khachHangId ? "border-emerald-200 focus:ring-emerald-50 bg-emerald-50/30" : "border-slate-100 focus:ring-indigo-50"}`} />
-                  {khachHangId && <span className="absolute right-3 top-3.5 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={12}/> Khách cũ</span>}
-                  {!khachHangId && soDienThoai.length >= 9 && <span className="absolute right-3 top-3.5 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-1 rounded-lg uppercase tracking-wider">✨ Tạo mới</span>}
+                  <input type="tel" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} placeholder="Nhập SĐT..." className={`bg-slate-50 border p-3.5 rounded-2xl w-full text-slate-900 font-black outline-none focus:ring-4 transition-all pr-24 ${khachHangId && khachHangId !== "NEW" ? "border-emerald-200 focus:ring-emerald-50 bg-emerald-50/30" : "border-slate-100 focus:ring-indigo-50"}`} />
+                  {khachHangId && khachHangId !== "NEW" && <span className="absolute right-3 top-3.5 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={12}/> Khách cũ</span>}
+                  {(!khachHangId || khachHangId === "NEW") && soDienThoai.length >= 9 && <span className="absolute right-3 top-3.5 text-[10px] font-black text-blue-600 bg-blue-100 px-2 py-1 rounded-lg uppercase tracking-wider">✨ Tạo mới</span>}
                 </div>
               </div>
 
+              {/* BỘ LỌC CHỌN TÊN KHÁCH TRÙNG SĐT THÔNG MINH */}
+              {!dangSua && soDienThoai.length >= 9 && danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai).length > 0 && (
+                <div className="bg-blue-50 border border-blue-100 p-3 rounded-2xl mt-1 animate-fade-in">
+                  <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2 flex items-center gap-1"><Search size={12}/> Chọn người dùng số này:</div>
+                  <div className="flex flex-wrap gap-2">
+                    {danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai).map(kh => (
+                      <button key={kh.id} onClick={(e) => { e.preventDefault(); setKhachHangId(kh.id!); setTenKhach(kh.tenKhach); if(kh.soDienThoai2) setSoDienThoai2(kh.soDienThoai2); }} className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${khachHangId === kh.id ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50"}`}>
+                        👤 {kh.tenKhach}
+                      </button>
+                    ))}
+                    <button onClick={(e) => { e.preventDefault(); setKhachHangId("NEW"); setTenKhach(""); setSoDienThoai2(""); }} className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${khachHangId === "NEW" ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50"}`}>
+                      ✨ Tạo người mới
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                  <div className="col-span-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5 flex justify-between">
-                    Tên Khách Hàng (*) 
-                    {khachHangId && <span className="text-emerald-500 italic lowercase">(Đã tự điền)</span>}
-                  </label>
-                  <input type="text" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} placeholder="Tên chú rể & cô dâu..." className={`border p-3.5 rounded-2xl w-full font-bold outline-none focus:ring-4 transition-all ${khachHangId ? "bg-emerald-50/30 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-100 text-slate-900 focus:ring-indigo-50"}`} />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5 flex justify-between">Tên Khách Hàng (*)</label>
+                  <input type="text" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} placeholder="Tên chú rể & cô dâu..." className={`border p-3.5 rounded-2xl w-full font-bold outline-none focus:ring-4 transition-all ${khachHangId && khachHangId !== "NEW" ? "bg-emerald-50/30 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-100 text-slate-900 focus:ring-indigo-50"}`} />
                  </div>
                  <div className="col-span-2">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">SĐT Phụ (Tùy chọn)</label>
@@ -455,7 +398,6 @@ export default function TabLich({
                  </div>
               </div>
 
-              {/* KHU VỰC CHỌN GÓI CHỤP SẠCH SẼ - ĐÃ PHÂN NHÓM CHUYÊN NGHIỆP */}
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 ml-1">Chọn gói chụp (*)</label>
                 <div className="grid grid-cols-1 gap-3">
@@ -464,57 +406,32 @@ export default function TabLich({
                       value={danhSachGoiDichVu.some(g => g.tenGoi === goiChup) ? goiChup : (goiChup ? "Khác" : "")}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (val === "Khác") {
-                          setGoiChup(""); setChiTietGoi(""); setTheLoaiDaChon("Khác");
-                        } else {
-                          setGoiChup(val);
-                          const goi = danhSachGoiDichVu.find(g => g.tenGoi === val);
-                          if (goi) {
-                            setGiaTien(formatTienInput(String(goi.giaTien)));
-                            setChiTietGoi(goi.chiTiet || ""); 
-                            setTheLoaiDaChon((goi as any).theLoai || "Chụp ảnh cưới");
-                          }
+                        if (val === "Khác") { setGoiChup(""); setChiTietGoi(""); setTheLoaiDaChon("Khác"); } 
+                        else {
+                          setGoiChup(val); const goi = danhSachGoiDichVu.find(g => g.tenGoi === val);
+                          if (goi) { setGiaTien(formatTienInput(String(goi.giaTien))); setChiTietGoi(goi.chiTiet || ""); setTheLoaiDaChon((goi as any).theLoai || "Chụp ảnh cưới"); }
                         }
                       }}
                       className="appearance-none bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8"
                     >
                       <option value="">-- Chọn từ danh sách gói --</option>
-                      
-                      {/* ĐÂY LÀ SỰ LỢI HẠI CỦA OPTGROUP: CHIA NHÓM CHUYÊN NGHIỆP TRONG SELECT */}
                       {Object.entries(groupedPackagesLich).map(([loai, gois]) => (
                         <optgroup key={loai} label={`📍 ${loai.toUpperCase()}`}>
-                          {gois.map(g => (
-                            <option key={g.id} value={g.tenGoi}>{g.tenGoi} - ({formatTienInput(String(g.giaTien))}đ)</option>
-                          ))}
+                          {gois.map(g => (<option key={g.id} value={g.tenGoi}>{g.tenGoi} - ({formatTienInput(String(g.giaTien))}đ)</option>))}
                         </optgroup>
                       ))}
-
                       <option value="Khác">✨ Khác (Nhập tay...)</option>
                     </select>
                     <ChevronDown size={16} className="absolute right-3 top-4 text-slate-400 pointer-events-none" />
                   </div>
 
                   {(!danhSachGoiDichVu.some(g => g.tenGoi === goiChup) && goiChup !== "") && (
-                    <input 
-                      type="text" 
-                      value={goiChup} 
-                      onChange={(e) => setGoiChup(e.target.value)} 
-                      placeholder="Nhập tên gói chụp tùy chỉnh..." 
-                      className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all animate-fade-in" 
-                    />
+                    <input type="text" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} placeholder="Nhập tên gói chụp tùy chỉnh..." className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all animate-fade-in" />
                   )}
 
                   <div className="mt-1">
-                    <label className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest ml-1 block mb-1.5 flex justify-between">
-                      Thông tin sản phẩm gói
-                    </label>
-                    <textarea 
-                      value={chiTietGoi} 
-                      onChange={(e) => setChiTietGoi(e.target.value)} 
-                      placeholder="Các sản phẩm khách nhận được (VD: 1 Ảnh cổng, 1 Album...)" 
-                      className="bg-white border border-indigo-100 p-3.5 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-100 transition-all" 
-                      rows={2}
-                    ></textarea>
+                    <label className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest ml-1 block mb-1.5 flex justify-between">Thông tin sản phẩm gói</label>
+                    <textarea value={chiTietGoi} onChange={(e) => setChiTietGoi(e.target.value)} placeholder="Các sản phẩm khách nhận được (VD: 1 Ảnh cổng, 1 Album...)" className="bg-white border border-indigo-100 p-3.5 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-100 transition-all" rows={2}></textarea>
                   </div>
 
                   <div className="relative mt-1">
@@ -537,7 +454,6 @@ export default function TabLich({
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Ngày cưới (Nếu có)</label>
                   <input type="date" value={ngayCuoi} onChange={(e) => setNgayCuoi(e.target.value)} className="bg-white border border-slate-200 p-3 rounded-xl w-full text-rose-600 font-bold outline-none focus:ring-2 focus:ring-rose-100" />
                 </div>
-                
                 <div className="col-span-2 mt-1">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Mua/Thuê thêm dịch vụ</label>
                   <div className="flex gap-2">
@@ -550,7 +466,6 @@ export default function TabLich({
                 </div>
               </div>
             </div>
-            
           </div>
         </div>
       )}

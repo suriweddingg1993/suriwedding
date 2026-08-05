@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { X, MapPin, Printer, PenTool, Eraser, Check } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { X, Printer, PenTool, Eraser, Check, Settings2 } from "lucide-react";
 import { Lich, PhatSinh } from "../../types";
 
 interface ModalHoaDonProps {
@@ -30,99 +30,110 @@ export default function ModalHoaDon({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // Khởi tạo Canvas (Bảng vẽ)
+  // STATE CHECKBOX CHO HÓA ĐƠN
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showSettings, setShowSettings] = useState(false); // Ẩn/Hiện bảng điều khiển
+
   useEffect(() => {
     if (showChuKyModal && canvasRef.current) {
       const canvas = canvasRef.current;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight - 100;
       const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "#0f172a"; 
-      }
+      if (ctx) { ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = 3; ctx.strokeStyle = "#0f172a"; }
     }
   }, [showChuKyModal]);
 
-  // Logic Vẽ Chữ Ký mượt mà cho cảm ứng
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-    setIsDrawing(true);
+    const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const rect = canvas.getBoundingClientRect(); ctx.beginPath(); ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top); setIsDrawing(true);
   };
-
   const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.stroke();
+    if (!isDrawing) return; const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext("2d"); if (!ctx) return;
+    const rect = canvas.getBoundingClientRect(); ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke();
   };
-
   const endDrawing = () => { setIsDrawing(false); };
-
   const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setChuKy(null);
+    const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); setChuKy(null);
   };
+  const saveSignature = () => { const canvas = canvasRef.current; if (canvas) setChuKy(canvas.toDataURL("image/png")); setShowChuKyModal(false); };
 
-  const saveSignature = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      // Lưu và ép React render lại ngay lập tức
-      setChuKy(canvas.toDataURL("image/png"));
+  // =========================================================================
+  // THUẬT TOÁN "ĐỢT DỊCH VỤ" THÔNG MINH (TRONG VÒNG 60 NGÀY)
+  // =========================================================================
+  const availableItems = useMemo(() => {
+    if (!hoaDonData) return [];
+    
+    const isCungKhach = (itemKhachHangId?: string, itemSDT?: string, itemTen?: string) => {
+      // 1. Kiểm tra bằng ID CRM (Ưu tiên số 1)
+      if (hoaDonData.khachHangId && itemKhachHangId) return itemKhachHangId === hoaDonData.khachHangId;
+      // 2. Nếu không có ID, buộc phải cùng Số điện thoại
+      if (itemSDT !== hoaDonData.soDienThoai) return false;
+      // 3. Cùng SĐT nhưng phải tương đồng về Tên (Tránh 2 người chung 1 số)
+      const tenA = (itemTen || "").toLowerCase().trim();
+      const tenB = (hoaDonData.tenKhach || "").toLowerCase().trim();
+      const isSameName = tenA === tenB || tenA.includes(tenB) || tenB.includes(tenA);
+      return isSameName;
+    };
+
+    const tinhKhoangCachNgay = (ngay1: string, ngay2: string) => Math.abs(new Date(ngay1).getTime() - new Date(ngay2).getTime()) / (1000 * 3600 * 24);
+
+    const items: any[] = [];
+    
+    // Quét Lịch Chụp
+    lichLamViec.forEach(l => {
+      if (isCungKhach(l.khachHangId, l.soDienThoai, l.tenKhach) && tinhKhoangCachNgay(l.ngay, hoaDonData.ngay) <= 60) {
+        items.push({ ...l, loaiItem: 'lich' });
+      }
+    });
+    
+    // Quét Phát Sinh
+    danhSachPhatSinh.forEach(p => {
+      if (isCungKhach(p.khachHangId, p.soDienThoai, p.tenKhach) && tinhKhoangCachNgay(p.ngay, hoaDonData.ngay) <= 60) {
+        items.push({ ...p, loaiItem: 'phatsinh' });
+      }
+    });
+
+    return items.sort((a,b) => a.ngay.localeCompare(b.ngay));
+  }, [hoaDonData, lichLamViec, danhSachPhatSinh]);
+
+  // Tự động tích chọn TẤT CẢ các dịch vụ thuộc Đợt này khi vừa mở Hóa Đơn
+  useEffect(() => {
+    if (hoaDonData) {
+      setSelectedIds(availableItems.map(i => i.id!));
     }
-    setShowChuKyModal(false);
-  };
+  }, [hoaDonData?.id]);
 
   if (!hoaDonData) return null;
 
-  // GIỮ NGUYÊN 100% LOGIC TÍNH TOÁN TIỀN
-  const isKhachCungID = (itemKhachHangId?: string, itemSDT?: string) => {
-    if (hoaDonData.khachHangId && itemKhachHangId) return itemKhachHangId === hoaDonData.khachHangId;
-    return itemSDT === hoaDonData.soDienThoai;
-  };
+  // Lọc ra các Dịch vụ đã được Tích chọn (Checked)
+  const checkedLich = availableItems.filter(i => i.loaiItem === 'lich' && selectedIds.includes(i.id));
+  const checkedPhatSinh = availableItems.filter(i => i.loaiItem === 'phatsinh' && selectedIds.includes(i.id));
 
-  const psCuaKhach = danhSachPhatSinh.filter((ps) => isKhachCungID(ps.khachHangId, ps.soDienThoai));
-  const lichCuaKhach = lichLamViec.filter((l) => isKhachCungID(l.khachHangId, l.soDienThoai));
-
+  // TÍNH TOÁN TIỀN THEO NHỮNG DỊCH VỤ ĐƯỢC CHỌN
   let tongTienLich = 0; let tongDaCocLich = 0;
-  lichCuaKhach.forEach(l => {
+  checkedLich.forEach(l => {
     tongTienLich += Number(l.giaTien || 0) + Number((l as any).tienDichVuThem || 0);
     tongDaCocLich += Number(l.tienCoc || 0);
   });
 
   let tongTienPhatSinh = 0;
-  psCuaKhach.forEach(p => { tongTienPhatSinh += Number(p.soTien || 0); });
+  checkedPhatSinh.forEach(p => { tongTienPhatSinh += Number(p.soTien || 0); });
 
   const tongBill = tongTienLich + tongTienPhatSinh;
   const daThanhToan = tongDaCocLich;
   const tongNoHienTai = tongBill - daThanhToan;
   
-  // Xử lý xuống dòng cho Chi tiết gói
   const chiTietLines = (hoaDonData.chiTietGoi || "").split('\n').filter(line => line.trim() !== '');
 
-  // LOGIC IN HÓA ĐƠN
+  // IN HÓA ĐƠN
   const handleInHoaDon = () => {
     const printContent = document.getElementById("vung-in-hoa-don");
     if (!printContent) return;
     const windowPrint = window.open("", "", "width=800,height=900");
     if (!windowPrint) return;
 
-    // Bơm CSS tĩnh để bản In/PDF y hệt bản hiển thị trên điện thoại
     windowPrint.document.write(`
       <html>
         <head>
@@ -167,20 +178,20 @@ export default function ModalHoaDon({
 
   return (
     <>
-      {/* 
-        BỐ CỤC MODAL TỐI ƯU 100% CHO ĐIỆN THOẠI 
-        Dùng flex-col, giấu các nút lên trên/xuống dưới, chừa toàn bộ không gian giữa cho Hóa đơn.
-      */}
       <div className="fixed inset-0 bg-slate-900 z-[100] flex flex-col">
         
-        {/* THANH CÔNG CỤ TRÊN CÙNG (Gọn gàng) */}
         <div className="bg-white p-3 shrink-0 flex flex-col gap-2 z-10 shadow-md rounded-b-2xl">
           <div className="flex justify-between items-center">
-            <h3 className="font-black text-slate-800 text-sm flex items-center gap-1.5"><Printer size={16}/> Hóa Đơn Khách Hàng</h3>
-            <button onClick={() => setHoaDonData(null)} className="w-7 h-7 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center active:scale-95"><X size={16}/></button>
+            <h3 className="font-black text-slate-800 text-sm flex items-center gap-1.5"><Printer size={16}/> Hóa Đơn</h3>
+            <div className="flex gap-2">
+              <button onClick={() => setShowSettings(!showSettings)} className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 text-[10px] font-bold transition-all border ${showSettings ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                <Settings2 size={14}/> Gộp / Tách Bill
+              </button>
+              <button onClick={() => setHoaDonData(null)} className="w-7 h-7 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center active:scale-95"><X size={16}/></button>
+            </div>
           </div>
           
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center mt-1">
             <input 
               type="text" value={hdDiaChi} onChange={(e) => setHdDiaChi(e.target.value)} 
               placeholder="Nhập địa chỉ nhà khách..." 
@@ -195,13 +206,45 @@ export default function ModalHoaDon({
           </div>
         </div>
 
-        {/* KHU VỰC HIỂN THỊ HÓA ĐƠN ĐỂ CHỤP MÀN HÌNH (Căn giữa, nền tối tôn hóa đơn sáng) */}
-        <div className="flex-1 overflow-auto bg-slate-800 p-2 sm:p-4 flex flex-col items-center justify-start sm:justify-center custom-scrollbar">
+        <div className="flex-1 overflow-auto bg-slate-800 p-2 sm:p-4 flex flex-col items-center justify-start custom-scrollbar relative">
           
-          {/* ĐÂY CHÍNH LÀ TỜ HÓA ĐƠN TRẮNG */}
-          <div id="vung-in-hoa-don" className="bg-white w-full max-w-[420px] p-4 text-[10px] sm:text-xs text-black font-sans shadow-2xl rounded-sm leading-tight relative">
+          {/* BẢNG ĐIỀU KHIỂN: CHỌN CHECKBOX ĐỂ GỘP HOẶC TÁCH BILL */}
+          {showSettings && (
+            <div className="w-full max-w-[420px] bg-slate-100 p-3 rounded-2xl mb-4 border border-slate-300 shadow-xl animate-fade-in">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 text-center">Các dịch vụ trong vòng 60 ngày</div>
+              <div className="flex flex-col gap-2">
+                {availableItems.map(item => {
+                  const isLichGoc = item.id === hoaDonData.id;
+                  return (
+                    <label key={item.id} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${selectedIds.includes(item.id) ? 'bg-white border-blue-300 shadow-sm' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
+                      <input 
+                        type="checkbox" 
+                        disabled={isLichGoc} // Không cho phép tắt Lịch gốc đang in
+                        checked={selectedIds.includes(item.id)} 
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedIds([...selectedIds, item.id]);
+                          else setSelectedIds(selectedIds.filter(id => id !== item.id));
+                        }} 
+                        className="w-4 h-4 text-blue-600 rounded" 
+                      />
+                      <div className="flex-1">
+                        <div className="text-[11px] font-bold text-slate-800 flex items-center gap-2">
+                          {item.loaiItem === 'lich' ? (item.goiChup || item.theLoai) : item.loai}
+                          {isLichGoc && <span className="text-[8px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded uppercase">Đang in</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {item.ngay.split('-').reverse().join('/')} - <span className="font-black text-slate-700">{formatTienInput(String(item.loaiItem==='lich' ? (Number(item.giaTien||0) + Number(item.tienDichVuThem||0)) : item.soTien))}đ</span>
+                        </div>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div id="vung-in-hoa-don" className="bg-white w-full max-w-[420px] p-4 text-[10px] sm:text-xs text-black font-sans shadow-2xl rounded-sm leading-tight relative mt-2 shrink-0">
             
-            {/* Header */}
             <div className="hd-header flex justify-between items-start mb-3">
               <div>
                 <div className="hd-title font-black text-blue-900 text-sm uppercase tracking-tight mb-1">Ảnh viện Suri Wedding</div>
@@ -214,14 +257,12 @@ export default function ModalHoaDon({
               </div>
             </div>
 
-            {/* Customer Info */}
             <div className="customer-box grid grid-cols-[45px_1fr] gap-x-2 gap-y-1.5 mb-3">
               <div className="c-label text-slate-600">Khách:</div><div className="c-value font-bold border-b border-dotted border-slate-400 pb-0.5">{hoaDonData.tenKhach}</div>
               <div className="c-label text-slate-600">SĐT:</div><div className="c-value font-bold border-b border-dotted border-slate-400 pb-0.5">{hoaDonData.soDienThoai}</div>
               <div className="c-label text-slate-600">Địa chỉ:</div><div className="c-value font-bold border-b border-dotted border-slate-400 pb-0.5">{hdDiaChi || "\u00A0"}</div>
             </div>
 
-            {/* Bảng Dịch Vụ (Đã được kẻ khung lưới rõ ràng) */}
             <table className="w-full border-collapse border border-slate-800 mb-3 text-[10px]">
               <thead>
                 <tr className="bg-slate-100">
@@ -233,15 +274,16 @@ export default function ModalHoaDon({
                 </tr>
               </thead>
               <tbody>
-                {/* Lịch Chụp */}
-                {lichCuaKhach.map((l, idx) => {
+                {checkedLich.map((l, idx) => {
                   const donGia = Number(l.giaTien || 0) + Number((l as any).tienDichVuThem || 0);
+                  const hienChiTiet = l.id === hoaDonData.id;
+                  
                   return (
                     <tr key={`l-${idx}`}>
                       <td className="border border-slate-800 p-1.5 text-center">{idx + 1}</td>
                       <td className="border border-slate-800 p-1.5">
                         <div className="font-bold text-[11px]">{l.goiChup || l.theLoai}</div>
-                        {chiTietLines.length > 0 && (
+                        {(hienChiTiet && chiTietLines.length > 0) && (
                           <div className="item-detail mt-1 text-[9px] text-slate-700 italic">
                             <strong>Chi tiết:</strong>
                             {chiTietLines.map((line, i) => <div key={i}>- {line}</div>)}
@@ -258,10 +300,9 @@ export default function ModalHoaDon({
                   )
                 })}
                 
-                {/* Phát Sinh */}
-                {psCuaKhach.map((p, idx) => (
+                {checkedPhatSinh.map((p, idx) => (
                   <tr key={`p-${idx}`}>
-                    <td className="border border-slate-800 p-1.5 text-center">{lichCuaKhach.length + idx + 1}</td>
+                    <td className="border border-slate-800 p-1.5 text-center">{checkedLich.length + idx + 1}</td>
                     <td className="border border-slate-800 p-1.5">
                       <div className="font-bold text-[11px]">{p.loai}</div>
                       {p.ghiChu && <div className="item-detail mt-1 text-[9px] text-slate-700 italic">{p.ghiChu}</div>}
@@ -274,7 +315,6 @@ export default function ModalHoaDon({
               </tbody>
             </table>
 
-            {/* Tính Tổng */}
             <div className="summary flex flex-col items-end gap-1.5 mb-4">
               <div className="sum-line flex justify-between w-[65%] font-bold text-slate-700">
                 <span>Tổng thanh toán:</span>
@@ -290,7 +330,6 @@ export default function ModalHoaDon({
               </div>
             </div>
 
-            {/* Chữ ký (Hiển thị ngay lập tức khi React render) */}
             <div className="signatures flex justify-between text-center mt-2">
               <div className="sig-col w-1/2 flex flex-col items-center">
                 <div className="sig-title font-bold uppercase text-[10px] mb-1">Khách hàng</div>
@@ -310,7 +349,6 @@ export default function ModalHoaDon({
           </div>
         </div>
 
-        {/* NÚT BẤM IN / LƯU PDF */}
         <div className="p-3 bg-white border-t border-slate-200 shrink-0 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.1)] z-10">
           <button 
             onClick={handleInHoaDon} 
@@ -322,19 +360,14 @@ export default function ModalHoaDon({
 
       </div>
 
-      {/* =========================================
-          MODAL BẢNG VẼ CHỮ KÝ FULL MÀN HÌNH 
-      ========================================= */}
       {showChuKyModal && (
         <div className="fixed inset-0 bg-slate-100 z-[200] flex flex-col touch-none overscroll-none">
-          {/* Header Bảng vẽ */}
           <div className="bg-white px-4 py-3 flex justify-between items-center shadow-sm z-10 shrink-0">
              <button onClick={() => setShowChuKyModal(false)} className="px-4 py-2 text-slate-500 font-bold active:bg-slate-100 rounded-xl">Đóng</button>
              <h3 className="font-black text-slate-800">Khách Ký Tên</h3>
              <button onClick={clearCanvas} className="p-2 text-rose-500 bg-rose-50 rounded-xl active:bg-rose-100"><Eraser size={20}/></button>
           </div>
 
-          {/* Khu vực khách ký tay (Canvas) */}
           <div className="flex-1 relative bg-white cursor-crosshair">
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
               <span className="text-4xl font-black rotate-[-15deg] uppercase">Ký vào đây</span>
@@ -346,12 +379,11 @@ export default function ModalHoaDon({
               onPointerMove={draw}
               onPointerUp={endDrawing}
               onPointerOut={endDrawing}
-              style={{ touchAction: "none" }} // Khóa màn hình không cho cuộn khi vuốt chữ ký
+              style={{ touchAction: "none" }}
               className="absolute inset-0 w-full h-full"
             />
           </div>
 
-          {/* Footer lưu chữ ký */}
           <div className="bg-white p-4 pb-8 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] shrink-0 z-10">
              <button onClick={saveSignature} className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-emerald-200 active:scale-95 transition-all flex items-center justify-center gap-2 text-lg">
                <Check size={24} /> XÁC NHẬN CHỮ KÝ
