@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { collection, addDoc, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { Trash2, Save, DollarSign, Receipt, Plus } from "lucide-react";
+import { Trash2, Save, Receipt, Plus } from "lucide-react";
 
 export default function TabChiPhi({ formatTienInput }: { formatTienInput: (v: string) => string }) {
   const homNay = new Date().toISOString().slice(0, 10);
@@ -14,11 +14,12 @@ export default function TabChiPhi({ formatTienInput }: { formatTienInput: (v: st
   
   const [danhSachChiPhi, setDanhSachChiPhi] = useState<any[]>([]);
 
-  // Tự động tải dữ liệu Chi phí từ Firebase
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "chiPhi"), (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setDanhSachChiPhi(data.sort((a: any, b: any) => new Date(b.ngay).getTime() - new Date(a.ngay).getTime()));
+    }, (error) => {
+      console.error("Lỗi tải dữ liệu chi phí: ", error);
     });
     return () => unsub();
   }, []);
@@ -29,39 +30,47 @@ export default function TabChiPhi({ formatTienInput }: { formatTienInput: (v: st
     if (!hangMucChot) { toast.error("Vui lòng nhập hạng mục chi!"); return; }
 
     try {
+      // Chuyển đổi chuỗi tiền có dấu chấm sang kiểu số nguyên an toàn tuyệt đối
+      const soTienThuan = Number(soTien.replace(/\./g, ""));
+      
       await addDoc(collection(db, "chiPhi"), {
         ngay,
         hangMuc: hangMucChot,
-        soTien: Number(soTien.replace(/\./g, "")),
-        ghiChu
+        soTien: isNaN(soTienThuan) ? 0 : soTienThuan,
+        ghiChu: ghiChu || ""
       });
       toast.success("Đã ghi chép khoản chi!");
       setSoTien(""); setGhiChu(""); setHangMucKhac("");
-    } catch (error) { toast.error("Lỗi khi lưu dữ liệu!"); }
+    } catch (error: any) { 
+      console.error(error);
+      toast.error("Lỗi lưu dữ liệu: " + (error?.message || "Kiểm tra lại kết nối")); 
+    }
   };
 
   const xoaChiPhi = async (id: string) => {
     if (confirm("Chắc chắn xóa khoản chi này khỏi sổ sách?")) {
-      await deleteDoc(doc(db, "chiPhi", id));
-      toast.success("Đã xóa khoản chi");
+      try {
+        await deleteDoc(doc(db, "chiPhi", id));
+        toast.success("Đã xóa khoản chi");
+      } catch (e) {
+        toast.error("Không thể xóa!");
+      }
     }
   };
 
   const tongChiThangNay = danhSachChiPhi
-    .filter(c => c.ngay.startsWith(homNay.slice(0, 7)))
-    .reduce((acc, curr) => acc + (curr.soTien || 0), 0);
+    .filter(c => c.ngay && c.ngay.startsWith(homNay.slice(0, 7)))
+    .reduce((acc, curr) => acc + (Number(curr.soTien) || 0), 0);
 
   return (
     <div className="pb-24 animate-fade-in max-w-3xl mx-auto px-1 mt-4">
       
-      {/* Thẻ Tổng Quan */}
       <div className="bg-gradient-to-br from-red-600 to-rose-700 rounded-3xl p-6 text-white shadow-xl shadow-red-200 mb-6 relative overflow-hidden">
         <div className="absolute right-[-20px] top-[-20px] text-8xl opacity-10 pointer-events-none">📉</div>
         <h2 className="text-sm font-black text-rose-200 uppercase tracking-widest mb-1">Chi phí vận hành tháng này</h2>
         <div className="text-4xl font-black">{formatTienInput(String(tongChiThangNay))}đ</div>
       </div>
 
-      {/* Form Ghi Chép */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 mb-6">
         <h2 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Plus size={20} className="text-rose-500"/> Ghi sổ chi phí</h2>
         
@@ -106,7 +115,6 @@ export default function TabChiPhi({ formatTienInput }: { formatTienInput: (v: st
         </button>
       </div>
 
-      {/* Lịch sử */}
       <div>
         <h3 className="font-black text-slate-800 text-lg mb-4 flex items-center gap-2"><Receipt size={20} className="text-slate-500"/> Lịch sử chi tiêu</h3>
         <div className="space-y-3">
@@ -117,13 +125,13 @@ export default function TabChiPhi({ formatTienInput }: { formatTienInput: (v: st
               <div key={item.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{item.ngay.split('-').reverse().join('/')}</span>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{item.ngay ? item.ngay.split('-').reverse().join('/') : ''}</span>
                     <span className="text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md uppercase">{item.hangMuc}</span>
                   </div>
                   {item.ghiChu && <div className="text-sm font-bold text-slate-700 mt-1">{item.ghiChu}</div>}
                 </div>
                 <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
-                  <div className="font-black text-rose-600 text-lg">-{formatTienInput(String(item.soTien))}đ</div>
+                  <div className="font-black text-rose-600 text-lg">-{formatTienInput(String(item.soTien || 0))}đ</div>
                   <button onClick={() => xoaChiPhi(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 bg-slate-50 hover:bg-red-50 hover:text-red-500 transition-all active:scale-90"><Trash2 size={16}/></button>
                 </div>
               </div>

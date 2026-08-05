@@ -18,8 +18,6 @@ const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading:
 const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
-
-// KẾT NỐI TAB CHI PHÍ MỚI
 const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
@@ -57,7 +55,7 @@ export default function HomePage() {
   const [subTabNhanSu, setSubTabNhanSu] = useState<"chamCong" | "danhSach">("chamCong");
   const [subTabKhoDo, setSubTabKhoDo] = useState<"traDo" | "goiChup">("traDo");
 
-  // STATE BẢO MẬT TAB CHI PHÍ
+  // MẬT KHẨU MỚI: 10012026 (8 SỐ)
   const [isChiPhiUnlocked, setIsChiPhiUnlocked] = useState(false);
   const [maPin, setMaPin] = useState("");
 
@@ -197,7 +195,6 @@ export default function HomePage() {
     ); 
   }
 
-  // ĐÃ BỔ SUNG TAB CHI PHÍ VẬN HÀNH VÀO MENU DÀNH CHO ADMIN
   const nutMenu = [
     { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
     { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
@@ -326,7 +323,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* RENDER CÁC TAB */}
       <div id="noi-dung-tab" className="mt-2">
         {tab === "lich" && (
           <TabLich 
@@ -344,7 +340,6 @@ export default function HomePage() {
           />
         )}
 
-        {/* TAB CHI PHÍ VỚI BỨC TƯỜNG BẢO MẬT */}
         {tab === "chiPhi" && laAdmin && (
           <div className="animate-fade-in">
             {!isChiPhiUnlocked ? (
@@ -352,26 +347,27 @@ export default function HomePage() {
                 <div className="absolute top-0 left-0 right-0 h-2 bg-rose-500"></div>
                 <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 shadow-inner"><Lock size={40} strokeWidth={2.5}/></div>
                 <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">Vùng Bảo Mật</h2>
-                <p className="text-sm text-slate-500 font-bold mb-6 text-center">Vui lòng nhập mã PIN Admin để xem các khoản Thu - Chi của tiệm.</p>
+                <p className="text-sm text-slate-500 font-bold mb-6 text-center">Vui lòng nhập mã PIN Admin (8 số) để xem chi phí.</p>
                 
                 <input 
                   type="password" 
+                  maxLength={8}
                   placeholder="Nhập mã PIN..." 
                   value={maPin} 
                   onChange={(e) => setMaPin(e.target.value)} 
-                  className="w-full text-center tracking-widest text-3xl font-black bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 mb-4 transition-all" 
+                  className="w-full text-center tracking-widest text-2xl font-black bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 mb-4 transition-all" 
                 />
                 
                 <button 
                   onClick={() => { 
-                    if (maPin === "6868") { setIsChiPhiUnlocked(true); setMaPin(""); } 
+                    if (maPin === "10012026") { setIsChiPhiUnlocked(true); setMaPin(""); } 
                     else { toast.error("Sai mã PIN!"); setMaPin(""); } 
                   }} 
                   className="w-full bg-rose-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-rose-200 active:scale-95 transition-all text-lg"
                 >
                   MỞ KHÓA
                 </button>
-                <p className="text-[10px] text-slate-400 mt-6 font-bold uppercase tracking-wider">Mã mặc định: 6868</p>
+                <p className="text-[10px] text-slate-400 mt-6 font-bold uppercase tracking-wider">Mật khẩu: 10012026</p>
               </div>
             ) : (
               <TabChiPhi formatTienInput={formatTienInput} />
