@@ -89,7 +89,7 @@ export default function TabLich({
     return () => unsubGoi();
   }, []);
 
-  // THUẬT TOÁN NHẬN DIỆN KHÁCH HÀNG (Cho phép chọn nếu trùng số điện thoại)
+  // THUẬT TOÁN NHẬN DIỆN KHÁCH HÀNG
   useEffect(() => {
     if (!dangSua && soDienThoai.length >= 9) {
       const matches = danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai);
@@ -319,6 +319,7 @@ export default function TabLich({
                   </div>
                 )}
 
+                {/* KHU VỰC CHỨA CÁC NÚT THAO TÁC - ĐÃ BỔ SUNG LẠI NÚT BÁO CÁO */}
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
                   <select disabled={biKhoaVoiNhanVien} value={currentTrangThai} onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)} className={`flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl outline-none min-w-[110px] ${biKhoaVoiNhanVien ? "opacity-60 cursor-not-allowed bg-slate-100" : "focus:ring-2 focus:ring-blue-200"}`}>
                     <option value="Đã chốt lịch">Đã chốt lịch</option><option value="Đã nhắc lịch">Đã nhắc lịch</option><option value="Đã chụp xong">Đã chụp xong</option><option value="Hoàn thành">Hoàn thành</option><option value="Hủy lịch">Hủy lịch</option>
@@ -326,6 +327,8 @@ export default function TabLich({
                   <button onClick={() => { setLichDangChon(item); setShowPhanCongModal(true); }} className="bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">👥 Phân công</button>
                   <button onClick={() => { setHoaDonData(item); setHdDiaChi(""); }} className="bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">🧾 Hóa Đơn</button>
                   <button onClick={() => copyNhacLich(item)} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">💬 Nhắc khách</button>
+                  {/* NÚT BÁO CÁO ĐƯỢC THÊM LẠI VÀO ĐÂY */}
+                  <button onClick={() => { setLichDangChon(item); setTienHoaHong(""); setVaiTro("Chụp ảnh"); setShowHoaHongModal(true); }} className="flex-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-2.5 rounded-xl hover:bg-blue-100 transition-colors shadow-sm min-w-[100px]">🙋‍♂️ Báo cáo</button>
                 </div>
               </div>
             );
