@@ -46,8 +46,12 @@ export default function TabLich({
   const [soDienThoai2, setSoDienThoai2] = useState("");
   const [theLoai, setTheLoai] = useState("Chụp ảnh cưới");
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
+  
+  // State Gói chụp & Chi tiết sản phẩm
   const [goiChup, setGoiChup] = useState("");
+  const [chiTietGoi, setChiTietGoi] = useState("");
   const [giaTien, setGiaTien] = useState("");
+  
   const [tienCoc, setTienCoc] = useState("");
   const [dichVuThem, setDichVuThem] = useState("");
   const [tienDichVuThem, setTienDichVuThem] = useState("");
@@ -81,20 +85,17 @@ export default function TabLich({
     }, {});
   }, [lichLamViec]);
 
-  // Vô hiệu hóa Scroll nền khi mở Modal (Chống vuốt web nhầm)
   useEffect(() => {
     if (showModal || showGoiModal || showHoaHongModal || showPhanCongModal || hoaDonData) { document.body.style.overflow = "hidden"; } 
     else { document.body.style.overflow = ""; }
     return () => { document.body.style.overflow = ""; };
   }, [showModal, showGoiModal, showHoaHongModal, showPhanCongModal, hoaDonData]);
 
-  // Lấy danh sách Gói chụp (để đồng bộ giá)
   useEffect(() => {
     const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => { setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]); });
     return () => unsubGoi();
   }, []);
 
-  // Tự động tìm SĐT
   useEffect(() => {
     if (!dangSua && soDienThoai.length >= 9) {
       const khachCu = danhSachKhachHang.find(kh => kh.soDienThoai === soDienThoai);
@@ -142,7 +143,7 @@ export default function TabLich({
   const resetForm = () => { 
     setDangSua(null); setKhachHangId(null); setNgay(selectedDate); setNgayCuoi(""); setGio("08:00"); 
     setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); setTheLoai("Chụp ảnh cưới"); setTheLoaiKhac(""); 
-    setGoiChup(""); setGiaTien(""); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); 
+    setGoiChup(""); setChiTietGoi(""); setGiaTien(""); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); 
   };
 
   const openAddModal = () => { resetForm(); setShowModal(true); };
@@ -150,7 +151,7 @@ export default function TabLich({
   const suaLich = (item: any) => { 
     setNgay(item.ngay); setGio(item.gio); setTenKhach(item.tenKhach); setSoDienThoai(item.soDienThoai || ""); 
     setSoDienThoai2(item.soDienThoai2 || ""); setTheLoai(item.theLoai || "Chụp ảnh cưới"); setTheLoaiKhac(""); 
-    setGoiChup(item.goiChup || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); 
+    setGoiChup(item.goiChup || ""); setChiTietGoi(item.chiTietGoi || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); 
     setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
     setDichVuThem(item.dichVuThem || ""); setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
     setDangSua(item.id || null); setKhachHangId(item.khachHangId || null);
@@ -200,9 +201,10 @@ export default function TabLich({
       }
 
       const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
+      
       const duLieuLich: any = { 
         khachHangId: finalKhId, ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
-        theLoai: theLoaiCuoi, goiChup, 
+        theLoai: theLoaiCuoi, goiChup, chiTietGoi, 
         giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0,
         dichVuThem, tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, ngayCuoi
       };
@@ -405,13 +407,12 @@ export default function TabLich({
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
       {/* ==============================================
-          MODAL THÊM LỊCH (ĐÃ NÂNG CẤP GIAO DIỆN & TÍNH NĂNG GÓI CHỤP)
+          MODAL THÊM LỊCH (ĐÃ CÓ TỰ ĐỘNG ĐIỀN THÔNG TIN SẢN PHẨM)
       =============================================== */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-[100] sm:p-4 overscroll-none touch-none">
           <div className="bg-white w-full sm:max-w-md h-[92vh] sm:h-auto sm:max-h-[90vh] rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-auto border border-white">
             
-            {/* HEADER CỐ ĐỊNH PHÍA TRÊN */}
             <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm z-10">
               <button onClick={() => setShowModal(false)} className="text-slate-500 font-bold px-4 py-2 hover:bg-slate-200 rounded-xl transition-all">Hủy</button>
               <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -420,7 +421,6 @@ export default function TabLich({
               <button onClick={handleLuuLichThongMinh} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 font-black px-4 py-2 rounded-xl transition-all">LƯU</button>
             </div>
 
-            {/* NỘI DUNG CUỘN ĐƯỢC BÊN DƯỚI */}
             <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-4 pb-12 overscroll-contain">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -490,10 +490,14 @@ export default function TabLich({
                         const val = e.target.value;
                         if (val === "Khác") {
                           setGoiChup(""); 
+                          setChiTietGoi(""); 
                         } else {
                           setGoiChup(val);
                           const goi = danhSachGoiDichVu.find(g => g.tenGoi === val);
-                          if (goi) setGiaTien(formatTienInput(String(goi.giaTien)));
+                          if (goi) {
+                            setGiaTien(formatTienInput(String(goi.giaTien)));
+                            setChiTietGoi(goi.chiTiet || ""); // TỰ ĐỘNG ĐIỀN THÔNG TIN SẢN PHẨM
+                          }
                         }
                       }}
                       className="appearance-none bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8"
@@ -516,6 +520,20 @@ export default function TabLich({
                       className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all animate-fade-in" 
                     />
                   )}
+
+                  {/* KHU VỰC THÔNG TIN SẢN PHẨM TỰ ĐỘNG ĐIỀN */}
+                  <div className="mt-1">
+                    <label className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest ml-1 block mb-1.5 flex justify-between">
+                      Thông tin sản phẩm gói
+                    </label>
+                    <textarea 
+                      value={chiTietGoi} 
+                      onChange={(e) => setChiTietGoi(e.target.value)} 
+                      placeholder="Các sản phẩm khách nhận được (VD: 1 Ảnh cổng, 1 Album...)" 
+                      className="bg-white border border-indigo-100 p-3.5 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-100 transition-all" 
+                      rows={2}
+                    ></textarea>
+                  </div>
 
                   <div className="relative mt-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Giá tiền gói (*)</label>
