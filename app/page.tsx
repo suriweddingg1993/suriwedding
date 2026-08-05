@@ -233,7 +233,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {khachNoTien.length > 0 && laAdmin && (
+          {khachNoTien.length > 0 && (
             <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300">
               <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5 pointer-events-none">💸</div>
               <button onClick={() => setShowKhachNo(!showKhachNo)} className="w-full flex justify-between items-center relative z-10 text-left outline-none"><h2 className="font-black text-lg text-rose-600 tracking-tight flex items-center gap-2"><Banknote size={24} /> Báo Động Nợ ({khachNoTien.length})</h2><div className="bg-rose-50 text-rose-600 p-1.5 rounded-full transition-transform">{showKhachNo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</div></button>
@@ -247,7 +247,9 @@ export default function HomePage() {
                           <div className="font-black text-slate-900 leading-tight break-words">{item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span></div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5"><span className="text-[10px] font-bold text-slate-500 bg-white w-fit px-2 py-0.5 rounded-md border border-slate-200">Qua ngày {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}</span><span className="text-sm font-black text-rose-600 w-fit">Nợ: {formatTienInput(String(tienNo))}đ</span></div>
                         </div>
-                        <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">Đã Thu</button>
+                        {laAdmin && (
+                          <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">Đã Thu</button>
+                        )}
                       </div>
                     )
                   })}
@@ -281,7 +283,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* RENDER CÁC TAB - TRUYỀN DỮ LIỆU CHUẨN XÁC VÀ ĐẦY ĐỦ */}
+      {/* RENDER CÁC TAB - ĐÃ THÊM BIẾN danhSachThuHuong ĐỂ SỬA LỖI TYPESCRIPT */}
       <div id="noi-dung-tab" className="mt-2">
         {tab === "lich" && (
           <TabLich 
@@ -293,14 +295,19 @@ export default function HomePage() {
         
         {tab === "phatSinh" && (
           <TabPhatSinh 
-            formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} 
-            hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} 
-            lichLamViec={lichLamViec} danhSachKhachHang={danhSachKhachHang} danhSachThuHuong={danhSachThuHuong}
+            formatTienInput={formatTienInput} 
+            danhSachPhatSinh={danhSachPhatSinh} 
+            laAdmin={laAdmin} 
+            hoSoCuaToi={hoSoCuaToi} 
+            themThuHuong={themThuHuong} 
+            danhDauDaTraDo={danhDauDaTraDo} 
+            lichLamViec={lichLamViec} 
+            danhSachKhachHang={danhSachKhachHang}
+            danhSachThuHuong={danhSachThuHuong} // <-- ĐÃ SỬA LỖI Ở ĐÂY
           />
         )}
 
         {tab === "chamCong" && <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />}
-        
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
         
         {tab === "nhanVien" && laAdmin && (
