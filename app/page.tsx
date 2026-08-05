@@ -50,6 +50,9 @@ export default function HomePage() {
   const [showKhachNo, setShowKhachNo] = useState(false);
   const [tabViecCuaToi, setTabViecCuaToi] = useState<"homNay" | "ngayMai">("homNay");
   const [thangThongKe, setThangThongKe] = useState("");
+  
+  // STATE MỚI ĐỂ CHUYỂN ĐỔI BÊN TRONG TAB NHÂN SỰ
+  const [subTabNhanSu, setSubTabNhanSu] = useState<"chamCong" | "danhSach">("chamCong");
 
   const laAdmin = role === "admin";
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachKhachHang } = useAppData(user, laAdmin);
@@ -162,15 +165,15 @@ export default function HomePage() {
     ); 
   }
 
+  // ĐÃ GỘP MENU TAB NHÂN VIÊN VÀO TAB CHẤM CÔNG VÀ ĐỔI TÊN THÀNH "NHÂN SỰ"
   const nutMenu = [
     { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
     { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
     { key: "phatSinh", icon: Wallet, label: "Dịch vụ phát sinh", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
     { key: "tinhTrangKH", icon: ClipboardList, label: "Kho đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
-    { key: "chamCong", icon: Clock, label: "Chấm công", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
+    { key: "chamCong", icon: Users, label: "Nhân sự", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
     { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
     { key: "khachHang", icon: UserCheck, label: "Khách hàng", color: "text-amber-600", bg: "bg-amber-50", adminOnly: true },
-    { key: "nhanVien", icon: Users, label: "Nhân sự", color: "text-pink-600", bg: "bg-pink-50", adminOnly: true },
     { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
   ] as const;
 
@@ -283,7 +286,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* RENDER CÁC TAB - ĐÃ THÊM BIẾN danhSachThuHuong ĐỂ SỬA LỖI TYPESCRIPT */}
+      {/* RENDER CÁC TAB */}
       <div id="noi-dung-tab" className="mt-2">
         {tab === "lich" && (
           <TabLich 
@@ -295,24 +298,43 @@ export default function HomePage() {
         
         {tab === "phatSinh" && (
           <TabPhatSinh 
-            formatTienInput={formatTienInput} 
-            danhSachPhatSinh={danhSachPhatSinh} 
-            laAdmin={laAdmin} 
-            hoSoCuaToi={hoSoCuaToi} 
-            themThuHuong={themThuHuong} 
-            danhDauDaTraDo={danhDauDaTraDo} 
-            lichLamViec={lichLamViec} 
-            danhSachKhachHang={danhSachKhachHang}
-            danhSachThuHuong={danhSachThuHuong} // <-- ĐÃ SỬA LỖI Ở ĐÂY
+            formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} 
+            hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} 
+            lichLamViec={lichLamViec} danhSachKhachHang={danhSachKhachHang} danhSachThuHuong={danhSachThuHuong}
           />
         )}
 
-        {tab === "chamCong" && <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />}
-        {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
-        
-        {tab === "nhanVien" && laAdmin && (
-          <TabNhanVien danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} formatTienInput={formatTienInput} />
+        {/* TAB NHÂN SỰ ĐƯỢC GỘP TỪ CHẤM CÔNG VÀ HỒ SƠ NHÂN VIÊN */}
+        {tab === "chamCong" && (
+          <div className="animate-fade-in">
+            {laAdmin && (
+              <div className="flex bg-slate-200/60 p-1.5 rounded-2xl mb-4 max-w-md mx-auto shadow-sm">
+                <button 
+                  onClick={() => setSubTabNhanSu("chamCong")} 
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${subTabNhanSu === "chamCong" ? "bg-white text-teal-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  🕒 Chấm công
+                </button>
+                <button 
+                  onClick={() => setSubTabNhanSu("danhSach")} 
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${subTabNhanSu === "danhSach" ? "bg-white text-teal-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  👥 Hồ sơ nhân sự
+                </button>
+              </div>
+            )}
+
+            {(!laAdmin || subTabNhanSu === "chamCong") && (
+              <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />
+            )}
+
+            {(laAdmin && subTabNhanSu === "danhSach") && (
+              <TabNhanVien danhSachTaiKhoan={danhSachTaiKhoan} laAdmin={laAdmin} formatTienInput={formatTienInput} />
+            )}
+          </div>
         )}
+        
+        {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
 
         {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
         
@@ -331,7 +353,7 @@ export default function HomePage() {
           { key: "phatSinh", icon: Wallet, label: "Phát sinh" }, { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
         ].map((nav) => {
           const IconComponent = nav.icon;
-          const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "nhanVien" || tab === "thongKe" || tab === "tinhTrangKH" || tab === "khachHang"));
+          const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "thongKe" || tab === "tinhTrangKH" || tab === "khachHang"));
           return (
             <button key={nav.key} onClick={() => { setTab(nav.key === "luong" ? "luong" : (nav.key as TabType)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group transition-all duration-300">
               {isActive && <span className="absolute -top-3 w-1.5 h-1.5 bg-blue-600 rounded-full animate-fade-in shadow-sm shadow-blue-300"></span>}
