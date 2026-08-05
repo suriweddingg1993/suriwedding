@@ -5,11 +5,10 @@ import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "fireb
 import { db } from "../../lib/firebase";
 
 import ModalHoaDon from "./ModalHoaDon";
-import ModalQuanLyGoi from "./ModalQuanLyGoi";
 import ModalBaoCao from "./ModalBaoCao";
 import ModalPhanCong from "./ModalPhanCong"; 
 import NutCopy from "./NutCopy"; 
-import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck, ChevronDown, Save } from "lucide-react";
+import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck, ChevronDown } from "lucide-react";
 
 // ĐÃ BỌC THÉP HÀM NÀY CHỐNG CRASH KHI VALUE BỊ UNDEFINED
 function chuyenTienVeSo(value: string) { 
@@ -67,11 +66,6 @@ export default function TabLich({
   const [tuKhoa, setTuKhoa] = useState(""); 
   
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]);
-  const [showGoiModal, setShowGoiModal] = useState(false);
-  const [tenGoiMoi, setTenGoiMoi] = useState("");
-  const [chiTietGoiMoi, setChiTietGoiMoi] = useState("");
-  const [giaGoiMoi, setGiaGoiMoi] = useState("");
-  const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
   
   const [hoaDonData, setHoaDonData] = useState<Lich | null>(null);
   const [hdDiaChi, setHdDiaChi] = useState("");
@@ -87,11 +81,12 @@ export default function TabLich({
   }, [lichLamViec]);
 
   useEffect(() => {
-    if (showModal || showGoiModal || showHoaHongModal || showPhanCongModal || hoaDonData) { document.body.style.overflow = "hidden"; } 
+    if (showModal || showHoaHongModal || showPhanCongModal || hoaDonData) { document.body.style.overflow = "hidden"; } 
     else { document.body.style.overflow = ""; }
     return () => { document.body.style.overflow = ""; };
-  }, [showModal, showGoiModal, showHoaHongModal, showPhanCongModal, hoaDonData]);
+  }, [showModal, showHoaHongModal, showPhanCongModal, hoaDonData]);
 
+  // Load danh sách gói để cho nhân viên chọn (Logic giữ nguyên)
   useEffect(() => {
     const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => { setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]); });
     return () => unsubGoi();
@@ -170,22 +165,6 @@ export default function TabLich({
     catch (error) { toast.error("Lỗi cập nhật"); } 
   };
 
-  const luuNhanhGoiVaoThuVien = async () => {
-    if (!goiChup || !giaTien) { toast.error("Vui lòng nhập Tên gói và Giá tiền để lưu mẫu!"); return; }
-    try {
-      await addDoc(collection(db, "goiDichVu"), {
-        tenGoi: goiChup || "", chiTiet: chiTietGoi || "", giaTien: chuyenTienVeSo(giaTien) || 0
-      });
-      toast.success("Đã lưu gói mới vào Thư viện mẫu!");
-    } catch(e: any) { 
-      toast.error("Lỗi lưu gói: " + e.message); 
-      console.error(e);
-    }
-  };
-
-  // ==========================================
-  // ĐÃ BỌC THÉP HÀM NÀY, BẮT LỖI TẬN RỄ
-  // ==========================================
   const handleLuuLichThongMinh = async () => {
     if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { 
       toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); 
@@ -210,7 +189,6 @@ export default function TabLich({
     let finalKhId = khachHangId;
 
     try {
-      // Tách logic CRM ra chạy độc lập. Nếu Firebase Rules có lỡ chặn cũng không chết Lịch.
       if (!finalKhId && !dangSua) {
         try {
           const khRef = await addDoc(collection(db, "khachHang"), {
@@ -219,13 +197,12 @@ export default function TabLich({
           });
           finalKhId = khRef.id;
         } catch (crmError) {
-          console.warn("⚠️ Bỏ qua lỗi CRM (Có thể do Firebase Rules chưa mở):", crmError);
+          console.warn("⚠️ Bỏ qua lỗi CRM:", crmError);
         }
       }
 
       const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
       
-      // Xoá sạch mọi rủi ro biến rỗng (undefined) trước khi đưa vào Database
       const duLieuLich: any = { 
         khachHangId: finalKhId || null, 
         ngay: ngay || "", 
@@ -255,25 +232,8 @@ export default function TabLich({
       resetForm();
     } catch (error: any) { 
       toast.error("Lỗi: " + (error?.message || "Không xác định"));
-      console.error("LỖI LƯU LỊCH CHÍNH XÁC:", error);
     }
   };
-
-  const luuGoiDichVu = async () => {
-    if (!tenGoiMoi || !giaGoiMoi) { toast.error("Vui lòng nhập tên gói và giá!"); return; }
-    try {
-      if (dangSuaGoi) { 
-        await updateDoc(doc(db, "goiDichVu", dangSuaGoi), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) || 0 }); 
-        toast.success("Cập nhật thành công!"); setDangSuaGoi(null); 
-      } else { 
-        await addDoc(collection(db, "goiDichVu"), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) || 0 }); 
-        toast.success("Thêm gói thành công!"); 
-      }
-      setTenGoiMoi(""); setChiTietGoiMoi(""); setGiaGoiMoi("");
-    } catch(e) { toast.error("Lỗi mạng!"); }
-  };
-
-  const xoaGoiDichVu = async (id: string) => { if (confirm("Chắc chắn xóa gói chụp mẫu này?")) await deleteDoc(doc(db, "goiDichVu", id)); };
 
   let dsLichNgayNay: Lich[] = [];
   if (tuKhoa.trim()) {
@@ -439,15 +399,10 @@ export default function TabLich({
 
       <button onClick={openAddModal} className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-200/50 flex items-center justify-center text-3xl z-40 hover:scale-110 active:scale-90 transition-all">+</button>
 
-      {/* CÁC MODAL CON */}
       <ModalPhanCong showModal={showPhanCongModal} setShowModal={setShowPhanCongModal} lichDangChon={lichDangChon} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} />
       <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} lichLamViec={lichLamViec} />
-      <ModalQuanLyGoi showGoiModal={showGoiModal} setShowGoiModal={setShowGoiModal} dangSuaGoi={dangSuaGoi} setDangSuaGoi={setDangSuaGoi} tenGoiMoi={tenGoiMoi} setTenGoiMoi={setTenGoiMoi} chiTietGoiMoi={chiTietGoiMoi} setChiTietGoiMoi={setChiTietGoiMoi} giaGoiMoi={giaGoiMoi} setGiaGoiMoi={setGiaGoiMoi} formatTienInput={formatTienInput} luuGoiDichVu={luuGoiDichVu} danhSachGoiDichVu={danhSachGoiDichVu} xoaGoiDichVu={xoaGoiDichVu} laAdmin={laAdmin} />
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
-      {/* ==============================================
-          MODAL THÊM LỊCH (ĐÃ CÓ TỰ ĐỘNG ĐIỀN THÔNG TIN SẢN PHẨM)
-      =============================================== */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-[100] sm:p-4 overscroll-none touch-none">
           <div className="bg-white w-full sm:max-w-md h-[92vh] sm:h-auto sm:max-h-[90vh] rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-auto border border-white">
@@ -514,13 +469,9 @@ export default function TabLich({
                 )}
               </div>
 
-              {/* KHU VỰC CHỌN GÓI CHỤP THÔNG MINH */}
+              {/* KHU VỰC CHỌN GÓI CHỤP SẠCH SẼ - KHÔNG CÒN NÚT THÊM GÓI TẠI ĐÂY */}
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
-                <div className="flex justify-between items-end mb-2 ml-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Chọn gói chụp (*)</label>
-                  {laAdmin && <button onClick={() => setShowGoiModal(true)} className="text-[9px] font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg">Quản lý Gói</button>}
-                </div>
-
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 ml-1">Chọn gói chụp (*)</label>
                 <div className="grid grid-cols-1 gap-3">
                   <div className="relative">
                     <select 
@@ -535,7 +486,7 @@ export default function TabLich({
                           const goi = danhSachGoiDichVu.find(g => g.tenGoi === val);
                           if (goi) {
                             setGiaTien(formatTienInput(String(goi.giaTien)));
-                            setChiTietGoi(goi.chiTiet || ""); // TỰ ĐỘNG ĐIỀN THÔNG TIN SẢN PHẨM
+                            setChiTietGoi(goi.chiTiet || ""); 
                           }
                         }
                       }}
@@ -560,7 +511,6 @@ export default function TabLich({
                     />
                   )}
 
-                  {/* KHU VỰC THÔNG TIN SẢN PHẨM TỰ ĐỘNG ĐIỀN */}
                   <div className="mt-1">
                     <label className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest ml-1 block mb-1.5 flex justify-between">
                       Thông tin sản phẩm gói
@@ -579,17 +529,6 @@ export default function TabLich({
                     <input type="text" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} placeholder="5.000.000" className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-indigo-700 font-black outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8" />
                     <span className="absolute right-3 top-[36px] text-slate-400 font-black">đ</span>
                   </div>
-
-                  {/* NÚT LƯU NHANH GÓI VÀO THƯ VIỆN KHI ADMIN GÕ GÓI MỚI */}
-                  {(!danhSachGoiDichVu.some(g => g.tenGoi === goiChup) && goiChup.trim() !== "") && laAdmin && (
-                    <button 
-                      onClick={luuNhanhGoiVaoThuVien} 
-                      className="mt-2 w-full py-3 bg-indigo-100 text-indigo-700 font-black text-xs rounded-xl hover:bg-indigo-200 transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      <Save size={16}/> LƯU GÓI NÀY VÀO THƯ VIỆN MẪU
-                    </button>
-                  )}
-
                 </div>
               </div>
 

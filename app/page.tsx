@@ -8,7 +8,7 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, TaiKhoan, Lich } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp } from "lucide-react";
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -51,11 +51,17 @@ export default function HomePage() {
   const [tabViecCuaToi, setTabViecCuaToi] = useState<"homNay" | "ngayMai">("homNay");
   const [thangThongKe, setThangThongKe] = useState("");
   
-  // STATE MỚI ĐỂ CHUYỂN ĐỔI BÊN TRONG TAB NHÂN SỰ
   const [subTabNhanSu, setSubTabNhanSu] = useState<"chamCong" | "danhSach">("chamCong");
+  const [subTabKhoDo, setSubTabKhoDo] = useState<"traDo" | "goiChup">("traDo");
+
+  // State Quản lý Gói
+  const [tenGoiMoi, setTenGoiMoi] = useState("");
+  const [chiTietGoiMoi, setChiTietGoiMoi] = useState("");
+  const [giaGoiMoi, setGiaGoiMoi] = useState("");
+  const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
 
   const laAdmin = role === "admin";
-  const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachKhachHang } = useAppData(user, laAdmin);
+  const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachKhachHang, danhSachGoiDichVu } = useAppData(user, laAdmin);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "system", "appVersion"), (snap) => {
@@ -129,6 +135,24 @@ export default function HomePage() {
     } catch (error) { toast.error("Lỗi hệ thống khi cập nhật!"); }
   };
 
+  const luuGoiDichVu = async () => {
+    if (!tenGoiMoi || !giaGoiMoi) { toast.error("Vui lòng nhập tên gói và giá!"); return; }
+    try {
+      if (dangSuaGoi) { 
+        await updateDoc(doc(db, "goiDichVu", dangSuaGoi), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) || 0 }); 
+        toast.success("Cập nhật thành công!"); setDangSuaGoi(null); 
+      } else { 
+        await addDoc(collection(db, "goiDichVu"), { tenGoi: tenGoiMoi, chiTiet: chiTietGoiMoi, giaTien: chuyenTienVeSo(giaGoiMoi) || 0 }); 
+        toast.success("Thêm gói thành công!"); 
+      }
+      setTenGoiMoi(""); setChiTietGoiMoi(""); setGiaGoiMoi("");
+    } catch(e) { toast.error("Lỗi mạng!"); }
+  };
+
+  const xoaGoiDichVu = async (id: string) => { 
+    if (confirm("Chắc chắn xóa gói chụp mẫu này?")) await deleteDoc(doc(db, "goiDichVu", id)); 
+  };
+
   const tenCuaToi = hoSoCuaToi?.hoTen || hoSoCuaToi?.email?.split('@')[0] || "";
   
   const viecCuaToiHomNay = lichLamViec.filter(lich => {
@@ -165,7 +189,6 @@ export default function HomePage() {
     ); 
   }
 
-  // ĐÃ GỘP MENU TAB NHÂN VIÊN VÀO TAB CHẤM CÔNG VÀ ĐỔI TÊN THÀNH "NHÂN SỰ"
   const nutMenu = [
     { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
     { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
@@ -298,13 +321,19 @@ export default function HomePage() {
         
         {tab === "phatSinh" && (
           <TabPhatSinh 
-            formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} 
-            hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} 
-            lichLamViec={lichLamViec} danhSachKhachHang={danhSachKhachHang} danhSachThuHuong={danhSachThuHuong}
+            formatTienInput={formatTienInput} 
+            danhSachPhatSinh={danhSachPhatSinh} 
+            laAdmin={laAdmin} 
+            hoSoCuaToi={hoSoCuaToi} 
+            themThuHuong={themThuHuong} 
+            danhDauDaTraDo={danhDauDaTraDo} 
+            lichLamViec={lichLamViec} 
+            danhSachKhachHang={danhSachKhachHang}
+            danhSachThuHuong={danhSachThuHuong}
           />
         )}
 
-        {/* TAB NHÂN SỰ ĐƯỢC GỘP TỪ CHẤM CÔNG VÀ HỒ SƠ NHÂN VIÊN */}
+        {/* TAB NHÂN SỰ GỘP */}
         {tab === "chamCong" && (
           <div className="animate-fade-in">
             {laAdmin && (
@@ -336,7 +365,90 @@ export default function HomePage() {
         
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
 
-        {tab === "tinhTrangKH" && <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />}
+        {/* TAB KHO ĐỒ GỘP GÓI CHỤP */}
+        {tab === "tinhTrangKH" && (
+          <div className="animate-fade-in">
+            {laAdmin && (
+              <div className="flex bg-slate-200/60 p-1.5 rounded-2xl mb-4 max-w-md mx-auto shadow-sm">
+                <button 
+                  onClick={() => setSubTabKhoDo("traDo")} 
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${subTabKhoDo === "traDo" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  👗 Kho đồ
+                </button>
+                <button 
+                  onClick={() => setSubTabKhoDo("goiChup")} 
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${subTabKhoDo === "goiChup" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  📸 Gói dịch vụ
+                </button>
+              </div>
+            )}
+
+            {(!laAdmin || subTabKhoDo === "traDo") && (
+              <TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />
+            )}
+
+            {/* GIAO DIỆN QUẢN LÝ GÓI CHỤP NẰM CHỌT LỌN Ở KHO ĐỒ */}
+            {(laAdmin && subTabKhoDo === "goiChup") && (
+              <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100 max-w-3xl mx-auto animate-fade-in">
+                <h2 className="font-black text-xl text-slate-800 mb-6 flex items-center gap-2"><Camera size={24} className="text-amber-500"/> Quản lý Thư viện Gói</h2>
+                
+                <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 mb-8 shadow-inner">
+                  <h3 className="text-sm font-black text-amber-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    {dangSuaGoi ? "✏️ Cập nhật gói" : "✨ Thêm gói mới"}
+                  </h3>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="text-[11px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1.5">Tên gói (*)</label>
+                      <input type="text" value={tenGoiMoi} onChange={(e) => setTenGoiMoi(e.target.value)} placeholder="Nhập tên gói..." className="bg-white border border-transparent p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-[11px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1.5">Chi tiết sản phẩm</label>
+                      <textarea value={chiTietGoiMoi} onChange={(e) => setChiTietGoiMoi(e.target.value)} placeholder="Các sản phẩm khách nhận được..." className="bg-white border border-transparent p-3.5 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm" rows={3}></textarea>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-[11px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1.5">Giá tiền mặc định (*)</label>
+                      <div className="relative">
+                        <input type="text" value={giaGoiMoi} onChange={(e) => setGiaGoiMoi(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-transparent p-3.5 rounded-xl w-full text-amber-700 font-black outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm pr-8 text-lg" />
+                        <span className="absolute right-4 top-4 text-slate-400 font-bold">đ</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-5">
+                    {dangSuaGoi && (
+                      <button onClick={() => { setDangSuaGoi(null); setTenGoiMoi(""); setChiTietGoiMoi(""); setGiaGoiMoi(""); }} className="px-6 py-4 bg-white text-slate-500 font-bold rounded-xl active:scale-95 transition-all shadow-sm">Hủy</button>
+                    )}
+                    <button onClick={luuGoiDichVu} className="flex-1 bg-amber-500 text-white font-black py-4 rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-600 active:scale-95 transition-all">
+                      {dangSuaGoi ? "CẬP NHẬT GÓI" : "LƯU VÀO THƯ VIỆN"}
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 ml-1">Kho Gói Chụp ({danhSachGoiDichVu.length})</h3>
+                <div className="grid gap-4">
+                  {danhSachGoiDichVu.length === 0 ? (
+                    <div className="text-center py-10 border border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm bg-slate-50">Chưa có gói nào được lưu.</div>
+                  ) : (
+                    danhSachGoiDichVu.map(goi => (
+                      <div key={goi.id} className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all group">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="font-black text-slate-900 text-lg">{goi.tenGoi}</div>
+                          <div className="font-black text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-lg text-sm">{formatTienInput(String(goi.giaTien))}đ</div>
+                        </div>
+                        {goi.chiTiet && <div className="text-sm text-slate-600 font-medium whitespace-pre-line mb-4 bg-slate-50 p-3 rounded-xl leading-relaxed">{goi.chiTiet}</div>}
+                        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                          <button onClick={() => { setDangSuaGoi(goi.id!); setTenGoiMoi(goi.tenGoi); setChiTietGoiMoi(goi.chiTiet || ""); setGiaGoiMoi(formatTienInput(String(goi.giaTien))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2.5 rounded-xl active:scale-95 transition-all">✏️ Sửa</button>
+                          <button onClick={() => xoaGoiDichVu(goi.id!)} className="text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 px-4 py-2.5 rounded-xl active:scale-95 transition-all">🗑 Xóa</button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         
         {tab === "khachHang" && laAdmin && (
           <TabKhachHang danhSachKhachHang={danhSachKhachHang} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} formatTienInput={formatTienInput} />
