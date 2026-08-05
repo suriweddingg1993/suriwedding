@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 import { Lich, PhatSinh, ChamCong, ThuHuong, TaiKhoan } from "../../types";
-import { TrendingUp, Wallet, Receipt, CalendarCheck, Clock, XCircle, PieChart, Banknote, TrendingDown, CircleDollarSign } from "lucide-react";
+import { TrendingUp, Wallet, Receipt, CalendarCheck, Clock, XCircle, PieChart, Banknote, TrendingDown, CircleDollarSign, DollarSign } from "lucide-react";
 
 interface TabThongKeProps {
   homNay: () => string;
@@ -23,6 +26,17 @@ export default function TabThongKe({
   danhSachThuHuong
 }: TabThongKeProps) {
   
+  // =======================================================
+  // 0. HÚT DỮ LIỆU CHI PHÍ VẬN HÀNH (TÍNH NĂNG MỚI)
+  // =======================================================
+  const [danhSachChiPhi, setDanhSachChiPhi] = useState<any[]>([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "chiPhi"), (snap) => {
+      setDanhSachChiPhi(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, []);
+
   // =======================================================
   // 1. TÍNH TOÁN DOANH THU & TIẾN ĐỘ
   // =======================================================
@@ -111,9 +125,14 @@ export default function TabThongKe({
   }
 
   // =======================================================
-  // 3. LỢI NHUẬN THUẦN (NET PROFIT)
+  // 3. TÍNH TOÁN CHI PHÍ VẬN HÀNH & LỢI NHUẬN THUẦN
   // =======================================================
-  const loiNhuanThuan = tongThucThu - tongQuyLuong;
+  const tongChiPhiVanHanh = danhSachChiPhi
+    .filter(c => c.ngay.startsWith(thangThongKe))
+    .reduce((sum, item) => sum + (Number(item.soTien) || 0), 0);
+
+  // Lợi nhuận thuần = (Tổng Thực Thu) - (Quỹ Lương Nhân Viên) - (Chi Phí Vận Hành)
+  const loiNhuanThuan = tongThucThu - tongQuyLuong - tongChiPhiVanHanh;
 
   const formatTien = (val: number) => val.toLocaleString("vi-VN");
 
@@ -147,40 +166,48 @@ export default function TabThongKe({
         ) : (
           <div className="space-y-4 animate-fade-in">
             
-            {/* THẺ LỢI NHUẬN THUẦN (NET PROFIT) - QUAN TRỌNG NHẤT */}
+            {/* THẺ LỢI NHUẬN THUẦN (NET PROFIT) - ĐÃ CẬP NHẬT CÔNG THỨC MỚI */}
             <div className={`rounded-3xl p-6 text-white shadow-lg relative overflow-hidden ${loiNhuanThuan >= 0 ? "bg-gradient-to-br from-indigo-500 to-purple-700 shadow-indigo-200" : "bg-gradient-to-br from-rose-500 to-red-700 shadow-rose-200"}`}>
               <div className="absolute -top-4 -right-4 opacity-10 text-8xl transform rotate-12 pointer-events-none">✨</div>
               <div className="flex items-center gap-2 text-white/80 text-[10px] font-bold mb-1 uppercase tracking-widest">
-                <CircleDollarSign size={14} /> LỢI NHUẬN THUẦN (THÁNG {thangThongKe.split("-")[1]})
+                <CircleDollarSign size={14} /> LỢI NHUẬN RÒNG (THÁNG {thangThongKe.split("-")[1]})
               </div>
               <div className="text-4xl font-black tracking-tight mt-1 drop-shadow-sm">
                 {loiNhuanThuan < 0 ? "-" : ""}{formatTien(Math.abs(loiNhuanThuan))}<span className="text-2xl font-bold ml-1 opacity-80">đ</span>
               </div>
               <div className="mt-3 text-[11px] font-bold text-white bg-black/20 w-fit px-3 py-1.5 rounded-lg backdrop-blur-sm border border-white/10 flex items-center gap-1.5">
-                = (Thực thu) - (Quỹ lương)
+                = (Thực thu) - (Quỹ lương + Vận hành)
               </div>
             </div>
 
-            {/* THẺ THỰC THU VS QUỸ LƯƠNG */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-                <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1.5">
-                  <TrendingUp size={14} /> TỔNG THỰC THU
+            {/* THẺ THỰC THU VS QUỸ LƯƠNG VS CHI PHÍ VẬN HÀNH (ĐÃ CHIA 3 CỘT) */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3 shadow-sm relative overflow-hidden">
+                <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1.5">
+                  <TrendingUp size={12} /> THỰC THU
                 </div>
-                <div className="text-xl font-black text-emerald-700 mt-1">
+                <div className="text-[15px] font-black text-emerald-700 mt-1">
                   {formatTien(tongThucThu)}đ
                 </div>
-                <div className="text-[9px] font-bold text-emerald-500 mt-1 opacity-80">Tiền cọc + Đã thanh toán</div>
               </div>
 
-              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 shadow-sm relative overflow-hidden">
-                <div className="flex items-center gap-1.5 text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1.5">
-                  <TrendingDown size={14} /> QUỸ XUẤT LƯƠNG
+              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-3 shadow-sm relative overflow-hidden">
+                <div className="flex items-center gap-1 text-[9px] font-black text-rose-600 uppercase tracking-widest mb-1.5">
+                  <TrendingDown size={12} /> QUỸ LƯƠNG
                 </div>
-                <div className="text-xl font-black text-rose-700 mt-1">
+                <div className="text-[15px] font-black text-rose-700 mt-1">
                   -{formatTien(tongQuyLuong)}đ
                 </div>
-                <div className="text-[9px] font-bold text-rose-500 mt-1 opacity-80">Lương cứng + Hoa hồng</div>
+              </div>
+
+              {/* MỤC MỚI: CHI PHÍ VẬN HÀNH */}
+              <div className="bg-violet-50 border border-violet-100 rounded-2xl p-3 shadow-sm relative overflow-hidden">
+                <div className="flex items-center gap-1 text-[9px] font-black text-violet-600 uppercase tracking-widest mb-1.5">
+                  <DollarSign size={12} /> VẬN HÀNH
+                </div>
+                <div className="text-[15px] font-black text-violet-700 mt-1">
+                  -{formatTien(tongChiPhiVanHanh)}đ
+                </div>
               </div>
             </div>
 

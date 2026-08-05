@@ -8,7 +8,7 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, TaiKhoan, Lich, GoiDichVu } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera, Layers } from "lucide-react";
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera, Layers, DollarSign, Lock } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -18,6 +18,9 @@ const TabPhatSinh = dynamic(() => import("./components/TabPhatSinh"), { loading:
 const TabLich = dynamic(() => import("./components/TabLich"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabChamCong = dynamic(() => import("./components/TabChamCong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
+
+// KẾT NỐI TAB CHI PHÍ MỚI
+const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
 const APP_VERSION = "v1.0.8"; 
@@ -43,7 +46,7 @@ export default function HomePage() {
   const [email, setEmail] = useState("");
   const [matKhau, setMatKhau] = useState("");
   const [role, setRole] = useState<Role>("staff");
-  const [tab, setTab] = useState<TabType>("home");
+  const [tab, setTab] = useState<TabType | "chiPhi">("home");
   const [coBanCapNhat, setCoBanCapNhat] = useState(false);
   const [hoSoCuaToi, setHoSoCuaToi] = useState<TaiKhoan | null>(null);
 
@@ -54,7 +57,10 @@ export default function HomePage() {
   const [subTabNhanSu, setSubTabNhanSu] = useState<"chamCong" | "danhSach">("chamCong");
   const [subTabKhoDo, setSubTabKhoDo] = useState<"traDo" | "goiChup">("traDo");
 
-  // State Quản lý Gói (Đã bổ sung Thể Loại)
+  // STATE BẢO MẬT TAB CHI PHÍ
+  const [isChiPhiUnlocked, setIsChiPhiUnlocked] = useState(false);
+  const [maPin, setMaPin] = useState("");
+
   const [tenGoiMoi, setTenGoiMoi] = useState("");
   const [theLoaiGoiMoi, setTheLoaiGoiMoi] = useState("Chụp ảnh cưới");
   const [chiTietGoiMoi, setChiTietGoiMoi] = useState("");
@@ -191,7 +197,7 @@ export default function HomePage() {
     ); 
   }
 
-  // CẬP NHẬT TÊN MENU: TỪ "KHO ĐỒ" THÀNH "KHO & GÓI CHỤP"
+  // ĐÃ BỔ SUNG TAB CHI PHÍ VẬN HÀNH VÀO MENU DÀNH CHO ADMIN
   const nutMenu = [
     { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
     { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
@@ -199,11 +205,11 @@ export default function HomePage() {
     { key: "tinhTrangKH", icon: Layers, label: "Kho & Gói chụp", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
     { key: "chamCong", icon: Users, label: "Nhân sự", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
     { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
+    { key: "chiPhi", icon: DollarSign, label: "Chi phí vận hành", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
     { key: "khachHang", icon: UserCheck, label: "Khách hàng", color: "text-amber-600", bg: "bg-amber-50", adminOnly: true },
     { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
   ] as const;
 
-  // LOGIC NHÓM CÁC GÓI CHỤP LẠI THEO THỂ LOẠI
   const goiDichVuĐaNhom = danhSachGoiDichVu.reduce((acc, goi) => {
     const loai = (goi as any).theLoai || "Khác";
     if (!acc[loai]) acc[loai] = [];
@@ -312,7 +318,7 @@ export default function HomePage() {
               {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
                   const IconComponent = item.icon;
                   return ( 
-                    <button key={item.key} onClick={() => { setTab(item.key as TabType); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group"><div className={`p-2.5 rounded-xl bg-slate-50 group-hover:${item.bg} ${item.color} transition-colors duration-300 shrink-0`}><IconComponent size={20} strokeWidth={2} /></div><div className="font-bold text-sm text-slate-700 text-left leading-tight">{item.label}</div></button> 
+                    <button key={item.key} onClick={() => { setTab(item.key as any); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group"><div className={`p-2.5 rounded-xl bg-slate-50 group-hover:${item.bg} ${item.color} transition-colors duration-300 shrink-0`}><IconComponent size={20} strokeWidth={2} /></div><div className="font-bold text-sm text-slate-700 text-left leading-tight">{item.label}</div></button> 
                   );
               })}
             </div>
@@ -332,16 +338,45 @@ export default function HomePage() {
         
         {tab === "phatSinh" && (
           <TabPhatSinh 
-            formatTienInput={formatTienInput} 
-            danhSachPhatSinh={danhSachPhatSinh} 
-            laAdmin={laAdmin} 
-            hoSoCuaToi={hoSoCuaToi} 
-            themThuHuong={themThuHuong} 
-            danhDauDaTraDo={danhDauDaTraDo} 
-            lichLamViec={lichLamViec} 
-            danhSachKhachHang={danhSachKhachHang}
-            danhSachThuHuong={danhSachThuHuong}
+            formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} 
+            hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} 
+            lichLamViec={lichLamViec} danhSachKhachHang={danhSachKhachHang} danhSachThuHuong={danhSachThuHuong}
           />
+        )}
+
+        {/* TAB CHI PHÍ VỚI BỨC TƯỜNG BẢO MẬT */}
+        {tab === "chiPhi" && laAdmin && (
+          <div className="animate-fade-in">
+            {!isChiPhiUnlocked ? (
+              <div className="flex flex-col items-center justify-center p-8 bg-white rounded-[2rem] shadow-xl border border-slate-100 max-w-sm mx-auto mt-10 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-2 bg-rose-500"></div>
+                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 shadow-inner"><Lock size={40} strokeWidth={2.5}/></div>
+                <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">Vùng Bảo Mật</h2>
+                <p className="text-sm text-slate-500 font-bold mb-6 text-center">Vui lòng nhập mã PIN Admin để xem các khoản Thu - Chi của tiệm.</p>
+                
+                <input 
+                  type="password" 
+                  placeholder="Nhập mã PIN..." 
+                  value={maPin} 
+                  onChange={(e) => setMaPin(e.target.value)} 
+                  className="w-full text-center tracking-widest text-3xl font-black bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 mb-4 transition-all" 
+                />
+                
+                <button 
+                  onClick={() => { 
+                    if (maPin === "6868") { setIsChiPhiUnlocked(true); setMaPin(""); } 
+                    else { toast.error("Sai mã PIN!"); setMaPin(""); } 
+                  }} 
+                  className="w-full bg-rose-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-rose-200 active:scale-95 transition-all text-lg"
+                >
+                  MỞ KHÓA
+                </button>
+                <p className="text-[10px] text-slate-400 mt-6 font-bold uppercase tracking-wider">Mã mặc định: 6868</p>
+              </div>
+            ) : (
+              <TabChiPhi formatTienInput={formatTienInput} />
+            )}
+          </div>
         )}
 
         {tab === "chamCong" && (
@@ -359,7 +394,6 @@ export default function HomePage() {
         
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
 
-        {/* TAB KHO ĐỒ GỘP GÓI CHỤP */}
         {tab === "tinhTrangKH" && (
           <div className="animate-fade-in">
             {laAdmin && (
@@ -467,9 +501,9 @@ export default function HomePage() {
           { key: "phatSinh", icon: Wallet, label: "Phát sinh" }, { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
         ].map((nav) => {
           const IconComponent = nav.icon;
-          const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "thongKe" || tab === "tinhTrangKH" || tab === "khachHang"));
+          const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "thongKe" || tab === "tinhTrangKH" || tab === "khachHang" || tab === "chiPhi"));
           return (
-            <button key={nav.key} onClick={() => { setTab(nav.key === "luong" ? "luong" : (nav.key as TabType)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group transition-all duration-300">
+            <button key={nav.key} onClick={() => { setTab(nav.key === "luong" ? "luong" : (nav.key as any)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group transition-all duration-300">
               {isActive && <span className="absolute -top-3 w-1.5 h-1.5 bg-blue-600 rounded-full animate-fade-in shadow-sm shadow-blue-300"></span>}
               <div className={`transition-all duration-300 ${isActive ? "-translate-y-1" : "group-hover:-translate-y-0.5"}`}><IconComponent size={24} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"} /></div>
               <span className={`text-[10px] mt-1.5 transition-all duration-300 ${isActive ? "font-bold text-blue-600" : "font-semibold text-slate-400 group-hover:text-slate-600"}`}>{nav.label}</span>
