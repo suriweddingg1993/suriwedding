@@ -9,10 +9,12 @@ import ModalQuanLyGoi from "./ModalQuanLyGoi";
 import ModalBaoCao from "./ModalBaoCao";
 import ModalPhanCong from "./ModalPhanCong"; 
 import NutCopy from "./NutCopy"; 
-import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck, ChevronDown } from "lucide-react";
+import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck, ChevronDown, Save } from "lucide-react";
 
+// ĐÃ BỌC THÉP HÀM NÀY CHỐNG CRASH KHI VALUE BỊ UNDEFINED
 function chuyenTienVeSo(value: string) { 
-  return Number(value.replace(/\./g, "")); 
+  if (!value) return 0;
+  return Number(value.toString().replace(/\./g, "")); 
 }
 
 interface TabLichProps {
@@ -47,7 +49,6 @@ export default function TabLich({
   const [theLoai, setTheLoai] = useState("Chụp ảnh cưới");
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
   
-  // State Gói chụp & Chi tiết sản phẩm
   const [goiChup, setGoiChup] = useState("");
   const [chiTietGoi, setChiTietGoi] = useState("");
   const [giaTien, setGiaTien] = useState("");
@@ -169,8 +170,27 @@ export default function TabLich({
     catch (error) { toast.error("Lỗi cập nhật"); } 
   };
 
+  const luuNhanhGoiVaoThuVien = async () => {
+    if (!goiChup || !giaTien) { toast.error("Vui lòng nhập Tên gói và Giá tiền để lưu mẫu!"); return; }
+    try {
+      await addDoc(collection(db, "goiDichVu"), {
+        tenGoi: goiChup || "", chiTiet: chiTietGoi || "", giaTien: chuyenTienVeSo(giaTien) || 0
+      });
+      toast.success("Đã lưu gói mới vào Thư viện mẫu!");
+    } catch(e: any) { 
+      toast.error("Lỗi lưu gói: " + e.message); 
+      console.error(e);
+    }
+  };
+
+  // ==========================================
+  // ĐÃ BỌC THÉP HÀM NÀY, BẮT LỖI TẬN RỄ
+  // ==========================================
   const handleLuuLichThongMinh = async () => {
-    if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); return; }
+    if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { 
+      toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); 
+      return; 
+    }
 
     const lichCungNgay = lichLamViec.filter((item) => item.ngay === ngay && item.id !== dangSua);
     const [h1, m1] = gio.split(":").map(Number);
@@ -190,34 +210,53 @@ export default function TabLich({
     let finalKhId = khachHangId;
 
     try {
+      // Tách logic CRM ra chạy độc lập. Nếu Firebase Rules có lỡ chặn cũng không chết Lịch.
       if (!finalKhId && !dangSua) {
-        const khRef = await addDoc(collection(db, "khachHang"), {
-          tenKhach, soDienThoai, soDienThoai2, 
-          nguonKhach: "Tự động tạo từ Lịch", 
-          ngayTao: new Date().toISOString()
-        });
-        finalKhId = khRef.id;
-        toast.success(`Đã tự động tạo Hồ sơ CRM cho khách mới!`);
+        try {
+          const khRef = await addDoc(collection(db, "khachHang"), {
+            tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
+            nguonKhach: "Tự động tạo từ Lịch", ngayTao: new Date().toISOString()
+          });
+          finalKhId = khRef.id;
+        } catch (crmError) {
+          console.warn("⚠️ Bỏ qua lỗi CRM (Có thể do Firebase Rules chưa mở):", crmError);
+        }
       }
 
       const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
       
+      // Xoá sạch mọi rủi ro biến rỗng (undefined) trước khi đưa vào Database
       const duLieuLich: any = { 
-        khachHangId: finalKhId, ngay, gio, tenKhach, soDienThoai, soDienThoai2, 
-        theLoai: theLoaiCuoi, goiChup, chiTietGoi, 
-        giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0,
-        dichVuThem, tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, ngayCuoi
+        khachHangId: finalKhId || null, 
+        ngay: ngay || "", 
+        gio: gio || "", 
+        tenKhach: tenKhach || "", 
+        soDienThoai: soDienThoai || "", 
+        soDienThoai2: soDienThoai2 || "", 
+        theLoai: theLoaiCuoi || "", 
+        goiChup: goiChup || "", 
+        chiTietGoi: chiTietGoi || "", 
+        giaTien: chuyenTienVeSo(giaTien) || 0, 
+        tienCoc: chuyenTienVeSo(tienCoc) || 0,
+        dichVuThem: dichVuThem || "", 
+        tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, 
+        ngayCuoi: ngayCuoi || ""
       };
 
-      if (!dangSua) duLieuLich.trangThai = "Đã chốt lịch";
-
-      if (dangSua) { 
-        await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); 
+      if (!dangSua) {
+        duLieuLich.trangThai = "Đã chốt lịch";
+        await addDoc(collection(db, "lichStudio"), duLieuLich); 
+        toast.success("Đã thêm lịch thành công!"); 
       } else { 
-        await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch!"); 
+        await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); 
+        toast.success("Đã lưu thay đổi!"); 
       } 
-      setShowModal(false); resetForm();
-    } catch (error) { toast.error("Có lỗi mạng"); }
+      setShowModal(false); 
+      resetForm();
+    } catch (error: any) { 
+      toast.error("Lỗi: " + (error?.message || "Không xác định"));
+      console.error("LỖI LƯU LỊCH CHÍNH XÁC:", error);
+    }
   };
 
   const luuGoiDichVu = async () => {
@@ -511,7 +550,7 @@ export default function TabLich({
                     <ChevronDown size={16} className="absolute right-3 top-4 text-slate-400 pointer-events-none" />
                   </div>
 
-                  {(!danhSachGoiDichVu.some(g => g.tenGoi === goiChup) || !goiChup) && (
+                  {(!danhSachGoiDichVu.some(g => g.tenGoi === goiChup) && goiChup !== "") && (
                     <input 
                       type="text" 
                       value={goiChup} 
@@ -540,6 +579,17 @@ export default function TabLich({
                     <input type="text" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} placeholder="5.000.000" className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-indigo-700 font-black outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8" />
                     <span className="absolute right-3 top-[36px] text-slate-400 font-black">đ</span>
                   </div>
+
+                  {/* NÚT LƯU NHANH GÓI VÀO THƯ VIỆN KHI ADMIN GÕ GÓI MỚI */}
+                  {(!danhSachGoiDichVu.some(g => g.tenGoi === goiChup) && goiChup.trim() !== "") && laAdmin && (
+                    <button 
+                      onClick={luuNhanhGoiVaoThuVien} 
+                      className="mt-2 w-full py-3 bg-indigo-100 text-indigo-700 font-black text-xs rounded-xl hover:bg-indigo-200 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                    >
+                      <Save size={16}/> LƯU GÓI NÀY VÀO THƯ VIỆN MẪU
+                    </button>
+                  )}
+
                 </div>
               </div>
 
