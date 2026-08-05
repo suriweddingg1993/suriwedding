@@ -10,7 +10,6 @@ import ModalPhanCong from "./ModalPhanCong";
 import NutCopy from "./NutCopy"; 
 import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck, ChevronDown } from "lucide-react";
 
-// ĐÃ BỌC THÉP HÀM NÀY CHỐNG CRASH KHI VALUE BỊ UNDEFINED
 function chuyenTienVeSo(value: string) { 
   if (!value) return 0;
   return Number(value.toString().replace(/\./g, "")); 
@@ -45,12 +44,12 @@ export default function TabLich({
   const [tenKhach, setTenKhach] = useState("");
   const [soDienThoai, setSoDienThoai] = useState("");
   const [soDienThoai2, setSoDienThoai2] = useState("");
-  const [theLoai, setTheLoai] = useState("Chụp ảnh cưới");
-  const [theLoaiKhac, setTheLoaiKhac] = useState("");
   
+  // Ẩn state "theLoai" riêng vì bây giờ Thể Loại sẽ được quyết định bởi Gói Chụp
   const [goiChup, setGoiChup] = useState("");
   const [chiTietGoi, setChiTietGoi] = useState("");
   const [giaTien, setGiaTien] = useState("");
+  const [theLoaiDaChon, setTheLoaiDaChon] = useState("Chưa phân loại"); // Tự nhận diện từ Gói
   
   const [tienCoc, setTienCoc] = useState("");
   const [dichVuThem, setDichVuThem] = useState("");
@@ -86,7 +85,6 @@ export default function TabLich({
     return () => { document.body.style.overflow = ""; };
   }, [showModal, showHoaHongModal, showPhanCongModal, hoaDonData]);
 
-  // Load danh sách gói để cho nhân viên chọn (Logic giữ nguyên)
   useEffect(() => {
     const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => { setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]); });
     return () => unsubGoi();
@@ -138,16 +136,17 @@ export default function TabLich({
 
   const resetForm = () => { 
     setDangSua(null); setKhachHangId(null); setNgay(selectedDate); setNgayCuoi(""); setGio("08:00"); 
-    setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); setTheLoai("Chụp ảnh cưới"); setTheLoaiKhac(""); 
-    setGoiChup(""); setChiTietGoi(""); setGiaTien(""); setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); 
+    setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); 
+    setGoiChup(""); setChiTietGoi(""); setGiaTien(""); setTheLoaiDaChon("Khác");
+    setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); 
   };
 
   const openAddModal = () => { resetForm(); setShowModal(true); };
 
   const suaLich = (item: any) => { 
     setNgay(item.ngay); setGio(item.gio); setTenKhach(item.tenKhach); setSoDienThoai(item.soDienThoai || ""); 
-    setSoDienThoai2(item.soDienThoai2 || ""); setTheLoai(item.theLoai || "Chụp ảnh cưới"); setTheLoaiKhac(""); 
-    setGoiChup(item.goiChup || ""); setChiTietGoi(item.chiTietGoi || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); 
+    setSoDienThoai2(item.soDienThoai2 || ""); 
+    setGoiChup(item.goiChup || item.theLoai || ""); setChiTietGoi(item.chiTietGoi || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); setTheLoaiDaChon(item.theLoai || "Khác");
     setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
     setDichVuThem(item.dichVuThem || ""); setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
     setDangSua(item.id || null); setKhachHangId(item.khachHangId || null);
@@ -200,8 +199,6 @@ export default function TabLich({
           console.warn("⚠️ Bỏ qua lỗi CRM:", crmError);
         }
       }
-
-      const theLoaiCuoi = theLoai === "Khác" ? theLoaiKhac.trim() : (theLoai || goiChup || "Chụp ảnh");
       
       const duLieuLich: any = { 
         khachHangId: finalKhId || null, 
@@ -210,7 +207,7 @@ export default function TabLich({
         tenKhach: tenKhach || "", 
         soDienThoai: soDienThoai || "", 
         soDienThoai2: soDienThoai2 || "", 
-        theLoai: theLoaiCuoi || "", 
+        theLoai: theLoaiDaChon || "Khác", 
         goiChup: goiChup || "", 
         chiTietGoi: chiTietGoi || "", 
         giaTien: chuyenTienVeSo(giaTien) || 0, 
@@ -234,6 +231,14 @@ export default function TabLich({
       toast.error("Lỗi: " + (error?.message || "Không xác định"));
     }
   };
+
+  // LOGIC NHÓM DỮ LIỆU ĐỂ HIỂN THỊ DROPDOWN SIÊU NGẮN GỌN
+  const groupedPackagesLich = danhSachGoiDichVu.reduce((acc, goi) => {
+    const loai = (goi as any).theLoai || "Khác";
+    if (!acc[loai]) acc[loai] = [];
+    acc[loai].push(goi);
+    return acc;
+  }, {} as Record<string, GoiDichVu[]>);
 
   let dsLichNgayNay: Lich[] = [];
   if (tuKhoa.trim()) {
@@ -436,40 +441,21 @@ export default function TabLich({
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5 flex justify-between">
-                  Tên Khách Hàng (*) 
-                  {khachHangId && <span className="text-emerald-500 italic lowercase">(Đã tự điền)</span>}
-                </label>
-                <input type="text" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} placeholder="Tên chú rể & cô dâu..." className={`border p-3.5 rounded-2xl w-full font-bold outline-none focus:ring-4 transition-all ${khachHangId ? "bg-emerald-50/30 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-100 text-slate-900 focus:ring-indigo-50"}`} />
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Loại hình</label>
-                  <select value={theLoai} onChange={(e) => setTheLoai(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all">
-                    <option value="Chụp ảnh cưới">Chụp ảnh cưới</option>
-                    <option value="Chụp gia đình">Chụp gia đình</option>
-                    <option value="Phóng sự cưới">Phóng sự cưới</option>
-                    <option value="Chụp thời trang">Chụp thời trang</option>
-                    <option value="Chụp em bé">Chụp em bé</option>
-                    <option value="Khác">Khác...</option>
-                  </select>
-                </div>
-                {theLoai === "Khác" ? (
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Nhập thể loại</label>
-                    <input type="text" value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} placeholder="VD: Khai trương..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none" />
-                  </div>
-                ) : (
-                  <div>
+                 <div className="col-span-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5 flex justify-between">
+                    Tên Khách Hàng (*) 
+                    {khachHangId && <span className="text-emerald-500 italic lowercase">(Đã tự điền)</span>}
+                  </label>
+                  <input type="text" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} placeholder="Tên chú rể & cô dâu..." className={`border p-3.5 rounded-2xl w-full font-bold outline-none focus:ring-4 transition-all ${khachHangId ? "bg-emerald-50/30 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-100 text-slate-900 focus:ring-indigo-50"}`} />
+                 </div>
+                 <div className="col-span-2">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">SĐT Phụ (Tùy chọn)</label>
                     <input type="tel" value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} placeholder="098..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
-                  </div>
-                )}
+                 </div>
               </div>
 
-              {/* KHU VỰC CHỌN GÓI CHỤP SẠCH SẼ - KHÔNG CÒN NÚT THÊM GÓI TẠI ĐÂY */}
+              {/* KHU VỰC CHỌN GÓI CHỤP SẠCH SẼ - ĐÃ PHÂN NHÓM CHUYÊN NGHIỆP */}
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 ml-1">Chọn gói chụp (*)</label>
                 <div className="grid grid-cols-1 gap-3">
@@ -479,24 +465,31 @@ export default function TabLich({
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === "Khác") {
-                          setGoiChup(""); 
-                          setChiTietGoi(""); 
+                          setGoiChup(""); setChiTietGoi(""); setTheLoaiDaChon("Khác");
                         } else {
                           setGoiChup(val);
                           const goi = danhSachGoiDichVu.find(g => g.tenGoi === val);
                           if (goi) {
                             setGiaTien(formatTienInput(String(goi.giaTien)));
                             setChiTietGoi(goi.chiTiet || ""); 
+                            setTheLoaiDaChon((goi as any).theLoai || "Chụp ảnh cưới");
                           }
                         }
                       }}
                       className="appearance-none bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8"
                     >
                       <option value="">-- Chọn từ danh sách gói --</option>
-                      {danhSachGoiDichVu.map(g => (
-                        <option key={g.id} value={g.tenGoi}>{g.tenGoi} - ({formatTienInput(String(g.giaTien))}đ)</option>
+                      
+                      {/* ĐÂY LÀ SỰ LỢI HẠI CỦA OPTGROUP: CHIA NHÓM CHUYÊN NGHIỆP TRONG SELECT */}
+                      {Object.entries(groupedPackagesLich).map(([loai, gois]) => (
+                        <optgroup key={loai} label={`📍 ${loai.toUpperCase()}`}>
+                          {gois.map(g => (
+                            <option key={g.id} value={g.tenGoi}>{g.tenGoi} - ({formatTienInput(String(g.giaTien))}đ)</option>
+                          ))}
+                        </optgroup>
                       ))}
-                      <option value="Khác">Nhập tay gói khác...</option>
+
+                      <option value="Khác">✨ Khác (Nhập tay...)</option>
                     </select>
                     <ChevronDown size={16} className="absolute right-3 top-4 text-slate-400 pointer-events-none" />
                   </div>
