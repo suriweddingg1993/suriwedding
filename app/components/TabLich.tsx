@@ -9,7 +9,7 @@ import ModalQuanLyGoi from "./ModalQuanLyGoi";
 import ModalBaoCao from "./ModalBaoCao";
 import ModalPhanCong from "./ModalPhanCong"; 
 import NutCopy from "./NutCopy"; 
-import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck } from "lucide-react";
+import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck, ChevronDown } from "lucide-react";
 
 function chuyenTienVeSo(value: string) { 
   return Number(value.replace(/\./g, "")); 
@@ -81,17 +81,20 @@ export default function TabLich({
     }, {});
   }, [lichLamViec]);
 
+  // Vô hiệu hóa Scroll nền khi mở Modal (Chống vuốt web nhầm)
   useEffect(() => {
     if (showModal || showGoiModal || showHoaHongModal || showPhanCongModal || hoaDonData) { document.body.style.overflow = "hidden"; } 
     else { document.body.style.overflow = ""; }
     return () => { document.body.style.overflow = ""; };
   }, [showModal, showGoiModal, showHoaHongModal, showPhanCongModal, hoaDonData]);
 
+  // Lấy danh sách Gói chụp (để đồng bộ giá)
   useEffect(() => {
     const unsubGoi = onSnapshot(collection(db, "goiDichVu"), (snap) => { setDanhSachGoiDichVu(snap.docs.map(d => ({ id: d.id, ...d.data() })) as GoiDichVu[]); });
     return () => unsubGoi();
   }, []);
 
+  // Tự động tìm SĐT
   useEffect(() => {
     if (!dangSua && soDienThoai.length >= 9) {
       const khachCu = danhSachKhachHang.find(kh => kh.soDienThoai === soDienThoai);
@@ -166,7 +169,7 @@ export default function TabLich({
   };
 
   const handleLuuLichThongMinh = async () => {
-    if (!ngay || !gio || !tenKhach || !soDienThoai) { toast.error("Vui lòng điền đủ Ngày, Giờ, SĐT và Tên!"); return; }
+    if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); return; }
 
     const lichCungNgay = lichLamViec.filter((item) => item.ngay === ngay && item.id !== dangSua);
     const [h1, m1] = gio.split(":").map(Number);
@@ -309,7 +312,6 @@ export default function TabLich({
                     
                     <div className="text-lg font-black text-slate-900 flex items-center gap-1.5">
                       {item.tenKhach} 
-                      {/* ĐÃ BỌC THẺ SPAN ĐỂ HẾT LỖI TITLE */}
                       {item.khachHangId && <span title="Khách hàng đã có Hồ sơ CRM"><UserCheck size={16} className="text-emerald-500"/></span>}
                     </div>
                     <div className="text-sm font-bold text-slate-500 mt-1">{item.theLoai}</div>
@@ -402,14 +404,24 @@ export default function TabLich({
       <ModalQuanLyGoi showGoiModal={showGoiModal} setShowGoiModal={setShowGoiModal} dangSuaGoi={dangSuaGoi} setDangSuaGoi={setDangSuaGoi} tenGoiMoi={tenGoiMoi} setTenGoiMoi={setTenGoiMoi} chiTietGoiMoi={chiTietGoiMoi} setChiTietGoiMoi={setChiTietGoiMoi} giaGoiMoi={giaGoiMoi} setGiaGoiMoi={setGiaGoiMoi} formatTienInput={formatTienInput} luuGoiDichVu={luuGoiDichVu} danhSachGoiDichVu={danhSachGoiDichVu} xoaGoiDichVu={xoaGoiDichVu} laAdmin={laAdmin} />
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
+      {/* ==============================================
+          MODAL THÊM LỊCH (ĐÃ NÂNG CẤP GIAO DIỆN & TÍNH NĂNG GÓI CHỤP)
+      =============================================== */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md p-6 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto custom-scrollbar border border-white">
-            <h3 className="text-xl font-black mb-6 text-slate-900 tracking-tight flex items-center gap-2">
-              {dangSua ? "✏️ Cập nhật Lịch" : "✨ Đặt lịch mới"}
-            </h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-[100] sm:p-4 overscroll-none touch-none">
+          <div className="bg-white w-full sm:max-w-md h-[92vh] sm:h-auto sm:max-h-[90vh] rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-auto border border-white">
+            
+            {/* HEADER CỐ ĐỊNH PHÍA TRÊN */}
+            <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm z-10">
+              <button onClick={() => setShowModal(false)} className="text-slate-500 font-bold px-4 py-2 hover:bg-slate-200 rounded-xl transition-all">Hủy</button>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                {dangSua ? "✏️ Cập nhật" : "✨ Đặt lịch mới"}
+              </h3>
+              <button onClick={handleLuuLichThongMinh} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 font-black px-4 py-2 rounded-xl transition-all">LƯU</button>
+            </div>
 
-            <div className="space-y-4">
+            {/* NỘI DUNG CUỘN ĐƯỢC BÊN DƯỚI */}
+            <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-4 pb-12 overscroll-contain">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày (*)</label>
@@ -463,17 +475,52 @@ export default function TabLich({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Gói chụp (*)</label>
-                  <input type="text" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} placeholder="Tên gói..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
-                  {laAdmin && <button onClick={() => setShowGoiModal(true)} className="absolute right-2 top-8 text-xs font-bold bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg">Gói</button>}
+              {/* KHU VỰC CHỌN GÓI CHỤP THÔNG MINH */}
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
+                <div className="flex justify-between items-end mb-2 ml-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Chọn gói chụp (*)</label>
+                  {laAdmin && <button onClick={() => setShowGoiModal(true)} className="text-[9px] font-black bg-indigo-100 text-indigo-600 px-2 py-1 rounded-lg">Quản lý Gói</button>}
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Giá tiền (*)</label>
+
+                <div className="grid grid-cols-1 gap-3">
                   <div className="relative">
-                    <input type="text" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} placeholder="5.000.000" className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 transition-all pr-8" />
-                    <span className="absolute right-3 top-3.5 text-slate-400 font-black">đ</span>
+                    <select 
+                      value={danhSachGoiDichVu.some(g => g.tenGoi === goiChup) ? goiChup : (goiChup ? "Khác" : "")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "Khác") {
+                          setGoiChup(""); 
+                        } else {
+                          setGoiChup(val);
+                          const goi = danhSachGoiDichVu.find(g => g.tenGoi === val);
+                          if (goi) setGiaTien(formatTienInput(String(goi.giaTien)));
+                        }
+                      }}
+                      className="appearance-none bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8"
+                    >
+                      <option value="">-- Chọn từ danh sách gói --</option>
+                      {danhSachGoiDichVu.map(g => (
+                        <option key={g.id} value={g.tenGoi}>{g.tenGoi} - ({formatTienInput(String(g.giaTien))}đ)</option>
+                      ))}
+                      <option value="Khác">Nhập tay gói khác...</option>
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-4 text-slate-400 pointer-events-none" />
+                  </div>
+
+                  {(!danhSachGoiDichVu.some(g => g.tenGoi === goiChup) || !goiChup) && (
+                    <input 
+                      type="text" 
+                      value={goiChup} 
+                      onChange={(e) => setGoiChup(e.target.value)} 
+                      placeholder="Nhập tên gói chụp tùy chỉnh..." 
+                      className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all animate-fade-in" 
+                    />
+                  )}
+
+                  <div className="relative mt-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Giá tiền gói (*)</label>
+                    <input type="text" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} placeholder="5.000.000" className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-indigo-700 font-black outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8" />
+                    <span className="absolute right-3 top-[36px] text-slate-400 font-black">đ</span>
                   </div>
                 </div>
               </div>
@@ -495,21 +542,15 @@ export default function TabLich({
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Mua/Thuê thêm dịch vụ</label>
                   <div className="flex gap-2">
                     <input type="text" value={dichVuThem} onChange={(e) => setDichVuThem(e.target.value)} placeholder="Tên dịch vụ..." className="bg-white border border-slate-200 p-3 rounded-xl flex-1 text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100" />
-                    <div className="relative w-32">
+                    <div className="relative w-32 shrink-0">
                       <input type="text" value={tienDichVuThem} onChange={(e) => setTienDichVuThem(formatTienInput(e.target.value))} placeholder="Giá..." className="bg-white border border-slate-200 p-3 rounded-xl w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-6" />
                       <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowModal(false)} className="px-6 py-4 bg-slate-100 font-bold text-slate-600 rounded-2xl hover:bg-slate-200 active:scale-95 transition-all">Hủy</button>
-                <button onClick={handleLuuLichThongMinh} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all">
-                  {dangSua ? "LƯU THAY ĐỔI" : "TẠO LỊCH NGAY"}
-                </button>
-              </div>
             </div>
+            
           </div>
         </div>
       )}
