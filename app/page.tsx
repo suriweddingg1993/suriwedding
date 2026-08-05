@@ -281,7 +281,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* RENDER CÁC TAB - TRUYỀN DỮ LIỆU CHUẨN XÁC */}
+      {/* RENDER CÁC TAB - TRUYỀN DỮ LIỆU CHUẨN XÁC VÀ ĐẦY ĐỦ */}
       <div id="noi-dung-tab" className="mt-2">
         {tab === "lich" && (
           <TabLich 
@@ -294,11 +294,13 @@ export default function HomePage() {
         {tab === "phatSinh" && (
           <TabPhatSinh 
             formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} 
-            hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} lichLamViec={lichLamViec} 
+            hoSoCuaToi={hoSoCuaToi} themThuHuong={themThuHuong} danhDauDaTraDo={danhDauDaTraDo} 
+            lichLamViec={lichLamViec} danhSachKhachHang={danhSachKhachHang} danhSachThuHuong={danhSachThuHuong}
           />
         )}
 
         {tab === "chamCong" && <TabChamCong homNay={homNay} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachChamCong={danhSachChamCong} danhSachTaiKhoan={danhSachTaiKhoan} />}
+        
         {tab === "luong" && <TabLuong homNay={homNay} uidCuaToi={user?.uid} hoSoCuaToi={hoSoCuaToi} laAdmin={laAdmin} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} themThuHuong={themThuHuong} xoaThuHuong={xoaThuHuong} formatTienInput={formatTienInput} />}
         
         {tab === "nhanVien" && laAdmin && (
