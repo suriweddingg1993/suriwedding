@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { collection, addDoc, doc, deleteDoc } from "firebase/firestore";
+// BỔ SUNG HÀM increment
+import { collection, addDoc, doc, deleteDoc, updateDoc, increment } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { PhatSinh, TaiKhoan, Lich, KhachHang, ThuHuong } from "../../types";
 import ModalHoaHongPhatSinh from "./ModalHoaHongPhatSinh";
@@ -17,7 +18,7 @@ interface TabPhatSinhProps {
   danhDauDaTraDo: (id: string) => Promise<void>;
   lichLamViec: Lich[]; 
   danhSachKhachHang: KhachHang[];
-  danhSachThuHuong: ThuHuong[]; // Đã thêm biến này để hệ thống nhận diện
+  danhSachThuHuong: ThuHuong[];
 }
 
 export default function TabPhatSinh({
@@ -28,7 +29,6 @@ export default function TabPhatSinh({
   const [selectedDate, setSelectedDate] = useState(localToday);
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
 
-  // State Form
   const [psKhachHangId, setPsKhachHangId] = useState<string | null>(null);
   const [psNgay, setPsNgay] = useState(localToday);
   const [psTenKhach, setPsTenKhach] = useState("");
@@ -44,14 +44,12 @@ export default function TabPhatSinh({
   const [tienHoaHong, setTienHoaHong] = useState("");
   const [tuKhoa, setTuKhoa] = useState("");
 
-  // Vô hiệu hóa Scroll nền khi mở Modal (Chống vuốt văng app)
   useEffect(() => {
     if (showModal || showHoaHongModal) document.body.style.overflow = "hidden"; 
     else document.body.style.overflow = "";
     return () => { document.body.style.overflow = ""; };
   }, [showModal, showHoaHongModal]);
 
-  // SMART CRM: Tự động tìm khách cũ theo SĐT
   useEffect(() => {
     if (psSoDienThoai.length >= 9) {
       const khachCu = danhSachKhachHang.find(kh => kh.soDienThoai === psSoDienThoai);
@@ -78,9 +76,16 @@ export default function TabPhatSinh({
 
   const goToToday = () => { setCurrentMonth(new Date(localToday)); setSelectedDate(localToday); setTuKhoa(""); };
 
+  // ÁP DỤNG TRỪ ĐIỂM CHI TIÊU KHI XÓA
   const xoaPhatSinh = async (id?: string) => { 
     if (!id) return; if (!laAdmin) { toast.error("Chỉ admin mới được xóa"); return; } 
     if (!confirm("Xóa khoản này?")) return; 
+    
+    const oldPS = danhSachPhatSinh.find(p => p.id === id);
+    if (oldPS && oldPS.khachHangId) {
+        try { await updateDoc(doc(db, "khachHang", oldPS.khachHangId), { tongChiTieu: increment(-(Number(oldPS.soTien || 0))), soLanDen: increment(-1) }); } catch(e){}
+    }
+
     await deleteDoc(doc(db, "phatSinh", id)); toast.success("Đã xóa"); 
   };
 
@@ -90,7 +95,6 @@ export default function TabPhatSinh({
     if (!phatSinhDangChon) return; 
     const moTaJob = `[Tư vấn ${phatSinhDangChon.loai}] KH: ${phatSinhDangChon.tenKhach || "Khách vãng lai"}`;
     
-    // Check nếu đã báo cáo thì không cho báo cáo lại
     const daBaoCao = danhSachThuHuong?.some(th => th.uid === hoSoCuaToi.id && th.moTa === moTaJob);
     if (daBaoCao) { toast.error("Bạn đã nhận hoa hồng cho khoản này rồi!"); return; }
 
@@ -98,6 +102,7 @@ export default function TabPhatSinh({
     setShowHoaHongModal(false); setTienHoaHong("");
   };
 
+  // TỐI ƯU CỘNG DỒN TỰ ĐỘNG LTV VÀO BẢNG KHACHHANG
   const handleThemPhatSinh = async () => {
     if (!psNgay || !psLoai || !psSoTien || !psTenKhach || !psSoDienThoai) { 
       toast.error("Vui lòng điền đủ Ngày, Khách, SĐT, Dịch vụ & Tiền!"); return; 
@@ -107,24 +112,28 @@ export default function TabPhatSinh({
     }
 
     let finalKhId = psKhachHangId;
+    const tienPhatSinhMoi = chuyenTienVeSo(psSoTien);
 
     try {
-      // TẠO HỒ SƠ KHÁCH HÀNG NẾU LÀ KHÁCH MỚI
       if (!finalKhId) {
         const khRef = await addDoc(collection(db, "khachHang"), {
           tenKhach: psTenKhach, soDienThoai: psSoDienThoai, 
           nguonKhach: "Tự động tạo từ Phát sinh", 
-          ngayTao: new Date().toISOString()
+          ngayTao: new Date().toISOString(),
+          tongChiTieu: tienPhatSinhMoi,
+          soLanDen: 1
         });
         finalKhId = khRef.id;
         toast.success(`Đã tự động tạo Hồ sơ CRM cho khách mới!`);
+      } else {
+         try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tienPhatSinhMoi), soLanDen: increment(1) }); } catch(e){}
       }
 
       await addDoc(collection(db, "phatSinh"), { 
-        khachHangId: finalKhId, // Đồng bộ mã KH
+        khachHangId: finalKhId,
         ngay: psNgay, tenKhach: psTenKhach, soDienThoai: psSoDienThoai, 
         loai: psLoai, ngayTra: psNgayTra, 
-        soTien: chuyenTienVeSo(psSoTien), 
+        soTien: tienPhatSinhMoi, 
         nguoiGhi: hoSoCuaToi?.email || "", ghiChu: psGhiChu 
       }); 
       
@@ -227,14 +236,10 @@ export default function TabPhatSinh({
 
       <button onClick={() => { setPsNgay(selectedDate); setShowModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full text-3xl shadow-xl shadow-emerald-200/50 z-40 hover:scale-110 active:scale-90 transition-all flex items-center justify-center"><Wallet size={24}/></button>
 
-      {/* ==============================================
-          MODAL THÊM PHÁT SINH (GIAO DIỆN NATIVE CHỐNG VUỐT VĂNG)
-      =============================================== */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-[100] sm:p-4 overscroll-none touch-none">
           <div className="bg-white w-full sm:max-w-md h-[92vh] sm:h-auto sm:max-h-[90vh] rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-auto border border-white">
             
-            {/* HEADER CỐ ĐỊNH PHÍA TRÊN */}
             <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm z-10">
               <button onClick={() => setShowModal(false)} className="text-slate-500 font-bold px-4 py-2 hover:bg-slate-200 rounded-xl transition-all active:scale-95">Hủy</button>
               <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -243,7 +248,6 @@ export default function TabPhatSinh({
               <button onClick={handleThemPhatSinh} className="text-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-black px-4 py-2 rounded-xl transition-all active:scale-95">LƯU</button>
             </div>
 
-            {/* NỘI DUNG CUỘN ĐƯỢC BÊN DƯỚI */}
             <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-4 pb-12 overscroll-contain">
               
               <div className="grid grid-cols-2 gap-3">
@@ -273,7 +277,6 @@ export default function TabPhatSinh({
                   <input type="text" value={psLoai} onChange={(e) => setPsLoai(e.target.value)} placeholder="VD: Thuê váy, Makeup..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-emerald-50 transition-all" />
                 </div>
 
-                {/* HIỆN NGÀY TRẢ NẾU LÀ THUÊ ĐỒ */}
                 {isThueDo(psLoai) && (
                    <div className="col-span-2 animate-fade-in">
                      <label className="text-[10px] font-bold text-orange-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày hẹn trả đồ (*)</label>
@@ -300,7 +303,6 @@ export default function TabPhatSinh({
         </div>
       )}
 
-      {/* Modal Báo cáo hoa hồng thuê đồ */}
       <ModalHoaHongPhatSinh showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} phatSinhDangChon={phatSinhDangChon} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
     </div>
   );

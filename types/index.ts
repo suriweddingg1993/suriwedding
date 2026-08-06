@@ -1,5 +1,5 @@
 export type Role = "admin" | "staff";
-export type TabType = "home" | "lich" | "phatSinh" | "chamCong" | "luong" | "nhanVien" | "tinhTrangKH" | "thongKe" | "khachHang";
+export type TabType = "home" | "lich" | "phatSinh" | "chamCong" | "luong" | "nhanVien" | "tinhTrangKH" | "thongKe" | "khachHang" | "chiPhi";
 
 export interface TaiKhoan {
   id: string; email: string; hoTen?: string; soDienThoai?: string; role?: Role; luongCung?: number; thuongChuyenCan?: number;
@@ -15,7 +15,7 @@ export interface Lich {
   soDienThoai2?: string; 
   theLoai: string; 
   goiChup: string; 
-  chiTietGoi?: string; // <-- ĐÃ BỔ SUNG TRƯỜNG LƯU CHI TIẾT SẢN PHẨM Ở ĐÂY
+  chiTietGoi?: string; 
   giaTien: number; 
   tienCoc?: number; 
   dichVuThem?: string; 
@@ -52,6 +52,7 @@ export interface ChamCong {
   trangThaiGiaiTrinh?: string; 
   loaiGiaiTrinh?: string; 
   lyDoGiaiTrinh?: string;
+  thoiGianDeXuat?: string;
 }
 
 export interface ThuHuong {
@@ -67,6 +68,7 @@ export interface ThuHuong {
 export interface GoiDichVu {
   id?: string; 
   tenGoi: string; 
+  theLoai?: string;
   chiTiet: string; 
   giaTien: number;
 }
@@ -81,4 +83,15 @@ export interface KhachHang {
   ghiChu?: string; 
   ngayTao?: string; 
   chiTieu?: number;
+  // BỔNG SUNG ĐỂ HẾT LỖI TẠI TAB KHACH HANG
+  tongChiTieu?: number;
+  soLanDen?: number;
+}
+
+export interface ChiPhi {
+  id?: string;
+  ngay: string;
+  hangMuc: string;
+  soTien: number;
+  ghiChu?: string;
 }

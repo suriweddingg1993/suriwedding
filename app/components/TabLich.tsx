@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 import { Lich, TaiKhoan, GoiDichVu, PhatSinh, ThuHuong, KhachHang } from "../../types";
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
+// BỔ SUNG HÀM increment
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
 import ModalHoaDon from "./ModalHoaDon";
@@ -89,7 +90,6 @@ export default function TabLich({
     return () => unsubGoi();
   }, []);
 
-  // THUẬT TOÁN NHẬN DIỆN KHÁCH HÀNG
   useEffect(() => {
     if (!dangSua && soDienThoai.length >= 9) {
       const matches = danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai);
@@ -152,9 +152,23 @@ export default function TabLich({
     setShowModal(true); 
   };
 
-  const xoaLich = async (id: string) => { if (!laAdmin) { toast.error("Chỉ admin mới được xóa lịch"); return; } if (!confirm("Xóa lịch này?")) return; await deleteDoc(doc(db, "lichStudio", id)); toast.success("Đã xóa"); };
+  // ÁP DỤNG TRỪ ĐIỂM CHI TIÊU KHI XÓA LỊCH
+  const xoaLich = async (id: string) => { 
+    if (!laAdmin) { toast.error("Chỉ admin mới được xóa lịch"); return; } 
+    if (!confirm("Xóa lịch này?")) return; 
+    
+    const oldLich = lichLamViec.find(l => l.id === id);
+    if (oldLich && oldLich.khachHangId) {
+        const tongTienCu = (Number(oldLich.giaTien || 0)) + (Number((oldLich as any).tienDichVuThem || 0));
+        try { await updateDoc(doc(db, "khachHang", oldLich.khachHangId), { tongChiTieu: increment(-tongTienCu), soLanDen: increment(-1) }); } catch(e){}
+    }
+
+    await deleteDoc(doc(db, "lichStudio", id)); toast.success("Đã xóa"); 
+  };
+  
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
+  // TỐI ƯU CỘNG DỒN TỰ ĐỘNG LTV VÀO BẢNG KHACHHANG
   const handleLuuLichThongMinh = async () => {
     if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); return; }
 
@@ -174,12 +188,14 @@ export default function TabLich({
     }
 
     let finalKhId = khachHangId === "NEW" ? null : khachHangId;
+    const tongTienMoi = chuyenTienVeSo(giaTien) + chuyenTienVeSo(tienDichVuThem);
 
     try {
       if (!finalKhId && !dangSua) {
         try {
           const khRef = await addDoc(collection(db, "khachHang"), {
-            tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", nguonKhach: "Tự động tạo từ Lịch", ngayTao: new Date().toISOString()
+            tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", nguonKhach: "Tự động tạo từ Lịch", ngayTao: new Date().toISOString(),
+            tongChiTieu: tongTienMoi, soLanDen: 1 
           });
           finalKhId = khRef.id;
         } catch (crmError) { console.warn("⚠️ Bỏ qua lỗi CRM:", crmError); }
@@ -191,8 +207,29 @@ export default function TabLich({
         giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, dichVuThem: dichVuThem || "", tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, ngayCuoi: ngayCuoi || ""
       };
 
-      if (!dangSua) { duLieuLich.trangThai = "Đã chốt lịch"; await addDoc(collection(db, "lichStudio"), duLieuLich); toast.success("Đã thêm lịch thành công!"); } 
-      else { await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); toast.success("Đã lưu thay đổi!"); } 
+      if (!dangSua) { 
+        duLieuLich.trangThai = "Đã chốt lịch"; 
+        await addDoc(collection(db, "lichStudio"), duLieuLich); 
+        
+        // Cộng tiền cho khách cũ
+        if (finalKhId && khachHangId !== "NEW") {
+            try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tongTienMoi), soLanDen: increment(1) }); } catch(e){}
+        }
+        toast.success("Đã thêm lịch thành công!"); 
+      } 
+      else { 
+        const oldLich = lichLamViec.find(l => l.id === dangSua);
+        const tongTienCu = (Number(oldLich?.giaTien || 0)) + (Number((oldLich as any)?.tienDichVuThem || 0));
+        const chenhLech = tongTienMoi - tongTienCu;
+
+        await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); 
+        
+        // Cập nhật chênh lệch cho khách cũ
+        if (finalKhId && chenhLech !== 0) {
+            try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(chenhLech) }); } catch(e){}
+        }
+        toast.success("Đã lưu thay đổi!"); 
+      } 
       setShowModal(false); resetForm();
     } catch (error: any) { toast.error("Lỗi: " + (error?.message || "Không xác định")); }
   };
@@ -319,7 +356,6 @@ export default function TabLich({
                   </div>
                 )}
 
-                {/* KHU VỰC CHỨA CÁC NÚT THAO TÁC - ĐÃ BỔ SUNG LẠI NÚT BÁO CÁO */}
                 <div className="flex flex-wrap gap-2 mt-4 ml-2">
                   <select disabled={biKhoaVoiNhanVien} value={currentTrangThai} onChange={(e) => item.id && capNhatTrangThai(item.id, e.target.value)} className={`flex-1 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-2 py-2.5 rounded-xl outline-none min-w-[110px] ${biKhoaVoiNhanVien ? "opacity-60 cursor-not-allowed bg-slate-100" : "focus:ring-2 focus:ring-blue-200"}`}>
                     <option value="Đã chốt lịch">Đã chốt lịch</option><option value="Đã nhắc lịch">Đã nhắc lịch</option><option value="Đã chụp xong">Đã chụp xong</option><option value="Hoàn thành">Hoàn thành</option><option value="Hủy lịch">Hủy lịch</option>
@@ -327,7 +363,6 @@ export default function TabLich({
                   <button onClick={() => { setLichDangChon(item); setShowPhanCongModal(true); }} className="bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">👥 Phân công</button>
                   <button onClick={() => { setHoaDonData(item); setHdDiaChi(""); }} className="bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">🧾 Hóa Đơn</button>
                   <button onClick={() => copyNhacLich(item)} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold px-3 py-2.5 rounded-xl transition-all shadow-sm">💬 Nhắc khách</button>
-                  {/* NÚT BÁO CÁO ĐƯỢC THÊM LẠI VÀO ĐÂY */}
                   <button onClick={() => { setLichDangChon(item); setTienHoaHong(""); setVaiTro("Chụp ảnh"); setShowHoaHongModal(true); }} className="flex-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-2.5 rounded-xl hover:bg-blue-100 transition-colors shadow-sm min-w-[100px]">🙋‍♂️ Báo cáo</button>
                 </div>
               </div>
@@ -373,7 +408,6 @@ export default function TabLich({
                 </div>
               </div>
 
-              {/* BỘ LỌC CHỌN TÊN KHÁCH TRÙNG SĐT THÔNG MINH */}
               {!dangSua && soDienThoai.length >= 9 && danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai).length > 0 && (
                 <div className="bg-blue-50 border border-blue-100 p-3 rounded-2xl mt-1 animate-fade-in">
                   <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2 flex items-center gap-1"><Search size={12}/> Chọn người dùng số này:</div>
