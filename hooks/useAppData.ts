@@ -13,9 +13,10 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
   const [danhSachGoiDichVu, setDanhSachGoiDichVu] = useState<GoiDichVu[]>([]); 
   const [danhSachKhachHang, setDanhSachKhachHang] = useState<KhachHang[]>([]); 
 
+  // GIẢI PHÁP CHỐNG SẬP FIREBASE: Rút ngắn thời gian tải từ 6 tháng xuống 2 tháng (60 ngày)
   const mocThoiGian = useMemo(() => {
     const d = new Date(); 
-    d.setMonth(d.getMonth() - 6);
+    d.setMonth(d.getMonth() - 2); // Đã sửa từ -6 thành -2
     const offset = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - offset).toISOString().slice(0, 10);
   }, []);
@@ -43,6 +44,7 @@ export const useAppData = (user: User | null, laAdmin: boolean) => {
       (snapshot) => setDanhSachGoiDichVu(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as GoiDichVu[])
     );
 
+    // VẪN TẢI TOÀN BỘ KHÁCH HÀNG: Dùng để xếp hạng VIP (Do 1 khách = 1 tài liệu nên rất nhẹ, không tốn tài nguyên)
     const unsubKhachHang = onSnapshot(collection(db, "khachHang"), 
       (snapshot) => setDanhSachKhachHang(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as KhachHang[])
     );
