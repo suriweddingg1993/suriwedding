@@ -55,7 +55,6 @@ export default function HomePage() {
   const [subTabNhanSu, setSubTabNhanSu] = useState<"chamCong" | "danhSach">("chamCong");
   const [subTabKhoDo, setSubTabKhoDo] = useState<"traDo" | "goiChup">("traDo");
 
-  // MẬT KHẨU MỚI: 10012026 (8 SỐ)
   const [isChiPhiUnlocked, setIsChiPhiUnlocked] = useState(false);
   const [maPin, setMaPin] = useState("");
 
@@ -347,7 +346,7 @@ export default function HomePage() {
                 <div className="absolute top-0 left-0 right-0 h-2 bg-rose-500"></div>
                 <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 shadow-inner"><Lock size={40} strokeWidth={2.5}/></div>
                 <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">Vùng Bảo Mật</h2>
-                <p className="text-sm text-slate-500 font-bold mb-6 text-center">Vui lòng nhập mã PIN Admin (8 số) để xem chi phí.</p>
+                <p className="text-sm text-slate-500 font-bold mb-6 text-center">Vui lòng nhập mã PIN Admin để truy cập.</p>
                 
                 <input 
                   type="password" 
@@ -367,7 +366,6 @@ export default function HomePage() {
                 >
                   MỞ KHÓA
                 </button>
-                <p className="text-[10px] text-slate-400 mt-6 font-bold uppercase tracking-wider">Mật khẩu: 10012026</p>
               </div>
             ) : (
               <TabChiPhi formatTienInput={formatTienInput} />
