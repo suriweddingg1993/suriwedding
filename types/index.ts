@@ -20,6 +20,10 @@ export interface Lich {
   tienCoc?: number; 
   dichVuThem?: string; 
   tienDichVuThem?: number; 
+  
+  // ĐÃ BỔ SUNG: Lưu danh sách chi tiết các dịch vụ phụ (In ảnh, khung...)
+  chiTietDichVuThem?: { ten: string; gia: number }[];
+
   trangThai?: string; 
   ngayCuoi?: string; 
   phanCong?: Record<string, string>;
@@ -83,7 +87,7 @@ export interface KhachHang {
   ghiChu?: string; 
   ngayTao?: string; 
   chiTieu?: number;
-  // BỔNG SUNG ĐỂ HẾT LỖI TẠI TAB KHACH HANG
+  // BỔ SUNG ĐỂ HẾT LỖI TẠI TAB KHACH HANG
   tongChiTieu?: number;
   soLanDen?: number;
 }

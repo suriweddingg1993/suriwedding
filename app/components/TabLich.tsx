@@ -25,7 +25,8 @@ interface TabLichProps {
   danhSachPhatSinh: PhatSinh[]; 
   danhSachThuHuong: ThuHuong[];
   danhSachKhachHang: KhachHang[]; 
-  // ĐÃ BỔ SUNG PROPS ĐỂ NHẬN LỊCH TỪ TRANG CHỦ
+  // Nhận dữ liệu Kho sản phẩm từ ngoài truyền vào
+  danhSachSanPham?: any[]; 
   lichChuyenTuHome?: Lich | null;
   clearLichChuyenTuHome?: () => void;
 }
@@ -33,7 +34,7 @@ interface TabLichProps {
 export default function TabLich({
   homNay, formatTienInput, hoSoCuaToi, themThuHuong, laAdmin, 
   lichLamViec, danhSachPhatSinh, danhSachThuHuong, danhSachKhachHang,
-  lichChuyenTuHome, clearLichChuyenTuHome
+  danhSachSanPham = [], lichChuyenTuHome, clearLichChuyenTuHome
 }: TabLichProps) {
   
   const localToday = homNay();
@@ -55,10 +56,10 @@ export default function TabLich({
   
   const [theLoaiDaChon, setTheLoaiDaChon] = useState(""); 
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
-  
   const [tienCoc, setTienCoc] = useState("");
-  const [dichVuThem, setDichVuThem] = useState("");
-  const [tienDichVuThem, setTienDichVuThem] = useState("");
+  
+  // ĐÃ BỔ SUNG: Quản lý danh sách Dịch vụ thêm động (Có nút +)
+  const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, gia: string}[]>([]);
 
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
@@ -143,7 +144,8 @@ export default function TabLich({
     setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); 
     setGoiChup(""); setChiTietGoi(""); setGiaTien(""); 
     setTheLoaiDaChon(""); setTheLoaiKhac(""); 
-    setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); 
+    setTienCoc(""); 
+    setDanhSachDichVuThem([]); // Xóa rỗng list
   };
 
   const openAddModal = () => { resetForm(); setShowModal(true); };
@@ -164,12 +166,20 @@ export default function TabLich({
     }
 
     setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
-    setDichVuThem(item.dichVuThem || ""); setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
+
+    // ĐỌC LẠI DANH SÁCH DỊCH VỤ THÊM KHI SỬA LỊCH
+    if (item.chiTietDichVuThem && Array.isArray(item.chiTietDichVuThem)) {
+      setDanhSachDichVuThem(item.chiTietDichVuThem.map((d: any, idx: number) => ({ idStr: idx.toString(), ten: d.ten, gia: formatTienInput(String(d.gia)) })));
+    } else if (item.dichVuThem) {
+      setDanhSachDichVuThem([{ idStr: "old", ten: item.dichVuThem, gia: formatTienInput(String(item.tienDichVuThem || 0)) }]);
+    } else {
+      setDanhSachDichVuThem([]);
+    }
+
     setDangSua(item.id || null); setKhachHangId(item.khachHangId || null);
     setShowModal(true); 
   };
 
-  // ĐÃ BỔ SUNG: Effect để tự động mở form Sửa lịch khi được truyền từ Trang chủ sang
   useEffect(() => {
     if (lichChuyenTuHome) {
       setSelectedDate(lichChuyenTuHome.ngay);
@@ -194,6 +204,21 @@ export default function TabLich({
   
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
+  // HÀM: Quản lý gõ chữ / chọn dịch vụ tự nhảy tiền
+  const capNhatDichVuPhu = (idStr: string, field: 'ten' | 'gia', val: string) => {
+    const newDs = danhSachDichVuThem.map(d => {
+       if(d.idStr !== idStr) return d;
+       let updated = { ...d, [field]: val };
+       // Nếu người dùng chọn tên giống hệt trong Kho, tự động điền Giá tiền
+       if (field === 'ten') {
+          const sp = danhSachSanPham.find(s => s.tenSanPham === val);
+          if (sp) updated.gia = formatTienInput(String(sp.giaTien));
+       }
+       return updated;
+    });
+    setDanhSachDichVuThem(newDs);
+  };
+
   const handleLuuLichThongMinh = async () => {
     if (!ngay || !gio || !tenKhach || !soDienThoai) { 
       toast.error("Vui lòng điền đủ Ngày, Giờ, SĐT và Tên khách hàng!"); return; 
@@ -214,11 +239,14 @@ export default function TabLich({
       if (!dongY) return;
     }
 
+    // TÍNH TOÁN DỊCH VỤ THÊM
+    const tongTienDichVuPhu = danhSachDichVuThem.reduce((acc, curr) => acc + chuyenTienVeSo(curr.gia), 0);
+    const chuoiDichVuPhu = danhSachDichVuThem.map(d => d.ten).filter(Boolean).join(", ");
+    
     let finalKhId = khachHangId === "NEW" ? null : khachHangId;
-    const tongTienMoi = chuyenTienVeSo(giaTien) + chuyenTienVeSo(tienDichVuThem);
+    const tongTienMoi = chuyenTienVeSo(giaTien) + tongTienDichVuPhu;
 
     const finalTheLoai = theLoaiDaChon === "Khác" && theLoaiKhac.trim() !== "" ? theLoaiKhac.trim() : (theLoaiDaChon || "Khác");
-    
     const isKhongCanNgayCuoi = ["Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"].includes(finalTheLoai);
 
     try {
@@ -235,7 +263,9 @@ export default function TabLich({
       const duLieuLich: any = { 
         khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
         theLoai: finalTheLoai, goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
-        giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, dichVuThem: dichVuThem || "", tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, 
+        giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, 
+        dichVuThem: chuoiDichVuPhu, tienDichVuThem: tongTienDichVuPhu, 
+        chiTietDichVuThem: danhSachDichVuThem.map(d => ({ ten: d.ten, gia: chuyenTienVeSo(d.gia) })), // Lưu chi tiết để gọi ra khi sửa
         ngayCuoi: isKhongCanNgayCuoi ? "" : (ngayCuoi || "") 
       };
 
@@ -570,15 +600,31 @@ export default function TabLich({
                   </div>
                 )}
 
-                <div className="col-span-2 mt-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Mua/Thuê thêm dịch vụ</label>
-                  <div className="flex gap-2">
-                    <input type="text" value={dichVuThem} onChange={(e) => setDichVuThem(e.target.value)} placeholder="Tên dịch vụ..." className="bg-white border border-slate-200 p-3 rounded-xl flex-1 text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100" />
-                    <div className="relative w-32 shrink-0">
-                      <input type="text" value={tienDichVuThem} onChange={(e) => setTienDichVuThem(formatTienInput(e.target.value))} placeholder="Giá..." className="bg-white border border-slate-200 p-3 rounded-xl w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-6" />
-                      <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
-                    </div>
+                {/* ĐÃ BỔ SUNG: KHỐI CHỨA DANH SÁCH DỊCH VỤ PHỤ NĂNG ĐỘNG */}
+                <div className="col-span-2 mt-1 border-t border-slate-200 pt-3">
+                  <div className="flex justify-between items-center mb-2 ml-1">
+                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dịch vụ in ấn / Phát sinh</label>
+                     <button onClick={() => setDanhSachDichVuThem([...danhSachDichVuThem, {idStr: Date.now().toString(), ten: "", gia: ""}])} className="bg-orange-100 text-orange-600 hover:bg-orange-200 px-3 py-1.5 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 uppercase tracking-widest"><Plus size={12}/> Thêm</button>
                   </div>
+                  
+                  {danhSachDichVuThem.map((dv, idx) => (
+                     <div key={dv.idStr} className="flex gap-2 mb-2 animate-fade-in relative">
+                        <div className="flex-1 relative">
+                           <input type="text" value={dv.ten} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'ten', e.target.value)} placeholder="Tên dịch vụ..." className="bg-white border border-slate-200 p-3 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100 pr-8" list={`san-pham-list-${dv.idStr}`} />
+                           <datalist id={`san-pham-list-${dv.idStr}`}>
+                              {danhSachSanPham.map(sp => <option key={sp.id} value={sp.tenSanPham} />)}
+                           </datalist>
+                        </div>
+                        <div className="relative w-28 sm:w-32 shrink-0">
+                           <input type="text" value={dv.gia} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'gia', formatTienInput(e.target.value))} placeholder="Giá..." className="bg-white border border-slate-200 p-3 rounded-xl w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-6" />
+                           <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
+                        </div>
+                        <button onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all"><Trash2 size={16}/></button>
+                     </div>
+                  ))}
+                  {danhSachDichVuThem.length === 0 && (
+                     <div className="text-[10px] font-bold text-slate-400 italic mb-2 ml-1 text-center py-2 bg-slate-100 rounded-xl border border-dashed border-slate-200">Không có dịch vụ thêm</div>
+                  )}
                 </div>
               </div>
 
