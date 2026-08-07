@@ -57,7 +57,7 @@ export default function TabLich({
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
   
   const [tienCoc, setTienCoc] = useState("");
-  const [phuongThucCoc, setPhuongThucCoc] = useState<"Tiền mặt" | "Chuyển khoản">("Chuyển khoản"); // TM/CK
+  const [phuongThucCoc, setPhuongThucCoc] = useState<"Tiền mặt" | "Chuyển khoản">("Chuyển khoản");
 
   const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, gia: string}[]>([]);
 
@@ -266,12 +266,13 @@ export default function TabLich({
         
         tienCoc: chuyenTienVeSo(tienCoc) || 0, 
         phuongThucCoc: phuongThucCoc,
-        ngayGhiNhanCoc: oldItem ? (oldItem.ngayGhiNhanCoc || homNay()) : homNay(), // Bảo toàn ngày cũ nếu sửa
+        ngayGhiNhanCoc: oldItem ? (oldItem.ngayGhiNhanCoc || homNay()) : homNay(), 
+        daNopTienCoc: oldItem ? (oldItem as any).daNopTienCoc : false, // Nếu mới lưu bằng tiền mặt thì mặc định là Chưa nộp sếp
         
-        // Bảo toàn dữ liệu thanh toán nợ
         tienThanhToanThem: oldItem ? (oldItem.tienThanhToanThem || 0) : 0,
         ngayThanhToanThem: oldItem ? (oldItem.ngayThanhToanThem || "") : "",
         phuongThucThanhToanThem: oldItem ? (oldItem.phuongThucThanhToanThem || "") : "",
+        daNopTienThanhToanThem: oldItem ? (oldItem as any).daNopTienThanhToanThem : false,
 
         dichVuThem: chuoiDichVuPhu, tienDichVuThem: tongTienDichVuPhu, 
         chiTietDichVuThem: danhSachDichVuThem.map(d => ({ ten: d.ten, gia: chuyenTienVeSo(d.gia) })), 
@@ -404,6 +405,18 @@ export default function TabLich({
                       ) : tongTienCaLich > 0 ? (
                         <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 text-right w-fit ml-auto">Đã thu đủ</div>
                       ) : null}
+                      
+                      {/* HIỂN THỊ CHÚ THÍCH TRẠNG THÁI TIỀN MẶT */}
+                      {item.phuongThucCoc === 'Tiền mặt' && (
+                        <div className={`text-[9px] mt-1 font-bold px-1.5 py-0.5 rounded text-right w-fit ml-auto ${(item as any).daNopTienCoc ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
+                           Cọc: {(item as any).daNopTienCoc ? '✓ Đã nộp sếp' : '⏳ Két (Chờ ký)'}
+                        </div>
+                      )}
+                      {item.phuongThucThanhToanThem === 'Tiền mặt' && (
+                        <div className={`text-[9px] mt-0.5 font-bold px-1.5 py-0.5 rounded text-right w-fit ml-auto ${(item as any).daNopTienThanhToanThem ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
+                           Thu nợ: {(item as any).daNopTienThanhToanThem ? '✓ Đã nộp sếp' : '⏳ Két (Chờ ký)'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -600,7 +613,6 @@ export default function TabLich({
                     <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
                   </div>
                   
-                  {/* NÚT CHỌN TIỀN MẶT / CHUYỂN KHOẢN KHI CỌC TIỀN */}
                   <div className="flex gap-1 mt-2">
                      <button type="button" onClick={(e) => { e.preventDefault(); setPhuongThucCoc("Tiền mặt"); }} className={`flex-1 py-2 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black border transition-all ${phuongThucCoc === 'Tiền mặt' ? 'bg-emerald-50 border-emerald-500 text-emerald-600 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}><HandCoins size={14}/> TM</button>
                      <button type="button" onClick={(e) => { e.preventDefault(); setPhuongThucCoc("Chuyển khoản"); }} className={`flex-1 py-2 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black border transition-all ${phuongThucCoc === 'Chuyển khoản' ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}><Landmark size={14}/> CK</button>

@@ -21,11 +21,12 @@ export interface Lich {
   tienCoc?: number; 
   phuongThucCoc?: "Tiền mặt" | "Chuyển khoản" | "Chưa phân loại"; 
   ngayGhiNhanCoc?: string;
+  daNopTienCoc?: boolean; // BỔ SUNG: Trạng thái Sếp ký nhận Cọc
 
-  // LƯU VẾT THU NỢ BỔ SUNG
   tienThanhToanThem?: number;
   ngayThanhToanThem?: string;
   phuongThucThanhToanThem?: "Tiền mặt" | "Chuyển khoản";
+  daNopTienThanhToanThem?: boolean; // BỔ SUNG: Trạng thái Sếp ký nhận Thu Nợ
 
   dichVuThem?: string; 
   tienDichVuThem?: number; 
@@ -45,7 +46,8 @@ export interface PhatSinh {
   loai: string; 
   ngayTra: string; 
   soTien: number; 
-  phuongThuc?: "Tiền mặt" | "Chuyển khoản" | "Chưa phân loại"; // BỔ SUNG
+  phuongThuc?: "Tiền mặt" | "Chuyển khoản" | "Chưa phân loại"; 
+  daNopTien?: boolean; // BỔ SUNG: Trạng thái Sếp ký nhận Phát Sinh
   nguoiGhi: string; 
   ghiChu: string; 
   daTraDo?: boolean;

@@ -39,7 +39,6 @@ export default function TabPhatSinh({
   const [psNgayTra, setPsNgayTra] = useState("");
   const [psSoTien, setPsSoTien] = useState("");
   
-  // STATE MỚI CHO TIỀN MẶT / CHUYỂN KHOẢN
   const [psPhuongThuc, setPsPhuongThuc] = useState<"Tiền mặt" | "Chuyển khoản">("Chuyển khoản");
   
   const [psGhiChu, setPsGhiChu] = useState("");
@@ -140,7 +139,8 @@ export default function TabPhatSinh({
         ngay: psNgay, tenKhach: psTenKhach, soDienThoai: psSoDienThoai, 
         loai: finalLoai, ngayTra: isThueDo(finalLoai) ? psNgayTra : "", 
         soTien: tienPhatSinhMoi, 
-        phuongThuc: psPhuongThuc, // Đã đẩy Hình thức thanh toán vào đây
+        phuongThuc: psPhuongThuc, 
+        daNopTien: false, // Bổ sung mặc định là Chưa ký nhận
         nguoiGhi: hoSoCuaToi?.email || "", ghiChu: psGhiChu 
       }); 
       
@@ -228,9 +228,12 @@ export default function TabPhatSinh({
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                      <div className="text-[10px] font-black px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-600 w-fit">{item.loai}</div>
-                     {/* Báo hiệu Nhận tiền mặt hay chuyển khoản */}
+                     
+                     {/* Báo hiệu Nhận tiền mặt hay chuyển khoản (Đã thêm trạng thái Sếp ký) */}
                      {item.phuongThuc === "Tiền mặt" ? (
-                        <div className="text-[10px] font-black px-2 py-1 rounded-md border border-emerald-200 text-emerald-600 bg-emerald-50/50 flex items-center gap-1"><HandCoins size={12}/> TM</div>
+                        <div className={`text-[10px] font-black px-2 py-1 rounded-md border flex items-center gap-1 ${item.daNopTien ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-orange-200 text-orange-600 bg-orange-50'}`}>
+                            <HandCoins size={12}/> TM {item.daNopTien ? '(Sếp đã nhận)' : '(Két)'}
+                        </div>
                      ) : (
                         <div className="text-[10px] font-black px-2 py-1 rounded-md border border-blue-200 text-blue-600 bg-blue-50/50 flex items-center gap-1"><Landmark size={12}/> CK</div>
                      )}
@@ -345,7 +348,6 @@ export default function TabPhatSinh({
                       <span className="absolute right-4 top-4 text-slate-400 font-black">đ</span>
                    </div>
 
-                   {/* NÚT CHỌN PHƯƠNG THỨC THANH TOÁN (DỊCH VỤ PHÁT SINH) */}
                    <div className="flex gap-1 mt-2">
                      <button type="button" onClick={(e) => { e.preventDefault(); setPsPhuongThuc("Tiền mặt"); }} className={`flex-1 py-3 flex items-center justify-center gap-2 rounded-xl text-xs font-black border-2 transition-all ${psPhuongThuc === 'Tiền mặt' ? 'bg-emerald-50 border-emerald-500 text-emerald-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}><HandCoins size={16}/> Tiền mặt</button>
                      <button type="button" onClick={(e) => { e.preventDefault(); setPsPhuongThuc("Chuyển khoản"); }} className={`flex-1 py-3 flex items-center justify-center gap-2 rounded-xl text-xs font-black border-2 transition-all ${psPhuongThuc === 'Chuyển khoản' ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}><Landmark size={16}/> Chuyển khoản</button>

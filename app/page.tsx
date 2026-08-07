@@ -8,7 +8,7 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, TaiKhoan, Lich, GoiDichVu } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera, Layers, DollarSign, Lock, Tag, Landmark, HandCoins } from "lucide-react";
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera, Layers, DollarSign, Lock, Tag, Landmark, HandCoins, CheckCircle2 } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -21,7 +21,7 @@ const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loadin
 const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
-const APP_VERSION = "v1.1.0"; 
+const APP_VERSION = "v1.1.2"; 
 
 function homNay() { 
   const d = new Date(); 
@@ -71,7 +71,6 @@ export default function HomePage() {
 
   const [lichChuyenTuHome, setLichChuyenTuHome] = useState<Lich | null>(null);
 
-  // STATE MODAL THU NỢ TIỀN MẶT / CHUYỂN KHOẢN
   const [thuNoItem, setThuNoItem] = useState<Lich | null>(null);
   const [phuongThucThuNo, setPhuongThucThuNo] = useState<"Tiền mặt" | "Chuyển khoản">("Chuyển khoản");
 
@@ -138,7 +137,6 @@ export default function HomePage() {
   
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi"); } };
 
-  // TÍNH CÔNG NỢ ĐÃ CẬP NHẬT LOGIC LƯU VẾT THANH TOÁN
   const khachNoTien = lichLamViec.filter((item) => {
     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
     const tienDaThu = Number(item.tienCoc || 0) + Number(item.tienThanhToanThem || 0);
@@ -148,20 +146,18 @@ export default function HomePage() {
     return ngayMocSoSanh < ngayHomNayStr;
   });
 
-  // HÀM XỬ LÝ KHI BẤM "XÁC NHẬN THU NỢ" TỪ MODAL
   const xacNhanThuDuTien = async () => {
     if (!laAdmin || !thuNoItem) { toast.error("Chỉ Admin mới được xác nhận tiền!"); return; }
-    
     const tongTien = Number(thuNoItem.giaTien || 0) + Number((thuNoItem as any).tienDichVuThem || 0);
     const tienDaThuCu = Number(thuNoItem.tienCoc || 0);
     const tienNo = tongTien - tienDaThuCu;
 
     try {
-      // CHỈ CẬP NHẬT PHẦN TRẢ THÊM, BẢO TOÀN LỊCH SỬ TIỀN CỌC
       await updateDoc(doc(db, "lichStudio", thuNoItem.id!), { 
         tienThanhToanThem: tienNo,
         ngayThanhToanThem: homNay(),
-        phuongThucThanhToanThem: phuongThucThuNo
+        phuongThucThanhToanThem: phuongThucThuNo,
+        daNopTienThanhToanThem: false // Tiền mới thu, chưa ký nhận
       });
       toast.success("✅ Đã tất toán nợ thành công!");
       setThuNoItem(null);
@@ -219,29 +215,64 @@ export default function HomePage() {
 
   const danhSachViecHienThi = tabViecCuaToi === "homNay" ? viecCuaToiHomNay : viecCuaToiNgayMai;
 
-  // TÍNH TOÁN DÒNG TIỀN SỔ QUỸ HÔM NAY CHO ADMIN
-  let tmHomNay = 0;
+  // TÍNH TOÁN BÀN GIAO TIỀN MẶT HÔM NAY (CHO ADMIN)
+  let tmChuaNop = 0;
+  let tmDaNop = 0;
   let ckHomNay = 0;
+
+  const lichUpdates: Record<string, any> = {};
+  const phatSinhUpdates: string[] = [];
+
   if (laAdmin && tab === "home") {
       lichLamViec.forEach(l => {
-          // Thu cọc
           if (l.ngayGhiNhanCoc === ngayHomNayStr && l.tienCoc) {
-              if (l.phuongThucCoc === "Tiền mặt") tmHomNay += l.tienCoc;
-              else ckHomNay += l.tienCoc;
+              if (l.phuongThucCoc === "Tiền mặt") {
+                  if (l.daNopTienCoc) tmDaNop += l.tienCoc;
+                  else { 
+                     tmChuaNop += l.tienCoc; 
+                     if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {};
+                     lichUpdates[l.id!].daNopTienCoc = true;
+                  }
+              } else if (l.phuongThucCoc === "Chuyển khoản") ckHomNay += l.tienCoc;
           }
-          // Thu trả nợ
+
           if (l.ngayThanhToanThem === ngayHomNayStr && l.tienThanhToanThem) {
-              if (l.phuongThucThanhToanThem === "Tiền mặt") tmHomNay += l.tienThanhToanThem;
-              else ckHomNay += l.tienThanhToanThem;
+              if (l.phuongThucThanhToanThem === "Tiền mặt") {
+                  if (l.daNopTienThanhToanThem) tmDaNop += l.tienThanhToanThem;
+                  else { 
+                     tmChuaNop += l.tienThanhToanThem; 
+                     if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {};
+                     lichUpdates[l.id!].daNopTienThanhToanThem = true;
+                  }
+              } else if (l.phuongThucThanhToanThem === "Chuyển khoản") ckHomNay += l.tienThanhToanThem;
           }
       });
+
       danhSachPhatSinh.forEach(ps => {
           if (ps.ngay === ngayHomNayStr && ps.soTien) {
-              if (ps.phuongThuc === "Tiền mặt") tmHomNay += ps.soTien;
-              else ckHomNay += ps.soTien;
+              if (ps.phuongThuc === "Tiền mặt") {
+                  if (ps.daNopTien) tmDaNop += ps.soTien;
+                  else { tmChuaNop += ps.soTien; phatSinhUpdates.push(ps.id!); }
+              } else if (ps.phuongThuc === "Chuyển khoản") ckHomNay += ps.soTien;
           }
       });
   }
+
+  // HÀM KÝ NHẬN TIỀN MẶT CỦA SẾP
+  const kyNhanBanGiaoTienMat = async () => {
+    if (!confirm(`Sếp xác nhận KÝ NHẬN tổng số tiền mặt: ${formatTienInput(String(tmChuaNop))}đ từ nhân viên?`)) return;
+    try {
+        for (const [id, updateData] of Object.entries(lichUpdates)) {
+            await updateDoc(doc(db, "lichStudio", id), updateData);
+        }
+        for (const id of phatSinhUpdates) {
+            await updateDoc(doc(db, "phatSinh", id), { daNopTien: true });
+        }
+        toast.success("Đã ký nhận tiền mặt thành công!");
+    } catch (error) {
+        toast.error("Lỗi khi ký nhận!");
+    }
+  };
 
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
   if (!user) { 
@@ -295,7 +326,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* POPUP THU NỢ TIỀN MẶT/CHUYỂN KHOẢN CHO ADMIN */}
       {thuNoItem && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[200] flex justify-center items-center p-4 animate-fade-in">
           <div className="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl">
@@ -330,20 +360,30 @@ export default function HomePage() {
       {tab === "home" && (
         <div className="animate-fade-in space-y-6">
 
-          {/* SỔ QUỸ HÔM NAY CỦA SẾP */}
+          {/* SỔ QUỸ HÔM NAY VÀ KÝ NHẬN (DÀNH CHO ADMIN) */}
           {laAdmin && (
              <div className="mb-6 animate-fade-in">
                <h2 className="font-black text-lg mb-3 text-slate-800 ml-1 tracking-tight">Sổ quỹ hôm nay (Thu vào)</h2>
                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-5 shadow-md shadow-emerald-200 text-white relative overflow-hidden">
-                     <div className="absolute -right-4 -bottom-4 text-7xl opacity-20"><HandCoins/></div>
-                     <div className="text-[10px] font-black uppercase tracking-widest text-emerald-100 mb-1">Két Tiền Mặt</div>
-                     <div className="text-2xl font-black leading-tight">{formatTienInput(String(tmHomNay))}đ</div>
+                  <div className="col-span-2 bg-gradient-to-r from-orange-400 to-amber-500 rounded-3xl p-5 shadow-md text-white relative overflow-hidden flex justify-between items-center border border-orange-300">
+                      <div className="relative z-10">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-amber-100 mb-1">Két Tiền Mặt (Chờ Ký)</div>
+                          <div className="text-3xl font-black leading-tight">{formatTienInput(String(tmChuaNop))}đ</div>
+                      </div>
+                      {tmChuaNop > 0 && (
+                          <button onClick={kyNhanBanGiaoTienMat} className="relative z-10 bg-white text-orange-600 font-black px-4 py-2.5 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-orange-100"><HandCoins size={18}/> KÝ NHẬN</button>
+                      )}
+                      <div className="absolute -right-2 -bottom-6 text-8xl opacity-10"><HandCoins/></div>
                   </div>
-                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-5 shadow-md shadow-blue-200 text-white relative overflow-hidden">
-                     <div className="absolute -right-4 -bottom-4 text-7xl opacity-20"><Landmark/></div>
-                     <div className="text-[10px] font-black uppercase tracking-widest text-blue-100 mb-1">Chuyển Khoản</div>
-                     <div className="text-2xl font-black leading-tight">{formatTienInput(String(ckHomNay))}đ</div>
+                  <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 relative overflow-hidden">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">Đã ký nhận</div>
+                      <div className="text-xl font-black text-emerald-600 leading-tight">{formatTienInput(String(tmDaNop))}đ</div>
+                      <div className="absolute -right-3 -bottom-3 text-6xl text-emerald-50 opacity-50"><CheckCircle2/></div>
+                  </div>
+                  <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 relative overflow-hidden">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-1">Chuyển Khoản</div>
+                      <div className="text-xl font-black text-blue-600 leading-tight">{formatTienInput(String(ckHomNay))}đ</div>
+                      <div className="absolute -right-3 -bottom-3 text-6xl text-blue-50 opacity-50"><Landmark/></div>
                   </div>
                </div>
              </div>
