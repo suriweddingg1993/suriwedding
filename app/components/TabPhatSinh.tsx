@@ -4,7 +4,7 @@ import { collection, addDoc, doc, deleteDoc, updateDoc, increment } from "fireba
 import { db } from "../../lib/firebase";
 import { PhatSinh, TaiKhoan, Lich, KhachHang, ThuHuong } from "../../types";
 import ModalHoaHongPhatSinh from "./ModalHoaHongPhatSinh";
-import { CheckCircle2, UserCheck, Wallet, Search, ChevronDown } from "lucide-react";
+import { CheckCircle2, UserCheck, Wallet, Search, ChevronDown, HandCoins, Landmark } from "lucide-react";
 
 function chuyenTienVeSo(value: string) { return Number(value.replace(/\./g, "")); }
 
@@ -33,12 +33,15 @@ export default function TabPhatSinh({
   const [psTenKhach, setPsTenKhach] = useState("");
   const [psSoDienThoai, setPsSoDienThoai] = useState("");
   
-  // ĐÃ SỬA: State mới cho Select Thể loại phát sinh
   const [psLoaiDaChon, setPsLoaiDaChon] = useState("");
   const [psLoaiKhac, setPsLoaiKhac] = useState("");
   
   const [psNgayTra, setPsNgayTra] = useState("");
   const [psSoTien, setPsSoTien] = useState("");
+  
+  // STATE MỚI CHO TIỀN MẶT / CHUYỂN KHOẢN
+  const [psPhuongThuc, setPsPhuongThuc] = useState<"Tiền mặt" | "Chuyển khoản">("Chuyển khoản");
+  
   const [psGhiChu, setPsGhiChu] = useState("");
 
   const [showModal, setShowModal] = useState(false);
@@ -137,11 +140,13 @@ export default function TabPhatSinh({
         ngay: psNgay, tenKhach: psTenKhach, soDienThoai: psSoDienThoai, 
         loai: finalLoai, ngayTra: isThueDo(finalLoai) ? psNgayTra : "", 
         soTien: tienPhatSinhMoi, 
+        phuongThuc: psPhuongThuc, // Đã đẩy Hình thức thanh toán vào đây
         nguoiGhi: hoSoCuaToi?.email || "", ghiChu: psGhiChu 
       }); 
       
       setPsNgay(localToday); setPsTenKhach(""); setPsSoDienThoai(""); 
-      setPsLoaiDaChon(""); setPsLoaiKhac(""); setPsNgayTra(""); setPsSoTien(""); setPsGhiChu(""); 
+      setPsLoaiDaChon(""); setPsLoaiKhac(""); setPsNgayTra(""); setPsSoTien(""); 
+      setPsPhuongThuc("Chuyển khoản"); setPsGhiChu(""); 
       setShowModal(false);
       toast.success("Đã lưu dịch vụ phát sinh"); 
     } catch (error) { toast.error("Lỗi cập nhật CSDL"); }
@@ -221,8 +226,17 @@ export default function TabPhatSinh({
               <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${isThueDo(item.loai) ? "bg-orange-500" : "bg-emerald-500"}`}></div>
               <div className="flex justify-between ml-2">
                 <div>
-                  <div className="text-[10px] font-black px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-600 w-fit mb-2">{item.loai}</div>
-                  <div className="font-black text-slate-800 text-lg flex items-center gap-1.5">
+                  <div className="flex items-center gap-2 mb-2">
+                     <div className="text-[10px] font-black px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-600 w-fit">{item.loai}</div>
+                     {/* Báo hiệu Nhận tiền mặt hay chuyển khoản */}
+                     {item.phuongThuc === "Tiền mặt" ? (
+                        <div className="text-[10px] font-black px-2 py-1 rounded-md border border-emerald-200 text-emerald-600 bg-emerald-50/50 flex items-center gap-1"><HandCoins size={12}/> TM</div>
+                     ) : (
+                        <div className="text-[10px] font-black px-2 py-1 rounded-md border border-blue-200 text-blue-600 bg-blue-50/50 flex items-center gap-1"><Landmark size={12}/> CK</div>
+                     )}
+                  </div>
+                  
+                  <div className="font-black text-slate-800 text-lg flex items-center gap-1.5 mt-1">
                     {item.tenKhach} {item.khachHangId && <span title="Khách hàng CRM"><UserCheck size={16} className="text-emerald-500"/></span>}
                   </div>
                   {item.ghiChu && <div className="text-xs font-medium text-slate-500 mt-1 italic">{item.ghiChu}</div>}
@@ -230,7 +244,6 @@ export default function TabPhatSinh({
                 <div className="text-xl font-black text-emerald-600">+{formatTienInput(String(item.soTien || 0))}</div>
               </div>
               
-              {/* ĐÃ SỬA: Loại bỏ rào cản 'isThueDo'. Nút Nhận hoa hồng luôn hiện đối với TẤT CẢ dịch vụ phát sinh */}
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 ml-2">
                 <button onClick={() => { setPhatSinhDangChon(item); setShowHoaHongModal(true); }} className="bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95">🙋‍♂️ Nhận hoa hồng</button>
                 {laAdmin && item.id && <button onClick={() => xoaPhatSinh(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all">🗑</button>}
@@ -279,7 +292,6 @@ export default function TabPhatSinh({
                   <input type="date" value={psNgay} onChange={(e) => setPsNgay(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-emerald-700 font-black outline-none focus:ring-4 focus:ring-emerald-50 focus:border-emerald-200 transition-all" />
                 </div>
                 
-                {/* ĐÃ SỬA: Form chọn loại dịch vụ Dropdown */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Loại dịch vụ (*)</label>
                   <div className="relative">
@@ -319,7 +331,6 @@ export default function TabPhatSinh({
                    </div>
                 )}
 
-                {/* NGÀY TRẢ ĐỒ: Chỉ hiện nếu cụm từ trong tên dịch vụ có chứa chữ "thuê" */}
                 {isThueDo(finalLoaiHienTai) && (
                    <div className="col-span-2 animate-fade-in">
                      <label className="text-[10px] font-bold text-orange-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày hẹn trả đồ (*)</label>
@@ -333,6 +344,12 @@ export default function TabPhatSinh({
                       <input type="text" value={psSoTien} onChange={(e) => setPsSoTien(formatTienInput(e.target.value))} placeholder="0" className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-emerald-700 font-black outline-none focus:ring-4 focus:ring-emerald-50 pr-8 transition-all text-lg" />
                       <span className="absolute right-4 top-4 text-slate-400 font-black">đ</span>
                    </div>
+
+                   {/* NÚT CHỌN PHƯƠNG THỨC THANH TOÁN (DỊCH VỤ PHÁT SINH) */}
+                   <div className="flex gap-1 mt-2">
+                     <button type="button" onClick={(e) => { e.preventDefault(); setPsPhuongThuc("Tiền mặt"); }} className={`flex-1 py-3 flex items-center justify-center gap-2 rounded-xl text-xs font-black border-2 transition-all ${psPhuongThuc === 'Tiền mặt' ? 'bg-emerald-50 border-emerald-500 text-emerald-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}><HandCoins size={16}/> Tiền mặt</button>
+                     <button type="button" onClick={(e) => { e.preventDefault(); setPsPhuongThuc("Chuyển khoản"); }} className={`flex-1 py-3 flex items-center justify-center gap-2 rounded-xl text-xs font-black border-2 transition-all ${psPhuongThuc === 'Chuyển khoản' ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}><Landmark size={16}/> Chuyển khoản</button>
+                  </div>
                 </div>
 
                 <div className="col-span-2">

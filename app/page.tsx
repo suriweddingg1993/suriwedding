@@ -8,7 +8,7 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, TaiKhoan, Lich, GoiDichVu } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera, Layers, DollarSign, Lock, Tag } from "lucide-react";
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera, Layers, DollarSign, Lock, Tag, Landmark, HandCoins } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -21,7 +21,7 @@ const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loadin
 const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
-const APP_VERSION = "v1.0.9"; 
+const APP_VERSION = "v1.1.0"; 
 
 function homNay() { 
   const d = new Date(); 
@@ -53,7 +53,6 @@ export default function HomePage() {
   const [thangThongKe, setThangThongKe] = useState("");
   
   const [subTabNhanSu, setSubTabNhanSu] = useState<"chamCong" | "danhSach">("chamCong");
-  // ĐÃ BỔ SUNG: Tab Sản phẩm (Khung/In ảnh)
   const [subTabKhoDo, setSubTabKhoDo] = useState<"traDo" | "goiChup" | "sanPham">("traDo");
 
   const [isChiPhiUnlocked, setIsChiPhiUnlocked] = useState(false);
@@ -65,7 +64,6 @@ export default function HomePage() {
   const [giaGoiMoi, setGiaGoiMoi] = useState("");
   const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
 
-  // ĐÃ BỔ SUNG: Kho sản phẩm phụ (In ảnh, Khung)
   const [danhSachSanPham, setDanhSachSanPham] = useState<any[]>([]);
   const [tenSanPhamMoi, setTenSanPhamMoi] = useState("");
   const [giaSanPhamMoi, setGiaSanPhamMoi] = useState("");
@@ -73,10 +71,13 @@ export default function HomePage() {
 
   const [lichChuyenTuHome, setLichChuyenTuHome] = useState<Lich | null>(null);
 
+  // STATE MODAL THU NỢ TIỀN MẶT / CHUYỂN KHOẢN
+  const [thuNoItem, setThuNoItem] = useState<Lich | null>(null);
+  const [phuongThucThuNo, setPhuongThucThuNo] = useState<"Tiền mặt" | "Chuyển khoản">("Chuyển khoản");
+
   const laAdmin = role === "admin";
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachKhachHang, danhSachGoiDichVu } = useAppData(user, laAdmin);
 
-  // Lắng nghe dữ liệu Kho sản phẩm phụ
   useEffect(() => {
     const unsubSP = onSnapshot(collection(db, "sanPhamPhu"), (snap) => {
       setDanhSachSanPham(snap.docs.map(d => ({id: d.id, ...d.data()})));
@@ -137,21 +138,33 @@ export default function HomePage() {
   
   const danhDauDaTraDo = async (id: string) => { try { await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); toast.success("Đã xác nhận trả đồ"); } catch (error) { toast.error("Lỗi"); } };
 
+  // TÍNH CÔNG NỢ ĐÃ CẬP NHẬT LOGIC LƯU VẾT THANH TOÁN
   const khachNoTien = lichLamViec.filter((item) => {
     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
-    const tienNo = tongTien - Number(item.tienCoc || 0);
+    const tienDaThu = Number(item.tienCoc || 0) + Number(item.tienThanhToanThem || 0);
+    const tienNo = tongTien - tienDaThu;
     if (tienNo <= 0) return false;
     const ngayMocSoSanh = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
     return ngayMocSoSanh < ngayHomNayStr;
   });
 
-  const xacNhanThuDuTien = async (item: Lich) => {
-    if (!laAdmin) { toast.error("Chỉ Admin mới được xác nhận tiền!"); return; }
-    if (!confirm(`Xác nhận đã thu đủ số tiền còn nợ của khách: ${item.tenKhach}?`)) return;
-    const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
+  // HÀM XỬ LÝ KHI BẤM "XÁC NHẬN THU NỢ" TỪ MODAL
+  const xacNhanThuDuTien = async () => {
+    if (!laAdmin || !thuNoItem) { toast.error("Chỉ Admin mới được xác nhận tiền!"); return; }
+    
+    const tongTien = Number(thuNoItem.giaTien || 0) + Number((thuNoItem as any).tienDichVuThem || 0);
+    const tienDaThuCu = Number(thuNoItem.tienCoc || 0);
+    const tienNo = tongTien - tienDaThuCu;
+
     try {
-      await updateDoc(doc(db, "lichStudio", item.id!), { tienCoc: tongTien });
+      // CHỈ CẬP NHẬT PHẦN TRẢ THÊM, BẢO TOÀN LỊCH SỬ TIỀN CỌC
+      await updateDoc(doc(db, "lichStudio", thuNoItem.id!), { 
+        tienThanhToanThem: tienNo,
+        ngayThanhToanThem: homNay(),
+        phuongThucThanhToanThem: phuongThucThuNo
+      });
       toast.success("✅ Đã tất toán nợ thành công!");
+      setThuNoItem(null);
       if (khachNoTien.length <= 1) setShowKhachNo(false);
     } catch (error) { toast.error("Lỗi hệ thống khi cập nhật!"); }
   };
@@ -172,7 +185,6 @@ export default function HomePage() {
   };
   const xoaGoiDichVu = async (id: string) => { if (confirm("Chắc chắn xóa gói chụp mẫu này?")) await deleteDoc(doc(db, "goiDichVu", id)); };
 
-  // ĐÃ BỔ SUNG: Logic lưu và xóa sản phẩm phụ (In ảnh, Khung)
   const luuSanPhamPhu = async () => {
     if (!tenSanPhamMoi || !giaSanPhamMoi) { toast.error("Vui lòng nhập Tên và Giá sản phẩm!"); return; }
     try {
@@ -206,6 +218,30 @@ export default function HomePage() {
   }).sort((a, b) => a.gio.localeCompare(b.gio));
 
   const danhSachViecHienThi = tabViecCuaToi === "homNay" ? viecCuaToiHomNay : viecCuaToiNgayMai;
+
+  // TÍNH TOÁN DÒNG TIỀN SỔ QUỸ HÔM NAY CHO ADMIN
+  let tmHomNay = 0;
+  let ckHomNay = 0;
+  if (laAdmin && tab === "home") {
+      lichLamViec.forEach(l => {
+          // Thu cọc
+          if (l.ngayGhiNhanCoc === ngayHomNayStr && l.tienCoc) {
+              if (l.phuongThucCoc === "Tiền mặt") tmHomNay += l.tienCoc;
+              else ckHomNay += l.tienCoc;
+          }
+          // Thu trả nợ
+          if (l.ngayThanhToanThem === ngayHomNayStr && l.tienThanhToanThem) {
+              if (l.phuongThucThanhToanThem === "Tiền mặt") tmHomNay += l.tienThanhToanThem;
+              else ckHomNay += l.tienThanhToanThem;
+          }
+      });
+      danhSachPhatSinh.forEach(ps => {
+          if (ps.ngay === ngayHomNayStr && ps.soTien) {
+              if (ps.phuongThuc === "Tiền mặt") tmHomNay += ps.soTien;
+              else ckHomNay += ps.soTien;
+          }
+      });
+  }
 
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
   if (!user) { 
@@ -259,6 +295,33 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* POPUP THU NỢ TIỀN MẶT/CHUYỂN KHOẢN CHO ADMIN */}
+      {thuNoItem && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[200] flex justify-center items-center p-4 animate-fade-in">
+          <div className="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl">
+            <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4"><Banknote size={32} /></div>
+            <h3 className="text-xl font-black text-slate-800 text-center mb-1">Xác nhận thu nợ</h3>
+            <p className="text-sm font-bold text-slate-500 text-center mb-6">Khách hàng: <span className="text-rose-600">{thuNoItem.tenKhach}</span></p>
+            
+            <div className="grid grid-cols-2 gap-3 mb-8">
+              <button onClick={() => setPhuongThucThuNo("Tiền mặt")} className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all active:scale-95 ${phuongThucThuNo === 'Tiền mặt' ? 'border-emerald-500 bg-emerald-50 text-emerald-600 shadow-md' : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'}`}>
+                <HandCoins size={28} className="mb-2" />
+                <span className="text-xs font-black">Tiền mặt</span>
+              </button>
+              <button onClick={() => setPhuongThucThuNo("Chuyển khoản")} className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all active:scale-95 ${phuongThucThuNo === 'Chuyển khoản' ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-md' : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'}`}>
+                <Landmark size={28} className="mb-2" />
+                <span className="text-xs font-black">Chuyển khoản</span>
+              </button>
+            </div>
+            
+            <div className="flex gap-3">
+              <button onClick={() => setThuNoItem(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-xl active:scale-95 transition-all">Hủy bỏ</button>
+              <button onClick={xacNhanThuDuTien} className="flex-1 py-4 bg-rose-600 text-white font-black rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all">CHỐT SỔ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center gap-4 mb-6">
         <div><h1 className="text-2xl font-black text-slate-900 tracking-tight">Suri Wedding</h1><p className="text-xs font-bold text-slate-500 mt-1">{tenCuaToi} • {laAdmin ? "Admin" : "Nhân viên"}</p></div>
         <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm"><LogOut size={18} strokeWidth={2.5} /></button>
@@ -266,6 +329,25 @@ export default function HomePage() {
 
       {tab === "home" && (
         <div className="animate-fade-in space-y-6">
+
+          {/* SỔ QUỸ HÔM NAY CỦA SẾP */}
+          {laAdmin && (
+             <div className="mb-6 animate-fade-in">
+               <h2 className="font-black text-lg mb-3 text-slate-800 ml-1 tracking-tight">Sổ quỹ hôm nay (Thu vào)</h2>
+               <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-5 shadow-md shadow-emerald-200 text-white relative overflow-hidden">
+                     <div className="absolute -right-4 -bottom-4 text-7xl opacity-20"><HandCoins/></div>
+                     <div className="text-[10px] font-black uppercase tracking-widest text-emerald-100 mb-1">Két Tiền Mặt</div>
+                     <div className="text-2xl font-black leading-tight">{formatTienInput(String(tmHomNay))}đ</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-5 shadow-md shadow-blue-200 text-white relative overflow-hidden">
+                     <div className="absolute -right-4 -bottom-4 text-7xl opacity-20"><Landmark/></div>
+                     <div className="text-[10px] font-black uppercase tracking-widest text-blue-100 mb-1">Chuyển Khoản</div>
+                     <div className="text-2xl font-black leading-tight">{formatTienInput(String(ckHomNay))}đ</div>
+                  </div>
+               </div>
+             </div>
+          )}
 
           {(viecCuaToiHomNay.length > 0 || viecCuaToiNgayMai.length > 0) ? (
             <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl p-5 shadow-lg shadow-blue-200 text-white relative overflow-hidden">
@@ -310,7 +392,11 @@ export default function HomePage() {
               {showKhachNo && (
                 <div className="flex flex-col gap-3 relative z-10 mt-4 animate-fade-in">
                   {khachNoTien.map(item => {
-                    const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0); const tienNo = tongTien - Number(item.tienCoc || 0); const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay; const loaiMoc = (item as any).ngayCuoi ? 'Cưới' : 'Chụp';
+                    const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0); 
+                    const tienDaThu = Number(item.tienCoc || 0) + Number(item.tienThanhToanThem || 0);
+                    const tienNo = tongTien - tienDaThu; 
+                    const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay; 
+                    const loaiMoc = (item as any).ngayCuoi ? 'Cưới' : 'Chụp';
                     return (
                       <div key={item.id} className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
                         <div 
@@ -320,13 +406,13 @@ export default function HomePage() {
                              setTab("lich");
                              window.scrollTo({ top: 0, behavior: "smooth" });
                           }}
-                          title="Bấm để mở form cập nhật tiền cọc"
+                          title="Bấm để mở form cập nhật chi tiết"
                         >
                           <div className="font-black text-slate-900 leading-tight break-words">{item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span></div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5"><span className="text-[10px] font-bold text-slate-500 bg-white w-fit px-2 py-0.5 rounded-md border border-slate-200">Qua ngày {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}</span><span className="text-sm font-black text-rose-600 w-fit">Nợ: {formatTienInput(String(tienNo))}đ</span></div>
                         </div>
                         {laAdmin && (
-                          <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0 ml-2">Đã Thu</button>
+                          <button onClick={(e) => { e.stopPropagation(); setThuNoItem(item); setPhuongThucThuNo("Chuyển khoản"); }} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0 ml-2">Đã Thu</button>
                         )}
                       </div>
                     )
@@ -367,7 +453,7 @@ export default function HomePage() {
             homNay={homNay} formatTienInput={formatTienInput} hoSoCuaToi={hoSoCuaToi} 
             themThuHuong={themThuHuong} laAdmin={laAdmin} lichLamViec={lichLamViec} 
             danhSachPhatSinh={danhSachPhatSinh} danhSachThuHuong={danhSachThuHuong} danhSachKhachHang={danhSachKhachHang}
-            danhSachSanPham={danhSachSanPham} // Truyền dữ liệu Kho sản phẩm qua TabLich
+            danhSachSanPham={danhSachSanPham} 
             lichChuyenTuHome={lichChuyenTuHome}
             clearLichChuyenTuHome={() => setLichChuyenTuHome(null)}
           />
@@ -440,7 +526,6 @@ export default function HomePage() {
               <div className="flex overflow-x-auto custom-scrollbar bg-slate-200/60 p-1.5 rounded-2xl mb-4 max-w-lg mx-auto shadow-sm gap-1">
                 <button onClick={() => setSubTabKhoDo("traDo")} className={`flex-1 min-w-[110px] py-2.5 rounded-xl text-xs font-black transition-all ${subTabKhoDo === "traDo" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>👗 Trả đồ</button>
                 <button onClick={() => setSubTabKhoDo("goiChup")} className={`flex-1 min-w-[110px] py-2.5 rounded-xl text-xs font-black transition-all ${subTabKhoDo === "goiChup" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>📸 Gói chụp</button>
-                {/* ĐÃ BỔ SUNG NÚT TAB: Giá Sản Phẩm (In ảnh, Khung) */}
                 <button onClick={() => setSubTabKhoDo("sanPham")} className={`flex-1 min-w-[110px] py-2.5 rounded-xl text-xs font-black transition-all ${subTabKhoDo === "sanPham" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>🖼️ Giá Sản phẩm</button>
               </div>
             )}
@@ -526,7 +611,6 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* ĐÃ BỔ SUNG: Giao diện Tab thiết lập Kho Giá In Ảnh / Khung */}
             {(laAdmin && subTabKhoDo === "sanPham") && (
               <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100 max-w-3xl mx-auto animate-fade-in">
                 <h2 className="font-black text-xl text-slate-800 mb-6 flex items-center gap-2"><Tag size={24} className="text-blue-500"/> Quản lý Bảng Giá Sản Phẩm Lẻ</h2>

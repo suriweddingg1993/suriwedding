@@ -8,7 +8,7 @@ import ModalHoaDon from "./ModalHoaDon";
 import ModalBaoCao from "./ModalBaoCao";
 import ModalPhanCong from "./ModalPhanCong"; 
 import NutCopy from "./NutCopy"; 
-import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck, ChevronDown } from "lucide-react";
+import { CalendarDays, Plus, Phone, Search, Clock, Edit, Trash2, CheckCircle2, UserCheck, ChevronDown, HandCoins, Landmark } from "lucide-react";
 
 function chuyenTienVeSo(value: string) { 
   if (!value) return 0;
@@ -25,7 +25,6 @@ interface TabLichProps {
   danhSachPhatSinh: PhatSinh[]; 
   danhSachThuHuong: ThuHuong[];
   danhSachKhachHang: KhachHang[]; 
-  // Nhận dữ liệu Kho sản phẩm từ ngoài truyền vào
   danhSachSanPham?: any[]; 
   lichChuyenTuHome?: Lich | null;
   clearLichChuyenTuHome?: () => void;
@@ -56,9 +55,10 @@ export default function TabLich({
   
   const [theLoaiDaChon, setTheLoaiDaChon] = useState(""); 
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
-  const [tienCoc, setTienCoc] = useState("");
   
-  // ĐÃ BỔ SUNG: Quản lý danh sách Dịch vụ thêm động (Có nút +)
+  const [tienCoc, setTienCoc] = useState("");
+  const [phuongThucCoc, setPhuongThucCoc] = useState<"Tiền mặt" | "Chuyển khoản">("Chuyển khoản"); // TM/CK
+
   const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, gia: string}[]>([]);
 
   const [showModal, setShowModal] = useState(false);
@@ -144,8 +144,8 @@ export default function TabLich({
     setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); 
     setGoiChup(""); setChiTietGoi(""); setGiaTien(""); 
     setTheLoaiDaChon(""); setTheLoaiKhac(""); 
-    setTienCoc(""); 
-    setDanhSachDichVuThem([]); // Xóa rỗng list
+    setTienCoc(""); setPhuongThucCoc("Chuyển khoản");
+    setDanhSachDichVuThem([]); 
   };
 
   const openAddModal = () => { resetForm(); setShowModal(true); };
@@ -166,8 +166,8 @@ export default function TabLich({
     }
 
     setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
+    setPhuongThucCoc(item.phuongThucCoc || "Chuyển khoản");
 
-    // ĐỌC LẠI DANH SÁCH DỊCH VỤ THÊM KHI SỬA LỊCH
     if (item.chiTietDichVuThem && Array.isArray(item.chiTietDichVuThem)) {
       setDanhSachDichVuThem(item.chiTietDichVuThem.map((d: any, idx: number) => ({ idStr: idx.toString(), ten: d.ten, gia: formatTienInput(String(d.gia)) })));
     } else if (item.dichVuThem) {
@@ -204,12 +204,10 @@ export default function TabLich({
   
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
-  // HÀM: Quản lý gõ chữ / chọn dịch vụ tự nhảy tiền
   const capNhatDichVuPhu = (idStr: string, field: 'ten' | 'gia', val: string) => {
     const newDs = danhSachDichVuThem.map(d => {
        if(d.idStr !== idStr) return d;
        let updated = { ...d, [field]: val };
-       // Nếu người dùng chọn tên giống hệt trong Kho, tự động điền Giá tiền
        if (field === 'ten') {
           const sp = danhSachSanPham.find(s => s.tenSanPham === val);
           if (sp) updated.gia = formatTienInput(String(sp.giaTien));
@@ -239,7 +237,6 @@ export default function TabLich({
       if (!dongY) return;
     }
 
-    // TÍNH TOÁN DỊCH VỤ THÊM
     const tongTienDichVuPhu = danhSachDichVuThem.reduce((acc, curr) => acc + chuyenTienVeSo(curr.gia), 0);
     const chuoiDichVuPhu = danhSachDichVuThem.map(d => d.ten).filter(Boolean).join(", ");
     
@@ -260,12 +257,24 @@ export default function TabLich({
         } catch (crmError) { console.warn("⚠️ Bỏ qua lỗi CRM:", crmError); }
       }
       
+      const oldItem = dangSua ? lichLamViec.find(l => l.id === dangSua) : null;
+      
       const duLieuLich: any = { 
         khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
         theLoai: finalTheLoai, goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
-        giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, 
+        giaTien: chuyenTienVeSo(giaTien) || 0, 
+        
+        tienCoc: chuyenTienVeSo(tienCoc) || 0, 
+        phuongThucCoc: phuongThucCoc,
+        ngayGhiNhanCoc: oldItem ? (oldItem.ngayGhiNhanCoc || homNay()) : homNay(), // Bảo toàn ngày cũ nếu sửa
+        
+        // Bảo toàn dữ liệu thanh toán nợ
+        tienThanhToanThem: oldItem ? (oldItem.tienThanhToanThem || 0) : 0,
+        ngayThanhToanThem: oldItem ? (oldItem.ngayThanhToanThem || "") : "",
+        phuongThucThanhToanThem: oldItem ? (oldItem.phuongThucThanhToanThem || "") : "",
+
         dichVuThem: chuoiDichVuPhu, tienDichVuThem: tongTienDichVuPhu, 
-        chiTietDichVuThem: danhSachDichVuThem.map(d => ({ ten: d.ten, gia: chuyenTienVeSo(d.gia) })), // Lưu chi tiết để gọi ra khi sửa
+        chiTietDichVuThem: danhSachDichVuThem.map(d => ({ ten: d.ten, gia: chuyenTienVeSo(d.gia) })), 
         ngayCuoi: isKhongCanNgayCuoi ? "" : (ngayCuoi || "") 
       };
 
@@ -278,8 +287,7 @@ export default function TabLich({
         toast.success("Đã thêm lịch thành công!"); 
       } 
       else { 
-        const oldLich = lichLamViec.find(l => l.id === dangSua);
-        const tongTienCu = (Number(oldLich?.giaTien || 0)) + (Number((oldLich as any)?.tienDichVuThem || 0));
+        const tongTienCu = (Number(oldItem?.giaTien || 0)) + (Number((oldItem as any)?.tienDichVuThem || 0));
         const chenhLech = tongTienMoi - tongTienCu;
 
         await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); 
@@ -360,14 +368,14 @@ export default function TabLich({
             };
             
             const tongTienCaLich = (item.giaTien || 0) + ((item as any).tienDichVuThem || 0);
-            const tienNo = tongTienCaLich - (item.tienCoc || 0);
+            const tienDaThu = (item.tienCoc || 0) + (item.tienThanhToanThem || 0);
+            const tienNo = tongTienCaLich - tienDaThu;
             const currentTrangThai = item.trangThai || "Đã chốt lịch";
 
             const laThangCu = item.ngay.substring(0, 7) < localToday.substring(0, 7);
             const daHoanThanh = currentTrangThai === "Hoàn thành";
             
             const biKhoaVoiNhanVien = (laThangCu || daHoanThanh) && !laAdmin && tienNo <= 0;
-            
             const phanCongData = (item as any).phanCong;
 
             return (
@@ -408,7 +416,7 @@ export default function TabLich({
                     <div className="text-slate-500 font-medium flex items-center gap-2">SĐT 1: <a href={`tel:${item.soDienThoai}`} className="font-bold text-blue-600 hover:underline">{item.soDienThoai}</a><NutCopy textCanCopy={item.soDienThoai} /></div>
                   )}
                   {(item as any).dichVuThem && (
-                    <div className="text-orange-600 font-bold bg-orange-50 px-3 py-2 rounded-xl mt-1 text-xs">🔥 Phát sinh: {(item as any).dichVuThem} (+{formatTienInput(String((item as any).tienDichVuThem || 0))}đ)</div>
+                    <div className="text-orange-600 font-bold bg-orange-50 px-3 py-2 rounded-xl mt-1 text-xs leading-relaxed">🔥 Phát sinh: {(item as any).dichVuThem} (+{formatTienInput(String((item as any).tienDichVuThem || 0))}đ)</div>
                   )}
                 </div>
 
@@ -591,6 +599,12 @@ export default function TabLich({
                     <input type="text" value={tienCoc} onChange={(e) => setTienCoc(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-slate-200 p-3 rounded-xl w-full text-emerald-600 font-black outline-none focus:ring-2 focus:ring-emerald-100 pr-6" />
                     <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
                   </div>
+                  
+                  {/* NÚT CHỌN TIỀN MẶT / CHUYỂN KHOẢN KHI CỌC TIỀN */}
+                  <div className="flex gap-1 mt-2">
+                     <button type="button" onClick={(e) => { e.preventDefault(); setPhuongThucCoc("Tiền mặt"); }} className={`flex-1 py-2 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black border transition-all ${phuongThucCoc === 'Tiền mặt' ? 'bg-emerald-50 border-emerald-500 text-emerald-600 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}><HandCoins size={14}/> TM</button>
+                     <button type="button" onClick={(e) => { e.preventDefault(); setPhuongThucCoc("Chuyển khoản"); }} className={`flex-1 py-2 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black border transition-all ${phuongThucCoc === 'Chuyển khoản' ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}><Landmark size={14}/> CK</button>
+                  </div>
                 </div>
                 
                 {hienNgayCuoi && (
@@ -600,11 +614,10 @@ export default function TabLich({
                   </div>
                 )}
 
-                {/* ĐÃ BỔ SUNG: KHỐI CHỨA DANH SÁCH DỊCH VỤ PHỤ NĂNG ĐỘNG */}
                 <div className="col-span-2 mt-1 border-t border-slate-200 pt-3">
                   <div className="flex justify-between items-center mb-2 ml-1">
                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dịch vụ in ấn / Phát sinh</label>
-                     <button onClick={() => setDanhSachDichVuThem([...danhSachDichVuThem, {idStr: Date.now().toString(), ten: "", gia: ""}])} className="bg-orange-100 text-orange-600 hover:bg-orange-200 px-3 py-1.5 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 uppercase tracking-widest"><Plus size={12}/> Thêm</button>
+                     <button onClick={() => setDanhSachDichVuThem([...danhSachDichVuThem, {idStr: Date.now().toString(), ten: "", gia: ""}])} className="bg-orange-100 text-orange-600 hover:bg-orange-200 px-3 py-1.5 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 uppercase tracking-widest shadow-sm"><Plus size={12}/> Thêm SP</button>
                   </div>
                   
                   {danhSachDichVuThem.map((dv, idx) => (
@@ -623,7 +636,7 @@ export default function TabLich({
                      </div>
                   ))}
                   {danhSachDichVuThem.length === 0 && (
-                     <div className="text-[10px] font-bold text-slate-400 italic mb-2 ml-1 text-center py-2 bg-slate-100 rounded-xl border border-dashed border-slate-200">Không có dịch vụ thêm</div>
+                     <div className="text-[10px] font-bold text-slate-400 italic mb-2 ml-1 text-center py-2 bg-slate-100 rounded-xl border border-dashed border-slate-200">Bấm thêm dịch vụ để chọn sản phẩm.</div>
                   )}
                 </div>
               </div>

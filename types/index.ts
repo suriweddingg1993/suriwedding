@@ -17,11 +17,18 @@ export interface Lich {
   goiChup: string; 
   chiTietGoi?: string; 
   giaTien: number; 
+  
   tienCoc?: number; 
+  phuongThucCoc?: "Tiền mặt" | "Chuyển khoản" | "Chưa phân loại"; 
+  ngayGhiNhanCoc?: string;
+
+  // LƯU VẾT THU NỢ BỔ SUNG
+  tienThanhToanThem?: number;
+  ngayThanhToanThem?: string;
+  phuongThucThanhToanThem?: "Tiền mặt" | "Chuyển khoản";
+
   dichVuThem?: string; 
   tienDichVuThem?: number; 
-  
-  // ĐÃ BỔ SUNG: Lưu danh sách chi tiết các dịch vụ phụ (In ảnh, khung...)
   chiTietDichVuThem?: { ten: string; gia: number }[];
 
   trangThai?: string; 
@@ -38,6 +45,7 @@ export interface PhatSinh {
   loai: string; 
   ngayTra: string; 
   soTien: number; 
+  phuongThuc?: "Tiền mặt" | "Chuyển khoản" | "Chưa phân loại"; // BỔ SUNG
   nguoiGhi: string; 
   ghiChu: string; 
   daTraDo?: boolean;
@@ -87,7 +95,6 @@ export interface KhachHang {
   ghiChu?: string; 
   ngayTao?: string; 
   chiTieu?: number;
-  // BỔ SUNG ĐỂ HẾT LỖI TẠI TAB KHACH HANG
   tongChiTieu?: number;
   soLanDen?: number;
 }
