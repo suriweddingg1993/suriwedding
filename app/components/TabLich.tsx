@@ -49,7 +49,6 @@ export default function TabLich({
   const [chiTietGoi, setChiTietGoi] = useState("");
   const [giaTien, setGiaTien] = useState("");
   
-  // ĐÃ BỔ SUNG: State riêng quản lý Thể loại chụp ảnh
   const [theLoaiDaChon, setTheLoaiDaChon] = useState(""); 
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
   
@@ -139,7 +138,7 @@ export default function TabLich({
     setDangSua(null); setKhachHangId(null); setNgay(selectedDate); setNgayCuoi(""); setGio("08:00"); 
     setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); 
     setGoiChup(""); setChiTietGoi(""); setGiaTien(""); 
-    setTheLoaiDaChon(""); setTheLoaiKhac(""); // Bổ sung reset
+    setTheLoaiDaChon(""); setTheLoaiKhac(""); 
     setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); 
   };
 
@@ -150,7 +149,6 @@ export default function TabLich({
     setSoDienThoai2(item.soDienThoai2 || ""); 
     setGoiChup(item.goiChup || item.theLoai || ""); setChiTietGoi(item.chiTietGoi || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); 
     
-    // Đọc thể loại cũ bảo toàn an toàn dữ liệu
     const standardTypes = ["Chụp ảnh cưới", "Chụp phóng sự cưới", "Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"];
     const loaiItem = item.theLoai || "";
     if (standardTypes.includes(loaiItem)) {
@@ -183,7 +181,10 @@ export default function TabLich({
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
   const handleLuuLichThongMinh = async () => {
-    if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); return; }
+    // ĐÃ SỬA: Loại bỏ kiểm tra bắt buộc đối với biến goiChup
+    if (!ngay || !gio || !tenKhach || !soDienThoai) { 
+      toast.error("Vui lòng điền đủ Ngày, Giờ, SĐT và Tên khách hàng!"); return; 
+    }
 
     const lichCungNgay = lichLamViec.filter((item) => item.ngay === ngay && item.id !== dangSua);
     const [h1, m1] = gio.split(":").map(Number);
@@ -203,8 +204,10 @@ export default function TabLich({
     let finalKhId = khachHangId === "NEW" ? null : khachHangId;
     const tongTienMoi = chuyenTienVeSo(giaTien) + chuyenTienVeSo(tienDichVuThem);
 
-    // Chốt thể loại (Lấy từ Text input nếu chọn "Khác")
     const finalTheLoai = theLoaiDaChon === "Khác" && theLoaiKhac.trim() !== "" ? theLoaiKhac.trim() : (theLoaiDaChon || "Khác");
+    
+    // ĐÃ BỔ SUNG: Kiểm tra thể loại để quyết định có lưu ngày cưới hay không
+    const isKhongCanNgayCuoi = ["Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"].includes(finalTheLoai);
 
     try {
       if (!finalKhId && !dangSua) {
@@ -220,7 +223,8 @@ export default function TabLich({
       const duLieuLich: any = { 
         khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
         theLoai: finalTheLoai, goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
-        giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, dichVuThem: dichVuThem || "", tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, ngayCuoi: ngayCuoi || ""
+        giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, dichVuThem: dichVuThem || "", tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, 
+        ngayCuoi: isKhongCanNgayCuoi ? "" : (ngayCuoi || "") // Nếu không cần ngày cưới thì tự động gán rỗng
       };
 
       if (!dangSua) { 
@@ -258,6 +262,9 @@ export default function TabLich({
      const kw = tuKhoa.toLowerCase().trim();
      dsLichNgayNay = (lichLamViec || []).filter((item: Lich) => (item.tenKhach || "").toLowerCase().includes(kw) || (item.soDienThoai || "").includes(kw) || (item.soDienThoai2 || "").includes(kw));
   } else { dsLichNgayNay = lichTheoNgay[selectedDate] || []; }
+
+  // Logic kiểm tra xem có cần hiện Form Ngày cưới hay không
+  const hienNgayCuoi = !["Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"].includes(theLoaiDaChon);
 
   return (
     <div className="pb-24 px-2 pt-2">
@@ -446,7 +453,6 @@ export default function TabLich({
                     <input type="tel" value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} placeholder="098..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
                  </div>
 
-                 {/* ĐÃ BỔ SUNG: BỘ CHỌN THỂ LOẠI CHỤP ẢNH MỚI */}
                  <div className="col-span-2 sm:col-span-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Thể loại chụp ảnh (*)</label>
                     <div className="relative">
@@ -470,7 +476,6 @@ export default function TabLich({
                     </div>
                  </div>
 
-                 {/* Hiện ô nhập tay nếu chọn "Khác" */}
                  {theLoaiDaChon === "Khác" && (
                    <div className="col-span-2 sm:col-span-1 animate-fade-in">
                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Nhập thể loại khác (*)</label>
@@ -480,7 +485,8 @@ export default function TabLich({
               </div>
 
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 ml-1">Chọn gói chụp (*)</label>
+                {/* ĐÃ SỬA: Loại bỏ dấu (*) Bắt buộc ở mục Gói chụp */}
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 ml-1">Chọn gói chụp</label>
                 <div className="grid grid-cols-1 gap-3">
                   <div className="relative">
                     <select 
@@ -494,7 +500,6 @@ export default function TabLich({
                              setGiaTien(formatTienInput(String(goi.giaTien))); 
                              setChiTietGoi(goi.chiTiet || ""); 
                              
-                             // Tự động nhận diện thể loại khi chọn gói
                              const loaiGoi = (goi as any).theLoai || "Chụp ảnh cưới";
                              const standardTypes = ["Chụp ảnh cưới", "Chụp phóng sự cưới", "Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"];
                              if (standardTypes.includes(loaiGoi)) {
@@ -530,25 +535,31 @@ export default function TabLich({
                   </div>
 
                   <div className="relative mt-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Giá tiền gói (*)</label>
+                    {/* ĐÃ SỬA: Loại bỏ dấu (*) Bắt buộc ở mục Giá tiền */}
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Giá tiền gói</label>
                     <input type="text" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} placeholder="5.000.000" className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-indigo-700 font-black outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8" />
                     <span className="absolute right-3 top-[36px] text-slate-400 font-black">đ</span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl mt-2">
-                <div>
+              {/* ĐÃ SỬA: Thay đổi cấu trúc Grid để Ẩn / Hiện Form nhập Ngày cưới một cách tự nhiên */}
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl mt-2 transition-all">
+                <div className={hienNgayCuoi ? "col-span-1" : "col-span-2"}>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Khách đã cọc</label>
                   <div className="relative">
                     <input type="text" value={tienCoc} onChange={(e) => setTienCoc(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-slate-200 p-3 rounded-xl w-full text-emerald-600 font-black outline-none focus:ring-2 focus:ring-emerald-100 pr-6" />
                     <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
                   </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Ngày cưới (Nếu có)</label>
-                  <input type="date" value={ngayCuoi} onChange={(e) => setNgayCuoi(e.target.value)} className="bg-white border border-slate-200 p-3 rounded-xl w-full text-rose-600 font-bold outline-none focus:ring-2 focus:ring-rose-100" />
-                </div>
+                
+                {hienNgayCuoi && (
+                  <div className="col-span-1 animate-fade-in">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Ngày cưới (Nếu có)</label>
+                    <input type="date" value={ngayCuoi} onChange={(e) => setNgayCuoi(e.target.value)} className="bg-white border border-slate-200 p-3 rounded-xl w-full text-rose-600 font-bold outline-none focus:ring-2 focus:ring-rose-100" />
+                  </div>
+                )}
+
                 <div className="col-span-2 mt-1">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Mua/Thuê thêm dịch vụ</label>
                   <div className="flex gap-2">
@@ -560,6 +571,7 @@ export default function TabLich({
                   </div>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
