@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 import { Lich, TaiKhoan, GoiDichVu, PhatSinh, ThuHuong, KhachHang } from "../../types";
-// BỔ SUNG HÀM increment
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, increment } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
@@ -49,7 +48,10 @@ export default function TabLich({
   const [goiChup, setGoiChup] = useState("");
   const [chiTietGoi, setChiTietGoi] = useState("");
   const [giaTien, setGiaTien] = useState("");
-  const [theLoaiDaChon, setTheLoaiDaChon] = useState("Khác"); 
+  
+  // ĐÃ BỔ SUNG: State riêng quản lý Thể loại chụp ảnh
+  const [theLoaiDaChon, setTheLoaiDaChon] = useState(""); 
+  const [theLoaiKhac, setTheLoaiKhac] = useState("");
   
   const [tienCoc, setTienCoc] = useState("");
   const [dichVuThem, setDichVuThem] = useState("");
@@ -136,7 +138,8 @@ export default function TabLich({
   const resetForm = () => { 
     setDangSua(null); setKhachHangId(null); setNgay(selectedDate); setNgayCuoi(""); setGio("08:00"); 
     setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); 
-    setGoiChup(""); setChiTietGoi(""); setGiaTien(""); setTheLoaiDaChon("Khác");
+    setGoiChup(""); setChiTietGoi(""); setGiaTien(""); 
+    setTheLoaiDaChon(""); setTheLoaiKhac(""); // Bổ sung reset
     setTienCoc(""); setDichVuThem(""); setTienDichVuThem(""); 
   };
 
@@ -145,14 +148,25 @@ export default function TabLich({
   const suaLich = (item: any) => { 
     setNgay(item.ngay); setGio(item.gio); setTenKhach(item.tenKhach); setSoDienThoai(item.soDienThoai || ""); 
     setSoDienThoai2(item.soDienThoai2 || ""); 
-    setGoiChup(item.goiChup || item.theLoai || ""); setChiTietGoi(item.chiTietGoi || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); setTheLoaiDaChon(item.theLoai || "Khác");
+    setGoiChup(item.goiChup || item.theLoai || ""); setChiTietGoi(item.chiTietGoi || ""); setGiaTien(formatTienInput(String(item.giaTien || ""))); 
+    
+    // Đọc thể loại cũ bảo toàn an toàn dữ liệu
+    const standardTypes = ["Chụp ảnh cưới", "Chụp phóng sự cưới", "Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"];
+    const loaiItem = item.theLoai || "";
+    if (standardTypes.includes(loaiItem)) {
+      setTheLoaiDaChon(loaiItem);
+      setTheLoaiKhac("");
+    } else {
+      setTheLoaiDaChon("Khác");
+      setTheLoaiKhac(loaiItem === "Khác" ? "" : loaiItem);
+    }
+
     setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
     setDichVuThem(item.dichVuThem || ""); setTienDichVuThem(formatTienInput(String(item.tienDichVuThem || 0))); 
     setDangSua(item.id || null); setKhachHangId(item.khachHangId || null);
     setShowModal(true); 
   };
 
-  // ÁP DỤNG TRỪ ĐIỂM CHI TIÊU KHI XÓA LỊCH
   const xoaLich = async (id: string) => { 
     if (!laAdmin) { toast.error("Chỉ admin mới được xóa lịch"); return; } 
     if (!confirm("Xóa lịch này?")) return; 
@@ -168,7 +182,6 @@ export default function TabLich({
   
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
-  // TỐI ƯU CỘNG DỒN TỰ ĐỘNG LTV VÀO BẢNG KHACHHANG
   const handleLuuLichThongMinh = async () => {
     if (!ngay || !gio || !tenKhach || !soDienThoai || !goiChup) { toast.error("Vui lòng điền đủ Ngày, Giờ, Gói chụp, SĐT và Tên!"); return; }
 
@@ -190,6 +203,9 @@ export default function TabLich({
     let finalKhId = khachHangId === "NEW" ? null : khachHangId;
     const tongTienMoi = chuyenTienVeSo(giaTien) + chuyenTienVeSo(tienDichVuThem);
 
+    // Chốt thể loại (Lấy từ Text input nếu chọn "Khác")
+    const finalTheLoai = theLoaiDaChon === "Khác" && theLoaiKhac.trim() !== "" ? theLoaiKhac.trim() : (theLoaiDaChon || "Khác");
+
     try {
       if (!finalKhId && !dangSua) {
         try {
@@ -203,15 +219,13 @@ export default function TabLich({
       
       const duLieuLich: any = { 
         khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
-        theLoai: theLoaiDaChon || "Khác", goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
+        theLoai: finalTheLoai, goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
         giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, dichVuThem: dichVuThem || "", tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, ngayCuoi: ngayCuoi || ""
       };
 
       if (!dangSua) { 
         duLieuLich.trangThai = "Đã chốt lịch"; 
         await addDoc(collection(db, "lichStudio"), duLieuLich); 
-        
-        // Cộng tiền cho khách cũ
         if (finalKhId && khachHangId !== "NEW") {
             try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tongTienMoi), soLanDen: increment(1) }); } catch(e){}
         }
@@ -223,8 +237,6 @@ export default function TabLich({
         const chenhLech = tongTienMoi - tongTienCu;
 
         await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); 
-        
-        // Cập nhật chênh lệch cho khách cũ
         if (finalKhId && chenhLech !== 0) {
             try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(chenhLech) }); } catch(e){}
         }
@@ -433,6 +445,38 @@ export default function TabLich({
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">SĐT Phụ (Tùy chọn)</label>
                     <input type="tel" value={soDienThoai2} onChange={(e) => setSoDienThoai2(e.target.value)} placeholder="098..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
                  </div>
+
+                 {/* ĐÃ BỔ SUNG: BỘ CHỌN THỂ LOẠI CHỤP ẢNH MỚI */}
+                 <div className="col-span-2 sm:col-span-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Thể loại chụp ảnh (*)</label>
+                    <div className="relative">
+                      <select 
+                        value={theLoaiDaChon} 
+                        onChange={(e) => setTheLoaiDaChon(e.target.value)} 
+                        className="appearance-none bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all pr-8"
+                      >
+                        <option value="">- Chọn thể loại -</option>
+                        <option value="Chụp ảnh cưới">💍 Chụp ảnh cưới</option>
+                        <option value="Chụp phóng sự cưới">💒 Chụp phóng sự cưới</option>
+                        <option value="Chụp gia đình">👨‍👩‍👧‍👦 Chụp gia đình</option>
+                        <option value="Chụp trẻ em">👶 Chụp trẻ em</option>
+                        <option value="Chụp beauty">💄 Chụp beauty</option>
+                        <option value="Chụp sự kiện">🎉 Chụp sự kiện</option>
+                        <option value="Chụp chân dung">👤 Chụp chân dung</option>
+                        <option value="Chụp kỷ yếu">🎓 Chụp kỷ yếu</option>
+                        <option value="Khác">✨ Khác...</option>
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-4 text-slate-400 pointer-events-none" />
+                    </div>
+                 </div>
+
+                 {/* Hiện ô nhập tay nếu chọn "Khác" */}
+                 {theLoaiDaChon === "Khác" && (
+                   <div className="col-span-2 sm:col-span-1 animate-fade-in">
+                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Nhập thể loại khác (*)</label>
+                     <input type="text" value={theLoaiKhac} onChange={(e) => setTheLoaiKhac(e.target.value)} placeholder="VD: Chụp sản phẩm..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
+                   </div>
+                 )}
               </div>
 
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
@@ -443,10 +487,24 @@ export default function TabLich({
                       value={danhSachGoiDichVu.some(g => g.tenGoi === goiChup) ? goiChup : (goiChup ? "Khác" : "")}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (val === "Khác") { setGoiChup(""); setChiTietGoi(""); setTheLoaiDaChon("Khác"); } 
+                        if (val === "Khác") { setGoiChup(""); setChiTietGoi(""); setTheLoaiDaChon("Khác"); setTheLoaiKhac(""); } 
                         else {
                           setGoiChup(val); const goi = danhSachGoiDichVu.find(g => g.tenGoi === val);
-                          if (goi) { setGiaTien(formatTienInput(String(goi.giaTien))); setChiTietGoi(goi.chiTiet || ""); setTheLoaiDaChon((goi as any).theLoai || "Chụp ảnh cưới"); }
+                          if (goi) { 
+                             setGiaTien(formatTienInput(String(goi.giaTien))); 
+                             setChiTietGoi(goi.chiTiet || ""); 
+                             
+                             // Tự động nhận diện thể loại khi chọn gói
+                             const loaiGoi = (goi as any).theLoai || "Chụp ảnh cưới";
+                             const standardTypes = ["Chụp ảnh cưới", "Chụp phóng sự cưới", "Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"];
+                             if (standardTypes.includes(loaiGoi)) {
+                               setTheLoaiDaChon(loaiGoi);
+                               setTheLoaiKhac("");
+                             } else {
+                               setTheLoaiDaChon("Khác");
+                               setTheLoaiKhac(loaiGoi);
+                             }
+                          }
                         }
                       }}
                       className="appearance-none bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8"
