@@ -181,7 +181,6 @@ export default function TabLich({
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
   const handleLuuLichThongMinh = async () => {
-    // ĐÃ SỬA: Loại bỏ kiểm tra bắt buộc đối với biến goiChup
     if (!ngay || !gio || !tenKhach || !soDienThoai) { 
       toast.error("Vui lòng điền đủ Ngày, Giờ, SĐT và Tên khách hàng!"); return; 
     }
@@ -206,7 +205,6 @@ export default function TabLich({
 
     const finalTheLoai = theLoaiDaChon === "Khác" && theLoaiKhac.trim() !== "" ? theLoaiKhac.trim() : (theLoaiDaChon || "Khác");
     
-    // ĐÃ BỔ SUNG: Kiểm tra thể loại để quyết định có lưu ngày cưới hay không
     const isKhongCanNgayCuoi = ["Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"].includes(finalTheLoai);
 
     try {
@@ -224,7 +222,7 @@ export default function TabLich({
         khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
         theLoai: finalTheLoai, goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
         giaTien: chuyenTienVeSo(giaTien) || 0, tienCoc: chuyenTienVeSo(tienCoc) || 0, dichVuThem: dichVuThem || "", tienDichVuThem: chuyenTienVeSo(tienDichVuThem) || 0, 
-        ngayCuoi: isKhongCanNgayCuoi ? "" : (ngayCuoi || "") // Nếu không cần ngày cưới thì tự động gán rỗng
+        ngayCuoi: isKhongCanNgayCuoi ? "" : (ngayCuoi || "") 
       };
 
       if (!dangSua) { 
@@ -263,7 +261,6 @@ export default function TabLich({
      dsLichNgayNay = (lichLamViec || []).filter((item: Lich) => (item.tenKhach || "").toLowerCase().includes(kw) || (item.soDienThoai || "").includes(kw) || (item.soDienThoai2 || "").includes(kw));
   } else { dsLichNgayNay = lichTheoNgay[selectedDate] || []; }
 
-  // Logic kiểm tra xem có cần hiện Form Ngày cưới hay không
   const hienNgayCuoi = !["Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"].includes(theLoaiDaChon);
 
   return (
@@ -324,7 +321,11 @@ export default function TabLich({
 
             const laThangCu = item.ngay.substring(0, 7) < localToday.substring(0, 7);
             const daHoanThanh = currentTrangThai === "Hoàn thành";
-            const biKhoaVoiNhanVien = (laThangCu || daHoanThanh) && !laAdmin;
+            
+            // ĐÃ BỎ ẨN NÚT SỬA ĐỐI VỚI NHÂN VIÊN: 
+            // Nếu khách hàng vẫn còn nợ tiền (tienNo > 0), nút Sửa ✏️ sẽ LUÔN HIỆN để nhân viên có thể bấm vào và cập nhật tiền "Khách đã cọc"
+            const biKhoaVoiNhanVien = (laThangCu || daHoanThanh) && !laAdmin && tienNo <= 0;
+            
             const phanCongData = (item as any).phanCong;
 
             return (
@@ -485,7 +486,6 @@ export default function TabLich({
               </div>
 
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
-                {/* ĐÃ SỬA: Loại bỏ dấu (*) Bắt buộc ở mục Gói chụp */}
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2 ml-1">Chọn gói chụp</label>
                 <div className="grid grid-cols-1 gap-3">
                   <div className="relative">
@@ -535,7 +535,6 @@ export default function TabLich({
                   </div>
 
                   <div className="relative mt-1">
-                    {/* ĐÃ SỬA: Loại bỏ dấu (*) Bắt buộc ở mục Giá tiền */}
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Giá tiền gói</label>
                     <input type="text" value={giaTien} onChange={(e) => setGiaTien(formatTienInput(e.target.value))} placeholder="5.000.000" className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-indigo-700 font-black outline-none focus:ring-2 focus:ring-indigo-100 transition-all pr-8" />
                     <span className="absolute right-3 top-[36px] text-slate-400 font-black">đ</span>
@@ -543,7 +542,6 @@ export default function TabLich({
                 </div>
               </div>
 
-              {/* ĐÃ SỬA: Thay đổi cấu trúc Grid để Ẩn / Hiện Form nhập Ngày cưới một cách tự nhiên */}
               <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl mt-2 transition-all">
                 <div className={hienNgayCuoi ? "col-span-1" : "col-span-2"}>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Khách đã cọc</label>
