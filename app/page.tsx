@@ -8,7 +8,7 @@ import { db, auth } from "../lib/firebase";
 import dynamic from "next/dynamic";
 import { useAppData } from "../hooks/useAppData";
 import { Role, TabType, TaiKhoan, Lich, GoiDichVu } from "../types";
-import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera, Layers, DollarSign, Lock, Tag, Landmark, HandCoins, CheckCircle2 } from "lucide-react";
+import { Home, CalendarDays, Wallet, Clock, FileSpreadsheet, Users, UserCheck, BarChart3, ClipboardList, LogOut, RefreshCw, AlertCircle, Banknote, ChevronDown, ChevronUp, Camera, Layers, DollarSign, Lock, Tag, Landmark, HandCoins, CheckCircle2, PieChart } from "lucide-react";
 
 const TabLuong = dynamic(() => import("./components/TabLuong"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 const TabTinhTrangKH = dynamic(() => import("./components/TabTinhTrangKH"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
@@ -21,7 +21,7 @@ const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loadin
 const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
-const APP_VERSION = "v1.1.2"; 
+const APP_VERSION = "v1.2.0"; 
 
 function homNay() { 
   const d = new Date(); 
@@ -50,6 +50,9 @@ export default function HomePage() {
 
   const [showKhachNo, setShowKhachNo] = useState(false);
   const [tabViecCuaToi, setTabViecCuaToi] = useState<"homNay" | "ngayMai">("homNay");
+  
+  // ĐÃ SỬA: State gộp chung Thống kê & Chi phí
+  const [subTabThongKe, setSubTabThongKe] = useState<"baoCao" | "chiPhi">("baoCao");
   const [thangThongKe, setThangThongKe] = useState("");
   
   const [subTabNhanSu, setSubTabNhanSu] = useState<"chamCong" | "danhSach">("chamCong");
@@ -157,7 +160,7 @@ export default function HomePage() {
         tienThanhToanThem: tienNo,
         ngayThanhToanThem: homNay(),
         phuongThucThanhToanThem: phuongThucThuNo,
-        daNopTienThanhToanThem: false // Tiền mới thu, chưa ký nhận
+        daNopTienThanhToanThem: false 
       });
       toast.success("✅ Đã tất toán nợ thành công!");
       setThuNoItem(null);
@@ -215,7 +218,6 @@ export default function HomePage() {
 
   const danhSachViecHienThi = tabViecCuaToi === "homNay" ? viecCuaToiHomNay : viecCuaToiNgayMai;
 
-  // TÍNH TOÁN BÀN GIAO TIỀN MẶT HÔM NAY (CHO ADMIN)
   let tmChuaNop = 0;
   let tmDaNop = 0;
   let ckHomNay = 0;
@@ -258,7 +260,6 @@ export default function HomePage() {
       });
   }
 
-  // HÀM KÝ NHẬN TIỀN MẶT CỦA SẾP
   const kyNhanBanGiaoTienMat = async () => {
     if (!confirm(`Sếp xác nhận KÝ NHẬN tổng số tiền mặt: ${formatTienInput(String(tmChuaNop))}đ từ nhân viên?`)) return;
     try {
@@ -292,16 +293,16 @@ export default function HomePage() {
     ); 
   }
 
+  // ĐÃ SỬA: Loại bỏ chiPhi, Gộp vào thongKe
   const nutMenu = [
     { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
     { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
-    { key: "phatSinh", icon: Wallet, label: "Dịch vụ phát sinh", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
-    { key: "tinhTrangKH", icon: Layers, label: "Kho & Gói chụp", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
+    { key: "phatSinh", icon: Wallet, label: "Dịch vụ thêm", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
+    { key: "tinhTrangKH", icon: Layers, label: "Kho Đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
     { key: "chamCong", icon: Users, label: "Nhân sự", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
     { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
-    { key: "chiPhi", icon: DollarSign, label: "Chi phí vận hành", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
     { key: "khachHang", icon: UserCheck, label: "Khách hàng", color: "text-amber-600", bg: "bg-amber-50", adminOnly: true },
-    { key: "thongKe", icon: BarChart3, label: "Thống kê", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
+    { key: "thongKe", icon: PieChart, label: "Kế toán", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
   ] as const;
 
   const goiDichVuĐaNhom = danhSachGoiDichVu.reduce((acc, goi) => {
@@ -312,16 +313,16 @@ export default function HomePage() {
   }, {} as Record<string, GoiDichVu[]>);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-28 font-sans">
+    <div className="min-h-screen bg-slate-50 p-3 md:p-6 pb-28 font-sans">
       {coBanCapNhat && (
-        <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 p-4 rounded-2xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm z-50 relative">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-200 text-amber-700 rounded-full flex items-center justify-center animate-pulse"><RefreshCw size={24} /></div> 
-            <div><div className="font-black text-amber-800 text-lg">App có bản cập nhật mới!</div><div className="text-sm text-amber-700 font-medium mt-0.5">Vui lòng cập nhật ngay để app hoạt động chuẩn xác nhất.</div></div>
+        <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 p-3 rounded-2xl mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm z-50 relative">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-200 text-amber-700 rounded-full flex items-center justify-center animate-pulse"><RefreshCw size={20} /></div> 
+            <div><div className="font-black text-amber-800 text-base">App có bản cập nhật!</div><div className="text-[11px] text-amber-700 font-medium">Vui lòng cập nhật ngay để app mượt mà nhất.</div></div>
           </div>
           <div className="flex gap-2">
-            {laAdmin && (<button onClick={xacNhanPhatHanh} className="flex-1 md:flex-none bg-emerald-600 text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700 active:scale-95 transition-all">Phát hành bản này</button>)}
-            <button onClick={() => window.location.reload()} className="flex-1 md:flex-none bg-amber-500 text-white px-5 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-amber-600 active:scale-95 transition-all">Cập nhật ngay</button>
+            {laAdmin && (<button onClick={xacNhanPhatHanh} className="flex-1 md:flex-none bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-emerald-700 active:scale-95 transition-all">Phát hành</button>)}
+            <button onClick={() => window.location.reload()} className="flex-1 md:flex-none bg-amber-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-amber-600 active:scale-95 transition-all">Cập nhật ngay</button>
           </div>
         </div>
       )}
@@ -352,107 +353,103 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className="flex justify-between items-center gap-4 mb-6">
-        <div><h1 className="text-2xl font-black text-slate-900 tracking-tight">Suri Wedding</h1><p className="text-xs font-bold text-slate-500 mt-1">{tenCuaToi} • {laAdmin ? "Admin" : "Nhân viên"}</p></div>
-        <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm"><LogOut size={18} strokeWidth={2.5} /></button>
+      <div className="flex justify-between items-center gap-3 mb-5 px-1">
+        <div><h1 className="text-xl font-black text-slate-900 tracking-tight leading-tight">Suri Wedding</h1><p className="text-[11px] font-bold text-slate-500 mt-0.5">{tenCuaToi} • {laAdmin ? "Admin" : "Nhân viên"}</p></div>
+        <button onClick={dangXuat} className="bg-white border border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-sm"><LogOut size={16} strokeWidth={2.5} /></button>
       </div>
 
       {tab === "home" && (
-        <div className="animate-fade-in space-y-6">
+        <div className="animate-fade-in space-y-4">
 
-          {/* SỔ QUỸ HÔM NAY VÀ KÝ NHẬN (DÀNH CHO ADMIN) */}
+          {/* ĐÃ SỬA: SỔ QUỸ LÀM GỌN HƠN */}
           {laAdmin && (
-             <div className="mb-6 animate-fade-in">
-               <h2 className="font-black text-lg mb-3 text-slate-800 ml-1 tracking-tight">Sổ quỹ hôm nay (Thu vào)</h2>
-               <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2 bg-gradient-to-r from-orange-400 to-amber-500 rounded-3xl p-5 shadow-md text-white relative overflow-hidden flex justify-between items-center border border-orange-300">
+             <div className="animate-fade-in">
+               <h2 className="font-black text-[15px] mb-2 text-slate-800 ml-1 tracking-tight">Sổ quỹ hôm nay</h2>
+               <div className="grid grid-cols-2 gap-2.5">
+                  <div className="col-span-2 bg-gradient-to-r from-orange-400 to-amber-500 rounded-2xl p-4 shadow-sm text-white relative overflow-hidden flex justify-between items-center border border-orange-300">
                       <div className="relative z-10">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-amber-100 mb-1">Két Tiền Mặt (Chờ Ký)</div>
-                          <div className="text-3xl font-black leading-tight">{formatTienInput(String(tmChuaNop))}đ</div>
+                          <div className="text-[9px] font-black uppercase tracking-widest text-amber-100 mb-1">Két Tiền Mặt (Chờ Ký)</div>
+                          <div className="text-2xl font-black leading-none">{formatTienInput(String(tmChuaNop))}đ</div>
                       </div>
                       {tmChuaNop > 0 && (
-                          <button onClick={kyNhanBanGiaoTienMat} className="relative z-10 bg-white text-orange-600 font-black px-4 py-2.5 rounded-xl shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2 border border-orange-100"><HandCoins size={18}/> KÝ NHẬN</button>
+                          <button onClick={kyNhanBanGiaoTienMat} className="relative z-10 bg-white text-orange-600 font-black px-3 py-2 rounded-xl text-xs shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 border border-orange-100"><HandCoins size={14}/> KÝ NHẬN</button>
                       )}
-                      <div className="absolute -right-2 -bottom-6 text-8xl opacity-10"><HandCoins/></div>
+                      <div className="absolute -right-2 -bottom-6 text-7xl opacity-10"><HandCoins/></div>
                   </div>
-                  <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 relative overflow-hidden">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">Đã ký nhận</div>
-                      <div className="text-xl font-black text-emerald-600 leading-tight">{formatTienInput(String(tmDaNop))}đ</div>
-                      <div className="absolute -right-3 -bottom-3 text-6xl text-emerald-50 opacity-50"><CheckCircle2/></div>
+                  <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 relative overflow-hidden">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-emerald-500 mb-1">Đã ký nhận</div>
+                      <div className="text-lg font-black text-emerald-600 leading-none">{formatTienInput(String(tmDaNop))}đ</div>
+                      <div className="absolute -right-2 -bottom-2 text-5xl text-emerald-50 opacity-60"><CheckCircle2/></div>
                   </div>
-                  <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 relative overflow-hidden">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-1">Chuyển Khoản</div>
-                      <div className="text-xl font-black text-blue-600 leading-tight">{formatTienInput(String(ckHomNay))}đ</div>
-                      <div className="absolute -right-3 -bottom-3 text-6xl text-blue-50 opacity-50"><Landmark/></div>
+                  <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 relative overflow-hidden">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-blue-500 mb-1">Chuyển Khoản</div>
+                      <div className="text-lg font-black text-blue-600 leading-none">{formatTienInput(String(ckHomNay))}đ</div>
+                      <div className="absolute -right-2 -bottom-2 text-5xl text-blue-50 opacity-60"><Landmark/></div>
                   </div>
                </div>
              </div>
           )}
 
+          {/* ĐÃ SỬA: CA LÀM VIỆC LÀM GỌN HƠN */}
           {(viecCuaToiHomNay.length > 0 || viecCuaToiNgayMai.length > 0) ? (
-            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl p-5 shadow-lg shadow-blue-200 text-white relative overflow-hidden">
-              <div className="absolute -right-4 -top-4 text-8xl opacity-10 pointer-events-none">🎯</div>
+            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl p-4 shadow-md shadow-blue-200 text-white relative overflow-hidden">
+              <div className="absolute -right-2 -top-2 text-7xl opacity-10 pointer-events-none">🎯</div>
               
-              <div className="flex gap-2 mb-4 relative z-10 bg-black/10 p-1.5 rounded-xl w-fit">
-                <button onClick={() => setTabViecCuaToi("homNay")} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${tabViecCuaToi === 'homNay' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}>
+              <div className="flex gap-1.5 mb-3 relative z-10 bg-black/10 p-1 rounded-xl w-fit">
+                <button onClick={() => setTabViecCuaToi("homNay")} className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${tabViecCuaToi === 'homNay' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}>
                   Hôm nay ({viecCuaToiHomNay.length})
                 </button>
-                <button onClick={() => setTabViecCuaToi("ngayMai")} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${tabViecCuaToi === 'ngayMai' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}>
+                <button onClick={() => setTabViecCuaToi("ngayMai")} className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all ${tabViecCuaToi === 'ngayMai' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/80 hover:text-white'}`}>
                   Ngày mai ({viecCuaToiNgayMai.length})
                 </button>
               </div>
               
-              <div className="flex flex-col gap-3 relative z-10">
+              <div className="flex flex-col gap-2 relative z-10">
                 {danhSachViecHienThi.length > 0 ? danhSachViecHienThi.map(lich => {
                   const phanCong = (lich as any).phanCong || {};
                   const nhiemVuCuaToi = Object.entries(phanCong).filter(([role, name]) => name === tenCuaToi).map(([role]) => role); 
                   return (
-                    <div key={lich.id} className="bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl p-4 flex flex-col gap-2">
-                      <div className="flex justify-between items-start"><span className="bg-white text-blue-700 text-xs font-black px-2.5 py-1 rounded-lg shadow-sm">⏰ {lich.gio}</span><span className="text-[10px] font-bold bg-black/20 px-2 py-1 rounded-md uppercase text-blue-50">{lich.theLoai}</span></div>
-                      <div className="font-black text-xl leading-tight drop-shadow-sm">{lich.tenKhach}</div>
-                      <div className="text-xs font-medium text-blue-50 flex items-center gap-1.5 flex-wrap mt-1"><span className="opacity-80">Nhiệm vụ:</span> <span className="font-bold text-white bg-white/20 border border-white/20 px-2 py-0.5 rounded-md">{nhiemVuCuaToi.join(", ")}</span></div>
+                    <div key={lich.id} className="bg-white/20 backdrop-blur-md border border-white/30 rounded-xl p-3 flex flex-col gap-1.5">
+                      <div className="flex justify-between items-start"><span className="bg-white text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">⏰ {lich.gio}</span><span className="text-[9px] font-bold bg-black/20 px-1.5 py-0.5 rounded uppercase text-blue-50">{lich.theLoai}</span></div>
+                      <div className="font-black text-lg leading-tight drop-shadow-sm">{lich.tenKhach}</div>
+                      <div className="text-[10px] font-medium text-blue-50 flex items-center gap-1 flex-wrap mt-0.5"><span className="opacity-80">Nhiệm vụ:</span> <span className="font-bold text-white bg-white/20 border border-white/20 px-1.5 py-0.5 rounded">{nhiemVuCuaToi.join(", ")}</span></div>
                     </div>
                   )
                 }) : (
-                  <div className="text-center py-6 bg-white/10 rounded-2xl border border-white/20"><div className="text-3xl mb-2 opacity-50">🏝️</div><div className="text-xs font-medium text-blue-100">Chưa có phân công.</div></div>
+                  <div className="text-center py-5 bg-white/10 rounded-xl border border-white/20"><div className="text-2xl mb-1 opacity-50">🏝️</div><div className="text-[10px] font-medium text-blue-100">Chưa có phân công.</div></div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-50 border border-emerald-100 text-emerald-500 rounded-2xl flex items-center justify-center text-2xl shrink-0">🏝️</div>
-              <div><div className="font-black text-slate-800 text-sm">Không có ca phân công</div><div className="text-xs font-medium text-slate-500 mt-0.5 leading-relaxed">Hôm nay và ngày mai bạn chưa có lịch làm việc nào!</div></div>
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-50 border border-emerald-100 text-emerald-500 rounded-xl flex items-center justify-center text-xl shrink-0">🏝️</div>
+              <div><div className="font-black text-slate-800 text-sm">Không có ca chụp</div><div className="text-[11px] font-medium text-slate-500 mt-0.5 leading-relaxed">Bạn có thể nghỉ ngơi!</div></div>
             </div>
           )}
 
+          {/* ĐÃ SỬA: NỢ THU GỌN */}
           {khachNoTien.length > 0 && (
-            <div className="bg-white border-2 border-rose-200 p-4 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300">
-              <div className="absolute right-[-10px] top-[-20px] text-8xl opacity-5 pointer-events-none">💸</div>
-              <button onClick={() => setShowKhachNo(!showKhachNo)} className="w-full flex justify-between items-center relative z-10 text-left outline-none"><h2 className="font-black text-lg text-rose-600 tracking-tight flex items-center gap-2"><Banknote size={24} /> Báo Động Nợ ({khachNoTien.length})</h2><div className="bg-rose-50 text-rose-600 p-1.5 rounded-full transition-transform">{showKhachNo ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</div></button>
+            <div className="bg-white border-2 border-rose-200 p-3 rounded-2xl shadow-sm relative overflow-hidden transition-all duration-300">
+              <div className="absolute right-[-5px] top-[-15px] text-7xl opacity-5 pointer-events-none">💸</div>
+              <button onClick={() => setShowKhachNo(!showKhachNo)} className="w-full flex justify-between items-center relative z-10 text-left outline-none"><h2 className="font-black text-[15px] text-rose-600 tracking-tight flex items-center gap-1.5"><Banknote size={20} /> Báo Động Nợ ({khachNoTien.length})</h2><div className="bg-rose-50 text-rose-600 p-1 rounded-full transition-transform">{showKhachNo ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div></button>
               {showKhachNo && (
-                <div className="flex flex-col gap-3 relative z-10 mt-4 animate-fade-in">
+                <div className="flex flex-col gap-2 relative z-10 mt-3 animate-fade-in">
                   {khachNoTien.map(item => {
                     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0); 
                     const tienDaThu = Number(item.tienCoc || 0) + Number(item.tienThanhToanThem || 0);
                     const tienNo = tongTien - tienDaThu; 
                     const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay; 
-                    const loaiMoc = (item as any).ngayCuoi ? 'Cưới' : 'Chụp';
                     return (
-                      <div key={item.id} className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
+                      <div key={item.id} className="bg-rose-50 border border-rose-100 p-3 rounded-xl flex justify-between items-center transition-all hover:shadow-sm">
                         <div 
                           className="min-w-0 pr-2 cursor-pointer hover:opacity-70 transition-opacity flex-1"
-                          onClick={() => {
-                             setLichChuyenTuHome(item);
-                             setTab("lich");
-                             window.scrollTo({ top: 0, behavior: "smooth" });
-                          }}
-                          title="Bấm để mở form cập nhật chi tiết"
+                          onClick={() => { setLichChuyenTuHome(item); setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                         >
-                          <div className="font-black text-slate-900 leading-tight break-words">{item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span></div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5"><span className="text-[10px] font-bold text-slate-500 bg-white w-fit px-2 py-0.5 rounded-md border border-slate-200">Qua ngày {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}</span><span className="text-sm font-black text-rose-600 w-fit">Nợ: {formatTienInput(String(tienNo))}đ</span></div>
+                          <div className="font-black text-sm text-slate-900 leading-tight truncate">{item.tenKhach}</div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 mt-1"><span className="text-[9px] font-bold text-slate-500 bg-white w-fit px-1.5 py-0.5 rounded border border-slate-200">Hạn: {ngayMoc.split('-').reverse().join('/')}</span><span className="text-xs font-black text-rose-600 w-fit">Nợ: {formatTienInput(String(tienNo))}đ</span></div>
                         </div>
                         {laAdmin && (
-                          <button onClick={(e) => { e.stopPropagation(); setThuNoItem(item); setPhuongThucThuNo("Chuyển khoản"); }} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0 ml-2">Đã Thu</button>
+                          <button onClick={(e) => { e.stopPropagation(); setThuNoItem(item); setPhuongThucThuNo("Chuyển khoản"); }} className="bg-rose-600 text-white text-[10px] font-black px-3 py-2.5 rounded-lg shadow-sm hover:bg-rose-700 active:scale-95 transition-all shrink-0 ml-1">Thu</button>
                         )}
                       </div>
                     )
@@ -462,24 +459,29 @@ export default function HomePage() {
             </div>
           )}
 
+          {/* ĐÃ SỬA: TÌNH TRẠNG LÀM GỌN */}
           <div>
-            <div className="flex items-center justify-between mb-3 px-1"><h2 className="font-black text-lg text-slate-800 tracking-tight">Tình trạng hôm nay</h2></div>
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-2 flex items-center justify-between">
-              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group"><div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform"><CalendarDays size={20} strokeWidth={2} /></div><div className="text-2xl font-black text-slate-800 leading-none mb-1">{lichLamViec.filter((item) => item.ngay === homNay()).length}</div><div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Lịch Chụp</div></button>
-              <div className="w-[1px] h-12 bg-slate-100"></div>
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">{canTraHomNay.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>}<div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}><ClipboardList size={20} strokeWidth={2} /></div><div className={`text-2xl font-black leading-none mb-1 ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-800"}`}>{canTraHomNay.length}</div><div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Trả đồ</div></button>
-              <div className="w-[1px] h-12 bg-slate-100"></div>
-              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-3 rounded-2xl hover:bg-slate-50 transition-all active:scale-95 group relative">{quaHan.length > 0 && <span className="absolute top-2 right-4 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>}<div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-transform group-hover:scale-110 ${quaHan.length > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-50 text-slate-400"}`}><AlertCircle size={20} strokeWidth={2} /></div><div className={`text-2xl font-black leading-none mb-1 ${quaHan.length > 0 ? "text-rose-600" : "text-slate-800"}`}>{quaHan.length}</div><div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center">Quá hạn</div></button>
+            <div className="flex items-center justify-between mb-2 px-1"><h2 className="font-black text-[15px] text-slate-800 tracking-tight">Tình trạng hôm nay</h2></div>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-1.5 flex items-center justify-between">
+              <button onClick={() => { setTab("lich"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-2 rounded-xl hover:bg-slate-50 transition-all active:scale-95 group"><div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform"><CalendarDays size={16} strokeWidth={2.5} /></div><div className="text-xl font-black text-slate-800 leading-none mb-1">{lichLamViec.filter((item) => item.ngay === homNay()).length}</div><div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider text-center">Lịch Chụp</div></button>
+              <div className="w-[1px] h-10 bg-slate-100"></div>
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-2 rounded-xl hover:bg-slate-50 transition-all active:scale-95 group relative">{canTraHomNay.length > 0 && <span className="absolute top-1 right-3 w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></span>}<div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-transform group-hover:scale-110 ${canTraHomNay.length > 0 ? "bg-amber-100 text-amber-600" : "bg-slate-50 text-slate-400"}`}><ClipboardList size={16} strokeWidth={2.5} /></div><div className={`text-xl font-black leading-none mb-1 ${canTraHomNay.length > 0 ? "text-amber-600" : "text-slate-800"}`}>{canTraHomNay.length}</div><div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider text-center">Trả đồ</div></button>
+              <div className="w-[1px] h-10 bg-slate-100"></div>
+              <button onClick={() => { setTab("tinhTrangKH"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex-1 flex flex-col items-center p-2 rounded-xl hover:bg-slate-50 transition-all active:scale-95 group relative">{quaHan.length > 0 && <span className="absolute top-1 right-3 w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></span>}<div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-transform group-hover:scale-110 ${quaHan.length > 0 ? "bg-rose-100 text-rose-600" : "bg-slate-50 text-slate-400"}`}><AlertCircle size={16} strokeWidth={2.5} /></div><div className={`text-xl font-black leading-none mb-1 ${quaHan.length > 0 ? "text-rose-600" : "text-slate-800"}`}>{quaHan.length}</div><div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider text-center">Quá hạn</div></button>
             </div>
           </div>
 
+          {/* ĐÃ SỬA: LƯỚI TÍNH NĂNG NHỎ GỌN NHƯ APP NGÂN HÀNG */}
           <div>
-            <h2 className="font-black text-lg mb-3 text-slate-800 ml-1 tracking-tight">Tính năng quản lý</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <h2 className="font-black text-[15px] mb-2 text-slate-800 ml-1 tracking-tight">Tính năng quản lý</h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
               {nutMenu.filter((item) => item.key !== "home").filter((item) => !item.adminOnly || laAdmin).map((item) => {
                   const IconComponent = item.icon;
                   return ( 
-                    <button key={item.key} onClick={() => { setTab(item.key as any); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 flex items-center gap-3 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group"><div className={`p-2.5 rounded-xl bg-slate-50 group-hover:${item.bg} ${item.color} transition-colors duration-300 shrink-0`}><IconComponent size={20} strokeWidth={2} /></div><div className="font-bold text-sm text-slate-700 text-left leading-tight">{item.label}</div></button> 
+                    <button key={item.key} onClick={() => { setTab(item.key as any); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-2.5 flex flex-col items-center justify-center gap-1.5 transition-all hover:shadow-md hover:border-slate-200 active:scale-95 group">
+                        <div className={`p-2.5 rounded-xl bg-slate-50 group-hover:${item.bg} ${item.color} transition-colors duration-300`}><IconComponent size={20} strokeWidth={2.5} /></div>
+                        <div className="font-bold text-[10px] text-slate-600 text-center leading-tight px-1">{item.label}</div>
+                    </button> 
                   );
               })}
             </div>
@@ -507,41 +509,52 @@ export default function HomePage() {
           />
         )}
 
-        {tab === "chiPhi" && laAdmin && (
+        {/* ĐÃ SỬA: GỘP THỐNG KÊ VÀ CHI PHÍ VÀO CHUNG 1 CHỖ */}
+        {tab === "thongKe" && laAdmin && (
           <div className="animate-fade-in">
-            {!isChiPhiUnlocked ? (
-              <div className="flex flex-col items-center justify-center p-8 bg-white rounded-[2rem] shadow-xl border border-slate-100 max-w-sm mx-auto mt-10 relative overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-2 bg-rose-500"></div>
-                <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 shadow-inner"><Lock size={40} strokeWidth={2.5}/></div>
-                <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">Vùng Bảo Mật</h2>
-                <p className="text-sm text-slate-500 font-bold mb-6 text-center">Vui lòng nhập mã PIN Admin để truy cập.</p>
-                
-                <input 
-                  type="password" 
-                  maxLength={8}
-                  placeholder="Nhập mã PIN..." 
-                  value={maPin} 
-                  onChange={(e) => setMaPin(e.target.value)} 
-                  className="w-full text-center tracking-widest text-2xl font-black bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 mb-4 transition-all" 
-                />
-                
-                <button 
-                  onClick={async () => { 
-                    try {
-                      const docSnap = await getDoc(doc(db, "system", "config"));
-                      const correctPin = docSnap.exists() ? docSnap.data().pinCode : "10012026";
-                      if (maPin === correctPin) { setIsChiPhiUnlocked(true); setMaPin(""); } 
-                      else { toast.error("Sai mã PIN!"); setMaPin(""); }
-                    } catch (error) { toast.error("Lỗi xác thực!"); }
-                  }} 
-                  className="w-full bg-rose-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-rose-200 active:scale-95 transition-all text-lg"
-                >
-                  MỞ KHÓA
-                </button>
-              </div>
-            ) : (
-              <TabChiPhi formatTienInput={formatTienInput} />
-            )}
+             <div className="flex bg-slate-200/60 p-1.5 rounded-2xl mb-4 max-w-md mx-auto shadow-sm">
+                <button onClick={() => setSubTabThongKe("baoCao")} className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${subTabThongKe === "baoCao" ? "bg-white text-rose-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>📊 Báo cáo Thu</button>
+                <button onClick={() => setSubTabThongKe("chiPhi")} className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${subTabThongKe === "chiPhi" ? "bg-white text-rose-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>💸 Chi phí vận hành</button>
+             </div>
+
+             {subTabThongKe === "baoCao" && (
+                <TabThongKe homNay={homNay} thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} />
+             )}
+
+             {subTabThongKe === "chiPhi" && (
+                <div className="animate-fade-in">
+                  {!isChiPhiUnlocked ? (
+                    <div className="flex flex-col items-center justify-center p-6 bg-white rounded-[2rem] shadow-xl border border-slate-100 max-w-sm mx-auto mt-6 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-rose-500"></div>
+                      <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-5 shadow-inner"><Lock size={32} strokeWidth={2.5}/></div>
+                      <h2 className="text-xl font-black text-slate-800 mb-1 tracking-tight">Khu Vực Kế Toán</h2>
+                      <p className="text-xs text-slate-500 font-bold mb-5 text-center">Vui lòng nhập PIN Admin.</p>
+                      
+                      <input 
+                        type="password" 
+                        maxLength={8}
+                        placeholder="Nhập mã PIN..." 
+                        value={maPin} 
+                        onChange={(e) => setMaPin(e.target.value)} 
+                        className="w-full text-center tracking-widest text-xl font-black bg-slate-50 border-2 border-slate-100 p-3.5 rounded-2xl outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-50 mb-4 transition-all" 
+                      />
+                      <button 
+                        onClick={async () => { 
+                          try {
+                            const docSnap = await getDoc(doc(db, "system", "config"));
+                            const correctPin = docSnap.exists() ? docSnap.data().pinCode : "10012026";
+                            if (maPin === correctPin) { setIsChiPhiUnlocked(true); setMaPin(""); } 
+                            else { toast.error("Sai mã PIN!"); setMaPin(""); }
+                          } catch (error) { toast.error("Lỗi xác thực!"); }
+                        }} 
+                        className="w-full bg-rose-600 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-rose-200 active:scale-95 transition-all text-sm"
+                      >MỞ KHÓA</button>
+                    </div>
+                  ) : (
+                    <TabChiPhi formatTienInput={formatTienInput} />
+                  )}
+                </div>
+             )}
           </div>
         )}
 
@@ -576,14 +589,14 @@ export default function HomePage() {
               <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100 max-w-3xl mx-auto animate-fade-in">
                 <h2 className="font-black text-xl text-slate-800 mb-6 flex items-center gap-2"><Camera size={24} className="text-amber-500"/> Quản lý Thư viện Gói</h2>
                 
-                <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 mb-8 shadow-inner">
+                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 mb-6 shadow-inner">
                   <h3 className="text-sm font-black text-amber-800 uppercase tracking-widest mb-4 flex items-center gap-2">
                     {dangSuaGoi ? "✏️ Cập nhật gói" : "✨ Thêm gói mới"}
                   </h3>
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="text-[11px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1.5">Loại hình chụp (*)</label>
-                      <select value={theLoaiGoiMoi} onChange={(e) => setTheLoaiGoiMoi(e.target.value)} className="bg-white border border-transparent p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm">
+                      <label className="text-[10px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1">Loại hình chụp (*)</label>
+                      <select value={theLoaiGoiMoi} onChange={(e) => setTheLoaiGoiMoi(e.target.value)} className="bg-white border border-transparent p-3 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm">
                         <option value="Chụp ảnh cưới">Chụp ảnh cưới</option>
                         <option value="Phóng sự cưới">Phóng sự cưới</option>
                         <option value="Chụp gia đình">Chụp gia đình</option>
@@ -593,53 +606,53 @@ export default function HomePage() {
                       </select>
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="text-[11px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1.5">Tên gói (*)</label>
-                      <input type="text" value={tenGoiMoi} onChange={(e) => setTenGoiMoi(e.target.value)} placeholder="Nhập tên gói..." className="bg-white border border-transparent p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm" />
+                      <label className="text-[10px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1">Tên gói (*)</label>
+                      <input type="text" value={tenGoiMoi} onChange={(e) => setTenGoiMoi(e.target.value)} placeholder="Nhập tên gói..." className="bg-white border border-transparent p-3 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm" />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="text-[11px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1.5">Chi tiết sản phẩm</label>
-                      <textarea value={chiTietGoiMoi} onChange={(e) => setChiTietGoiMoi(e.target.value)} placeholder="Các sản phẩm khách nhận được..." className="bg-white border border-transparent p-3.5 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm" rows={3}></textarea>
+                      <label className="text-[10px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1">Chi tiết sản phẩm</label>
+                      <textarea value={chiTietGoiMoi} onChange={(e) => setChiTietGoiMoi(e.target.value)} placeholder="Các sản phẩm khách nhận được..." className="bg-white border border-transparent p-3 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm" rows={2}></textarea>
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="text-[11px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1.5">Giá tiền mặc định (*)</label>
+                      <label className="text-[10px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1">Giá tiền mặc định (*)</label>
                       <div className="relative">
-                        <input type="text" value={giaGoiMoi} onChange={(e) => setGiaGoiMoi(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-transparent p-3.5 rounded-xl w-full text-amber-700 font-black outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm pr-8 text-lg" />
-                        <span className="absolute right-4 top-4 text-slate-400 font-bold">đ</span>
+                        <input type="text" value={giaGoiMoi} onChange={(e) => setGiaGoiMoi(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-transparent p-3 rounded-xl w-full text-amber-700 font-black outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm pr-8 text-lg" />
+                        <span className="absolute right-4 top-3.5 text-slate-400 font-bold">đ</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-3 mt-5">
+                  <div className="flex gap-2 mt-4">
                     {dangSuaGoi && (
-                      <button onClick={() => { setDangSuaGoi(null); setTenGoiMoi(""); setChiTietGoiMoi(""); setGiaGoiMoi(""); setTheLoaiGoiMoi("Chụp ảnh cưới"); }} className="px-6 py-4 bg-white text-slate-500 font-bold rounded-xl active:scale-95 transition-all shadow-sm">Hủy</button>
+                      <button onClick={() => { setDangSuaGoi(null); setTenGoiMoi(""); setChiTietGoiMoi(""); setGiaGoiMoi(""); setTheLoaiGoiMoi("Chụp ảnh cưới"); }} className="px-5 py-3 bg-white text-slate-500 text-sm font-bold rounded-xl active:scale-95 transition-all shadow-sm">Hủy</button>
                     )}
-                    <button onClick={luuGoiDichVu} className="flex-1 bg-amber-500 text-white font-black py-4 rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-600 active:scale-95 transition-all">
+                    <button onClick={luuGoiDichVu} className="flex-1 bg-amber-500 text-white text-sm font-black py-3 rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-600 active:scale-95 transition-all">
                       {dangSuaGoi ? "CẬP NHẬT GÓI" : "LƯU VÀO THƯ VIỆN"}
                     </button>
                   </div>
                 </div>
 
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 ml-1">Kho Gói Chụp ({danhSachGoiDichVu.length})</h3>
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 ml-1">Kho Gói Chụp ({danhSachGoiDichVu.length})</h3>
                 <div>
                   {danhSachGoiDichVu.length === 0 ? (
-                    <div className="text-center py-10 border border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm bg-slate-50">Chưa có gói nào được lưu.</div>
+                    <div className="text-center py-8 border border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm bg-slate-50">Chưa có gói nào được lưu.</div>
                   ) : (
                     Object.entries(goiDichVuĐaNhom).map(([loai, gois]) => (
-                      <div key={loai} className="mb-8">
-                        <div className="flex items-center gap-2 mb-4">
-                           <div className="px-3 py-1 bg-slate-800 text-white text-xs font-black uppercase rounded-lg shadow-sm">{loai}</div>
+                      <div key={loai} className="mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                           <div className="px-2.5 py-1 bg-slate-800 text-white text-[10px] font-black uppercase rounded-lg shadow-sm">{loai}</div>
                            <div className="h-px bg-slate-200 flex-1"></div>
                         </div>
-                        <div className="grid gap-3">
+                        <div className="grid gap-2">
                           {gois.map(goi => (
-                            <div key={goi.id} className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all group">
-                              <div className="flex justify-between items-start mb-2">
-                                <div className="font-black text-slate-900 text-base">{goi.tenGoi}</div>
-                                <div className="font-black text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-lg text-xs">{formatTienInput(String(goi.giaTien))}đ</div>
+                            <div key={goi.id} className="bg-white border border-slate-100 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-all group">
+                              <div className="flex justify-between items-start mb-1.5">
+                                <div className="font-black text-slate-900 text-sm">{goi.tenGoi}</div>
+                                <div className="font-black text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-lg text-xs">{formatTienInput(String(goi.giaTien))}đ</div>
                               </div>
-                              {goi.chiTiet && <div className="text-[11px] text-slate-600 font-medium whitespace-pre-line mb-3 bg-slate-50 p-2.5 rounded-xl leading-relaxed">{goi.chiTiet}</div>}
-                              <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
-                                <button onClick={() => { setDangSuaGoi(goi.id!); setTenGoiMoi(goi.tenGoi); setTheLoaiGoiMoi((goi as any).theLoai || "Chụp ảnh cưới"); setChiTietGoiMoi(goi.chiTiet || ""); setGiaGoiMoi(formatTienInput(String(goi.giaTien))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-[10px] font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-2 rounded-xl active:scale-95 transition-all">✏️ Sửa</button>
-                                <button onClick={() => xoaGoiDichVu(goi.id!)} className="text-[10px] font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-2 rounded-xl active:scale-95 transition-all">🗑 Xóa</button>
+                              {goi.chiTiet && <div className="text-[11px] text-slate-600 font-medium whitespace-pre-line mb-2 bg-slate-50 p-2 rounded-xl leading-relaxed">{goi.chiTiet}</div>}
+                              <div className="flex justify-end gap-1.5 border-t border-slate-100 pt-2.5">
+                                <button onClick={() => { setDangSuaGoi(goi.id!); setTenGoiMoi(goi.tenGoi); setTheLoaiGoiMoi((goi as any).theLoai || "Chụp ảnh cưới"); setChiTietGoiMoi(goi.chiTiet || ""); setGiaGoiMoi(formatTienInput(String(goi.giaTien))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-[10px] font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg active:scale-95 transition-all">✏️ Sửa</button>
+                                <button onClick={() => xoaGoiDichVu(goi.id!)} className="text-[10px] font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-1.5 rounded-lg active:scale-95 transition-all">🗑 Xóa</button>
                               </div>
                             </div>
                           ))}
@@ -653,48 +666,48 @@ export default function HomePage() {
 
             {(laAdmin && subTabKhoDo === "sanPham") && (
               <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100 max-w-3xl mx-auto animate-fade-in">
-                <h2 className="font-black text-xl text-slate-800 mb-6 flex items-center gap-2"><Tag size={24} className="text-blue-500"/> Quản lý Bảng Giá Sản Phẩm Lẻ</h2>
-                <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 mb-8 shadow-inner">
+                <h2 className="font-black text-xl text-slate-800 mb-5 flex items-center gap-2"><Tag size={24} className="text-blue-500"/> Quản lý Bảng Giá Sản Phẩm Lẻ</h2>
+                <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 mb-6 shadow-inner">
                   <h3 className="text-sm font-black text-blue-800 uppercase tracking-widest mb-4 flex items-center gap-2">
                     {dangSuaSanPham ? "✏️ Cập nhật giá" : "✨ Thêm sản phẩm (Khung/Ảnh)"}
                   </h3>
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-2">
-                      <label className="text-[11px] font-bold text-blue-700 uppercase tracking-widest ml-1 block mb-1.5">Tên sản phẩm / Kích cỡ (*)</label>
-                      <input type="text" value={tenSanPhamMoi} onChange={(e) => setTenSanPhamMoi(e.target.value)} placeholder="VD: Khung pha lê 60x90, In ảnh ép gỗ..." className="bg-white border border-transparent p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-blue-200 transition-all shadow-sm" />
+                      <label className="text-[10px] font-bold text-blue-700 uppercase tracking-widest ml-1 block mb-1">Tên sản phẩm / Kích cỡ (*)</label>
+                      <input type="text" value={tenSanPhamMoi} onChange={(e) => setTenSanPhamMoi(e.target.value)} placeholder="VD: Khung pha lê 60x90..." className="bg-white border border-transparent p-3 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-blue-200 transition-all shadow-sm" />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="text-[11px] font-bold text-blue-700 uppercase tracking-widest ml-1 block mb-1.5">Giá tiền quy định (*)</label>
+                      <label className="text-[10px] font-bold text-blue-700 uppercase tracking-widest ml-1 block mb-1">Giá tiền quy định (*)</label>
                       <div className="relative">
-                        <input type="text" value={giaSanPhamMoi} onChange={(e) => setGiaSanPhamMoi(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-transparent p-3.5 rounded-xl w-full text-blue-700 font-black outline-none focus:ring-4 focus:ring-blue-200 transition-all shadow-sm pr-8 text-lg" />
-                        <span className="absolute right-4 top-4 text-slate-400 font-bold">đ</span>
+                        <input type="text" value={giaSanPhamMoi} onChange={(e) => setGiaSanPhamMoi(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-transparent p-3 rounded-xl w-full text-blue-700 font-black outline-none focus:ring-4 focus:ring-blue-200 transition-all shadow-sm pr-8 text-lg" />
+                        <span className="absolute right-4 top-3.5 text-slate-400 font-bold">đ</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-3 mt-5">
+                  <div className="flex gap-2 mt-4">
                     {dangSuaSanPham && (
-                      <button onClick={() => { setDangSuaSanPham(null); setTenSanPhamMoi(""); setGiaSanPhamMoi(""); }} className="px-6 py-4 bg-white text-slate-500 font-bold rounded-xl active:scale-95 transition-all shadow-sm">Hủy</button>
+                      <button onClick={() => { setDangSuaSanPham(null); setTenSanPhamMoi(""); setGiaSanPhamMoi(""); }} className="px-5 py-3 bg-white text-slate-500 text-sm font-bold rounded-xl active:scale-95 transition-all shadow-sm">Hủy</button>
                     )}
-                    <button onClick={luuSanPhamPhu} className="flex-1 bg-blue-500 text-white font-black py-4 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-600 active:scale-95 transition-all">
+                    <button onClick={luuSanPhamPhu} className="flex-1 bg-blue-500 text-white text-sm font-black py-3 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-600 active:scale-95 transition-all">
                       {dangSuaSanPham ? "CẬP NHẬT GIÁ" : "THÊM VÀO BẢNG GIÁ"}
                     </button>
                   </div>
                 </div>
 
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-4 ml-1">Danh mục sản phẩm ({danhSachSanPham.length})</h3>
-                <div className="grid gap-3">
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-3 ml-1">Danh mục sản phẩm ({danhSachSanPham.length})</h3>
+                <div className="grid gap-2">
                   {danhSachSanPham.length === 0 ? (
-                    <div className="text-center py-10 border border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm bg-slate-50">Chưa có giá sản phẩm nào được lưu.</div>
+                    <div className="text-center py-8 border border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm bg-slate-50">Chưa có giá sản phẩm nào được lưu.</div>
                   ) : (
                     danhSachSanPham.map(sp => (
-                      <div key={sp.id} className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div key={sp.id} className="bg-white border border-slate-100 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center justify-between">
                          <div>
                             <div className="font-black text-slate-900 text-sm">{sp.tenSanPham}</div>
-                            <div className="font-black text-blue-600 mt-1">{formatTienInput(String(sp.giaTien))}đ</div>
+                            <div className="font-black text-blue-600 mt-0.5 text-xs">{formatTienInput(String(sp.giaTien))}đ</div>
                          </div>
-                         <div className="flex gap-2 shrink-0">
-                            <button onClick={() => { setDangSuaSanPham(sp.id); setTenSanPhamMoi(sp.tenSanPham); setGiaSanPhamMoi(formatTienInput(String(sp.giaTien))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-all">✏️</button>
-                            <button onClick={() => xoaSanPhamPhu(sp.id)} className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-600 rounded-full hover:bg-rose-100 transition-all">🗑</button>
+                         <div className="flex gap-1.5 shrink-0">
+                            <button onClick={() => { setDangSuaSanPham(sp.id); setTenSanPhamMoi(sp.tenSanPham); setGiaSanPhamMoi(formatTienInput(String(sp.giaTien))); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all text-xs">✏️</button>
+                            <button onClick={() => xoaSanPhamPhu(sp.id)} className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all text-xs">🗑</button>
                          </div>
                       </div>
                     ))
@@ -708,13 +721,9 @@ export default function HomePage() {
         {tab === "khachHang" && laAdmin && (
           <TabKhachHang danhSachKhachHang={danhSachKhachHang} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} laAdmin={laAdmin} formatTienInput={formatTienInput} />
         )}
-
-        {tab === "thongKe" && laAdmin && (
-          <TabThongKe homNay={homNay} thangThongKe={thangThongKe} setThangThongKe={setThangThongKe} lichLamViec={lichLamViec} danhSachPhatSinh={danhSachPhatSinh} danhSachTaiKhoan={danhSachTaiKhoan} danhSachChamCong={danhSachChamCong} danhSachThuHuong={danhSachThuHuong} />
-        )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-2xl border-t border-slate-200/50 flex justify-around items-end pt-2 pb-6 md:pb-4 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] z-40">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200/50 flex justify-around items-end pt-1.5 pb-5 md:pb-3 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] z-40">
         {[
           { key: "home", icon: Home, label: "Trang chủ" }, { key: "lich", icon: CalendarDays, label: "Lịch chụp" },
           { key: "phatSinh", icon: Wallet, label: "Phát sinh" }, { key: "luong", icon: FileSpreadsheet, label: "Quản lý" },
@@ -723,9 +732,9 @@ export default function HomePage() {
           const isActive = tab === nav.key || (nav.key === "luong" && (tab === "chamCong" || tab === "luong" || tab === "thongKe" || tab === "tinhTrangKH" || tab === "khachHang" || tab === "chiPhi"));
           return (
             <button key={nav.key} onClick={() => { setTab(nav.key === "luong" ? "luong" : (nav.key as any)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="flex flex-col items-center p-2 w-1/4 relative group transition-all duration-300">
-              {isActive && <span className="absolute -top-3 w-1.5 h-1.5 bg-blue-600 rounded-full animate-fade-in shadow-sm shadow-blue-300"></span>}
-              <div className={`transition-all duration-300 ${isActive ? "-translate-y-1" : "group-hover:-translate-y-0.5"}`}><IconComponent size={24} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"} /></div>
-              <span className={`text-[10px] mt-1.5 transition-all duration-300 ${isActive ? "font-bold text-blue-600" : "font-semibold text-slate-400 group-hover:text-slate-600"}`}>{nav.label}</span>
+              {isActive && <span className="absolute -top-2 w-1.5 h-1.5 bg-blue-600 rounded-full animate-fade-in shadow-sm shadow-blue-300"></span>}
+              <div className={`transition-all duration-300 ${isActive ? "-translate-y-1" : "group-hover:-translate-y-0.5"}`}><IconComponent size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"} /></div>
+              <span className={`text-[9px] mt-1 transition-all duration-300 uppercase tracking-wide ${isActive ? "font-black text-blue-600" : "font-bold text-slate-400 group-hover:text-slate-600"}`}>{nav.label}</span>
             </button>
           )
         })}
