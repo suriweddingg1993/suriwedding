@@ -64,6 +64,9 @@ export default function HomePage() {
   const [giaGoiMoi, setGiaGoiMoi] = useState("");
   const [dangSuaGoi, setDangSuaGoi] = useState<string | null>(null);
 
+  // ĐÃ BỔ SUNG: State nhận tín hiệu lịch cần sửa từ Trang Chủ truyền qua Tab Lịch
+  const [lichChuyenTuHome, setLichChuyenTuHome] = useState<Lich | null>(null);
+
   const laAdmin = role === "admin";
   const { lichLamViec, danhSachPhatSinh, danhSachChamCong, danhSachThuHuong, danhSachTaiKhoan, danhSachKhachHang, danhSachGoiDichVu } = useAppData(user, laAdmin);
 
@@ -282,12 +285,21 @@ export default function HomePage() {
                     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0); const tienNo = tongTien - Number(item.tienCoc || 0); const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay; const loaiMoc = (item as any).ngayCuoi ? 'Cưới' : 'Chụp';
                     return (
                       <div key={item.id} className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex justify-between items-center transition-all hover:shadow-md">
-                        <div className="min-w-0 pr-2">
+                        {/* ĐÃ BỔ SUNG: Cho phép bấm vào khách nợ để nhảy thẳng sang Modal nhập tiền cọc */}
+                        <div 
+                          className="min-w-0 pr-2 cursor-pointer hover:opacity-70 transition-opacity flex-1"
+                          onClick={() => {
+                             setLichChuyenTuHome(item);
+                             setTab("lich");
+                             window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          title="Bấm để mở form cập nhật tiền cọc"
+                        >
                           <div className="font-black text-slate-900 leading-tight break-words">{item.tenKhach} <span className="text-xs text-slate-500 font-bold ml-1 block sm:inline">({item.soDienThoai})</span></div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1.5"><span className="text-[10px] font-bold text-slate-500 bg-white w-fit px-2 py-0.5 rounded-md border border-slate-200">Qua ngày {loaiMoc}: {ngayMoc.split('-').reverse().join('/')}</span><span className="text-sm font-black text-rose-600 w-fit">Nợ: {formatTienInput(String(tienNo))}đ</span></div>
                         </div>
                         {laAdmin && (
-                          <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0">Đã Thu</button>
+                          <button onClick={() => xacNhanThuDuTien(item)} className="bg-rose-600 text-white text-xs font-black px-4 py-3 rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all whitespace-nowrap shrink-0 ml-2">Đã Thu</button>
                         )}
                       </div>
                     )
@@ -328,6 +340,8 @@ export default function HomePage() {
             homNay={homNay} formatTienInput={formatTienInput} hoSoCuaToi={hoSoCuaToi} 
             themThuHuong={themThuHuong} laAdmin={laAdmin} lichLamViec={lichLamViec} 
             danhSachPhatSinh={danhSachPhatSinh} danhSachThuHuong={danhSachThuHuong} danhSachKhachHang={danhSachKhachHang}
+            lichChuyenTuHome={lichChuyenTuHome}
+            clearLichChuyenTuHome={() => setLichChuyenTuHome(null)}
           />
         )}
         
@@ -358,9 +372,13 @@ export default function HomePage() {
                 />
                 
                 <button 
-                  onClick={() => { 
-                    if (maPin === "10012026") { setIsChiPhiUnlocked(true); setMaPin(""); } 
-                    else { toast.error("Sai mã PIN!"); setMaPin(""); } 
+                  onClick={async () => { 
+                    try {
+                      const docSnap = await getDoc(doc(db, "system", "config"));
+                      const correctPin = docSnap.exists() ? docSnap.data().pinCode : "10012026";
+                      if (maPin === correctPin) { setIsChiPhiUnlocked(true); setMaPin(""); } 
+                      else { toast.error("Sai mã PIN!"); setMaPin(""); }
+                    } catch (error) { toast.error("Lỗi xác thực!"); }
                   }} 
                   className="w-full bg-rose-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-rose-200 active:scale-95 transition-all text-lg"
                 >

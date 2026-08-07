@@ -25,11 +25,15 @@ interface TabLichProps {
   danhSachPhatSinh: PhatSinh[]; 
   danhSachThuHuong: ThuHuong[];
   danhSachKhachHang: KhachHang[]; 
+  // ĐÃ BỔ SUNG PROPS ĐỂ NHẬN LỊCH TỪ TRANG CHỦ
+  lichChuyenTuHome?: Lich | null;
+  clearLichChuyenTuHome?: () => void;
 }
 
 export default function TabLich({
   homNay, formatTienInput, hoSoCuaToi, themThuHuong, laAdmin, 
-  lichLamViec, danhSachPhatSinh, danhSachThuHuong, danhSachKhachHang
+  lichLamViec, danhSachPhatSinh, danhSachThuHuong, danhSachKhachHang,
+  lichChuyenTuHome, clearLichChuyenTuHome
 }: TabLichProps) {
   
   const localToday = homNay();
@@ -164,6 +168,16 @@ export default function TabLich({
     setDangSua(item.id || null); setKhachHangId(item.khachHangId || null);
     setShowModal(true); 
   };
+
+  // ĐÃ BỔ SUNG: Effect để tự động mở form Sửa lịch khi được truyền từ Trang chủ sang
+  useEffect(() => {
+    if (lichChuyenTuHome) {
+      setSelectedDate(lichChuyenTuHome.ngay);
+      setCurrentMonth(new Date(lichChuyenTuHome.ngay));
+      suaLich(lichChuyenTuHome);
+      if (clearLichChuyenTuHome) clearLichChuyenTuHome();
+    }
+  }, [lichChuyenTuHome]);
 
   const xoaLich = async (id: string) => { 
     if (!laAdmin) { toast.error("Chỉ admin mới được xóa lịch"); return; } 
@@ -322,8 +336,6 @@ export default function TabLich({
             const laThangCu = item.ngay.substring(0, 7) < localToday.substring(0, 7);
             const daHoanThanh = currentTrangThai === "Hoàn thành";
             
-            // ĐÃ BỎ ẨN NÚT SỬA ĐỐI VỚI NHÂN VIÊN: 
-            // Nếu khách hàng vẫn còn nợ tiền (tienNo > 0), nút Sửa ✏️ sẽ LUÔN HIỆN để nhân viên có thể bấm vào và cập nhật tiền "Khách đã cọc"
             const biKhoaVoiNhanVien = (laThangCu || daHoanThanh) && !laAdmin && tienNo <= 0;
             
             const phanCongData = (item as any).phanCong;
