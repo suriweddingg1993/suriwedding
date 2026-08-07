@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-// BỔ SUNG HÀM increment
 import { collection, addDoc, doc, deleteDoc, updateDoc, increment } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { PhatSinh, TaiKhoan, Lich, KhachHang, ThuHuong } from "../../types";
 import ModalHoaHongPhatSinh from "./ModalHoaHongPhatSinh";
-import { CheckCircle2, UserCheck, Wallet, Search } from "lucide-react";
+import { CheckCircle2, UserCheck, Wallet, Search, ChevronDown } from "lucide-react";
 
 function chuyenTienVeSo(value: string) { return Number(value.replace(/\./g, "")); }
 
@@ -33,7 +32,11 @@ export default function TabPhatSinh({
   const [psNgay, setPsNgay] = useState(localToday);
   const [psTenKhach, setPsTenKhach] = useState("");
   const [psSoDienThoai, setPsSoDienThoai] = useState("");
-  const [psLoai, setPsLoai] = useState("");
+  
+  // ĐÃ SỬA: State mới cho Select Thể loại phát sinh
+  const [psLoaiDaChon, setPsLoaiDaChon] = useState("");
+  const [psLoaiKhac, setPsLoaiKhac] = useState("");
+  
   const [psNgayTra, setPsNgayTra] = useState("");
   const [psSoTien, setPsSoTien] = useState("");
   const [psGhiChu, setPsGhiChu] = useState("");
@@ -76,7 +79,6 @@ export default function TabPhatSinh({
 
   const goToToday = () => { setCurrentMonth(new Date(localToday)); setSelectedDate(localToday); setTuKhoa(""); };
 
-  // ÁP DỤNG TRỪ ĐIỂM CHI TIÊU KHI XÓA
   const xoaPhatSinh = async (id?: string) => { 
     if (!id) return; if (!laAdmin) { toast.error("Chỉ admin mới được xóa"); return; } 
     if (!confirm("Xóa khoản này?")) return; 
@@ -102,12 +104,13 @@ export default function TabPhatSinh({
     setShowHoaHongModal(false); setTienHoaHong("");
   };
 
-  // TỐI ƯU CỘNG DỒN TỰ ĐỘNG LTV VÀO BẢNG KHACHHANG
   const handleThemPhatSinh = async () => {
-    if (!psNgay || !psLoai || !psSoTien || !psTenKhach || !psSoDienThoai) { 
+    const finalLoai = psLoaiDaChon === "Khác" && psLoaiKhac.trim() !== "" ? psLoaiKhac.trim() : psLoaiDaChon;
+
+    if (!psNgay || !finalLoai || !psSoTien || !psTenKhach || !psSoDienThoai) { 
       toast.error("Vui lòng điền đủ Ngày, Khách, SĐT, Dịch vụ & Tiền!"); return; 
     }
-    if (isThueDo(psLoai) && !psNgayTra) {
+    if (isThueDo(finalLoai) && !psNgayTra) {
       toast.error("Với dịch vụ Thuê đồ, vui lòng chọn Ngày trả!"); return; 
     }
 
@@ -132,13 +135,13 @@ export default function TabPhatSinh({
       await addDoc(collection(db, "phatSinh"), { 
         khachHangId: finalKhId,
         ngay: psNgay, tenKhach: psTenKhach, soDienThoai: psSoDienThoai, 
-        loai: psLoai, ngayTra: psNgayTra, 
+        loai: finalLoai, ngayTra: isThueDo(finalLoai) ? psNgayTra : "", 
         soTien: tienPhatSinhMoi, 
         nguoiGhi: hoSoCuaToi?.email || "", ghiChu: psGhiChu 
       }); 
       
       setPsNgay(localToday); setPsTenKhach(""); setPsSoDienThoai(""); 
-      setPsLoai(""); setPsNgayTra(""); setPsSoTien(""); setPsGhiChu(""); 
+      setPsLoaiDaChon(""); setPsLoaiKhac(""); setPsNgayTra(""); setPsSoTien(""); setPsGhiChu(""); 
       setShowModal(false);
       toast.success("Đã lưu dịch vụ phát sinh"); 
     } catch (error) { toast.error("Lỗi cập nhật CSDL"); }
@@ -146,6 +149,7 @@ export default function TabPhatSinh({
 
   let dsGiaoDichNgayNay = tuKhoa.trim() ? danhSachPhatSinh.filter(item => (item.tenKhach || "").toLowerCase().includes(tuKhoa.toLowerCase()) || (item.soDienThoai || "").includes(tuKhoa)) : (phatSinhTheoNgay[selectedDate] || []);
   const dsTraDoNgayNay = danhSachPhatSinh.filter((ps) => isThueDo(ps.loai) && ps.ngayTra === selectedDate);
+  const finalLoaiHienTai = psLoaiDaChon === "Khác" ? psLoaiKhac : psLoaiDaChon;
 
   return (
     <div className="pb-24 px-2 pt-2 animate-fade-in">
@@ -225,8 +229,10 @@ export default function TabPhatSinh({
                 </div>
                 <div className="text-xl font-black text-emerald-600">+{formatTienInput(String(item.soTien || 0))}</div>
               </div>
+              
+              {/* ĐÃ SỬA: Loại bỏ rào cản 'isThueDo'. Nút Nhận hoa hồng luôn hiện đối với TẤT CẢ dịch vụ phát sinh */}
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 ml-2">
-                {isThueDo(item.loai) ? <button onClick={() => { setPhatSinhDangChon(item); setShowHoaHongModal(true); }} className="bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95">🙋‍♂️ Nhận hoa hồng</button> : <div></div>}
+                <button onClick={() => { setPhatSinhDangChon(item); setShowHoaHongModal(true); }} className="bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95">🙋‍♂️ Nhận hoa hồng</button>
                 {laAdmin && item.id && <button onClick={() => xoaPhatSinh(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all">🗑</button>}
               </div>
             </div>
@@ -272,12 +278,49 @@ export default function TabPhatSinh({
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày phát sinh (*)</label>
                   <input type="date" value={psNgay} onChange={(e) => setPsNgay(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-emerald-700 font-black outline-none focus:ring-4 focus:ring-emerald-50 focus:border-emerald-200 transition-all" />
                 </div>
+                
+                {/* ĐÃ SỬA: Form chọn loại dịch vụ Dropdown */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Loại dịch vụ (*)</label>
-                  <input type="text" value={psLoai} onChange={(e) => setPsLoai(e.target.value)} placeholder="VD: Thuê váy, Makeup..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-emerald-50 transition-all" />
+                  <div className="relative">
+                    <select 
+                      value={psLoaiDaChon} 
+                      onChange={(e) => setPsLoaiDaChon(e.target.value)} 
+                      className="appearance-none bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-emerald-50 transition-all pr-8"
+                    >
+                      <option value="">- Chọn dịch vụ -</option>
+                      <optgroup label="👗 Nhóm Cho Thuê">
+                        <option value="Thuê váy">Thuê váy</option>
+                        <option value="Thuê vest">Thuê vest</option>
+                        <option value="Thuê áo dài">Thuê áo dài</option>
+                        <option value="Thuê phụ kiện">Thuê phụ kiện</option>
+                      </optgroup>
+                      <optgroup label="💄 Nhóm Dịch vụ lẻ">
+                        <option value="Make-up lẻ">Make-up lẻ</option>
+                        <option value="In thêm ảnh">In thêm ảnh / Khung</option>
+                        <option value="Chụp lấy ngay">Chụp thẻ / Lấy ngay</option>
+                        <option value="Bán lẻ">Bán phụ kiện lẻ</option>
+                      </optgroup>
+                      <optgroup label="⚠️ Nhóm Phụ phí">
+                        <option value="Phí di chuyển">Phí di chuyển</option>
+                        <option value="Phí chụp thêm">Phí chụp thêm giờ</option>
+                        <option value="Phí đền bù">Phí đền bù / Giặt là</option>
+                      </optgroup>
+                      <option value="Khác">✨ Khác...</option>
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-4 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
 
-                {isThueDo(psLoai) && (
+                {psLoaiDaChon === "Khác" && (
+                   <div className="col-span-2 animate-fade-in">
+                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Nhập dịch vụ khác (*)</label>
+                     <input type="text" value={psLoaiKhac} onChange={(e) => setPsLoaiKhac(e.target.value)} placeholder="VD: Thuê xe đi ngoại cảnh..." className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-emerald-50 transition-all" />
+                   </div>
+                )}
+
+                {/* NGÀY TRẢ ĐỒ: Chỉ hiện nếu cụm từ trong tên dịch vụ có chứa chữ "thuê" */}
+                {isThueDo(finalLoaiHienTai) && (
                    <div className="col-span-2 animate-fade-in">
                      <label className="text-[10px] font-bold text-orange-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày hẹn trả đồ (*)</label>
                      <input type="date" value={psNgayTra} onChange={(e) => setPsNgayTra(e.target.value)} className="bg-orange-50 border border-orange-100 p-3.5 rounded-2xl w-full text-orange-700 font-black outline-none focus:ring-4 focus:ring-orange-100 transition-all" />
