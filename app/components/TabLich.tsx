@@ -15,7 +15,6 @@ function chuyenTienVeSo(value: string) {
   return Number(value.toString().replace(/\./g, "")); 
 }
 
-// Hàm này giúp đồng bộ những tên gói cũ lúc trước nhân viên nhập sai 
 const chuanHoaTheLoai = (loai: string) => {
     if (!loai) return "Khác";
     if (loai === "Phóng sự cưới") return "Chụp phóng sự cưới";
@@ -276,6 +275,9 @@ export default function TabLich({
     const finalTheLoai = theLoaiDaChon === "Khác" && theLoaiKhac.trim() !== "" ? theLoaiKhac.trim() : (theLoaiDaChon || "Khác");
     const isKhongCanNgayCuoi = ["Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"].includes(finalTheLoai);
 
+    // BỔ SUNG CHỐT CHẶN: Phát hiện khách mới để không bị cộng bồi dữ liệu
+    let isKhachVuaTao = false;
+
     try {
       if (!finalKhId && !dangSua) {
         try {
@@ -284,6 +286,7 @@ export default function TabLich({
             tongChiTieu: tongTienMoi, soLanDen: 1 
           });
           finalKhId = khRef.id;
+          isKhachVuaTao = true; // Đánh dấu đây là khách mới tinh
         } catch (crmError) { console.warn("⚠️ Bỏ qua lỗi CRM:", crmError); }
       }
       
@@ -312,7 +315,9 @@ export default function TabLich({
       if (!dangSua) { 
         duLieuLich.trangThai = "Đã chốt lịch"; 
         await addDoc(collection(db, "lichStudio"), duLieuLich); 
-        if (finalKhId && khachHangId !== "NEW") {
+        
+        // ĐÃ SỬA: Chỉ cộng dồn chi tiêu nếu ĐÓ LÀ KHÁCH CŨ
+        if (finalKhId && !isKhachVuaTao) {
             try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tongTienMoi), soLanDen: increment(1) }); } catch(e){}
         }
         toast.success("Đã thêm lịch thành công!"); 
@@ -331,7 +336,6 @@ export default function TabLich({
     } catch (error: any) { toast.error("Lỗi: " + (error?.message || "Không xác định")); }
   };
 
-  // ĐÃ SỬA: Lọc danh sách gói chụp theo đúng thể loại đang được chọn (Phiên dịch các gói cũ)
   const danhSachGoiLocTheoTheLoai = danhSachGoiDichVu.filter(goi => {
      if (goiChup && goi.tenGoi === goiChup) return true;
      if (!theLoaiDaChon) return true;
