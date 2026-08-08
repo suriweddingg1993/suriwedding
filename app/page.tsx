@@ -21,7 +21,7 @@ const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loadin
 const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
-const APP_VERSION = "v1.2.0"; 
+const APP_VERSION = "v1.3.1"; 
 
 function homNay() { 
   const d = new Date(); 
@@ -51,7 +51,6 @@ export default function HomePage() {
   const [showKhachNo, setShowKhachNo] = useState(false);
   const [tabViecCuaToi, setTabViecCuaToi] = useState<"homNay" | "ngayMai">("homNay");
   
-  // ĐÃ SỬA: State gộp chung Thống kê & Chi phí
   const [subTabThongKe, setSubTabThongKe] = useState<"baoCao" | "chiPhi">("baoCao");
   const [thangThongKe, setThangThongKe] = useState("");
   
@@ -142,7 +141,13 @@ export default function HomePage() {
 
   const khachNoTien = lichLamViec.filter((item) => {
     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0);
-    const tienDaThu = Number(item.tienCoc || 0) + Number(item.tienThanhToanThem || 0);
+    let tienDaThu = 0;
+    if (item.danhSachThanhToan && item.danhSachThanhToan.length > 0) {
+        tienDaThu = item.danhSachThanhToan.reduce((a, b) => a + (b.soTien || 0), 0);
+    } else {
+        tienDaThu = Number(item.tienCoc || 0) + Number(item.tienThanhToanThem || 0);
+    }
+
     const tienNo = tongTien - tienDaThu;
     if (tienNo <= 0) return false;
     const ngayMocSoSanh = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay;
@@ -151,16 +156,37 @@ export default function HomePage() {
 
   const xacNhanThuDuTien = async () => {
     if (!laAdmin || !thuNoItem) { toast.error("Chỉ Admin mới được xác nhận tiền!"); return; }
+    
     const tongTien = Number(thuNoItem.giaTien || 0) + Number((thuNoItem as any).tienDichVuThem || 0);
-    const tienDaThuCu = Number(thuNoItem.tienCoc || 0);
+    let existingList: any[] = [];
+    let tienDaThuCu = 0;
+
+    if (thuNoItem.danhSachThanhToan && thuNoItem.danhSachThanhToan.length > 0) {
+        existingList = [...thuNoItem.danhSachThanhToan];
+        tienDaThuCu = existingList.reduce((a, b) => a + (b.soTien || 0), 0);
+    } else {
+        tienDaThuCu = Number(thuNoItem.tienCoc || 0) + Number(thuNoItem.tienThanhToanThem || 0);
+        if (thuNoItem.tienCoc) existingList.push({ idStr: 'c1', soTien: thuNoItem.tienCoc, phuongThuc: thuNoItem.phuongThucCoc || "Chuyển khoản", ngay: thuNoItem.ngayGhiNhanCoc || thuNoItem.ngay, daNopTien: (thuNoItem as any).daNopTienCoc });
+        if (thuNoItem.tienThanhToanThem) existingList.push({ idStr: 'c2', soTien: thuNoItem.tienThanhToanThem, phuongThuc: thuNoItem.phuongThucThanhToanThem || "Chuyển khoản", ngay: thuNoItem.ngayThanhToanThem || thuNoItem.ngay, daNopTien: (thuNoItem as any).daNopTienThanhToanThem });
+    }
+
     const tienNo = tongTien - tienDaThuCu;
+
+    const newThanhToan = {
+        idStr: Date.now().toString(),
+        soTien: tienNo,
+        ngay: homNay(),
+        phuongThuc: phuongThucThuNo,
+        daNopTien: false
+    };
+    
+    existingList.push(newThanhToan);
 
     try {
       await updateDoc(doc(db, "lichStudio", thuNoItem.id!), { 
-        tienThanhToanThem: tienNo,
-        ngayThanhToanThem: homNay(),
-        phuongThucThanhToanThem: phuongThucThuNo,
-        daNopTienThanhToanThem: false 
+        tienCoc: 0, 
+        tienThanhToanThem: 0, 
+        danhSachThanhToan: existingList
       });
       toast.success("✅ Đã tất toán nợ thành công!");
       setThuNoItem(null);
@@ -227,26 +253,37 @@ export default function HomePage() {
 
   if (laAdmin && tab === "home") {
       lichLamViec.forEach(l => {
-          if (l.ngayGhiNhanCoc === ngayHomNayStr && l.tienCoc) {
-              if (l.phuongThucCoc === "Tiền mặt") {
-                  if (l.daNopTienCoc) tmDaNop += l.tienCoc;
-                  else { 
-                     tmChuaNop += l.tienCoc; 
-                     if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {};
-                     lichUpdates[l.id!].daNopTienCoc = true;
+          if (l.danhSachThanhToan && l.danhSachThanhToan.length > 0) {
+              let modified = false;
+              const newList = l.danhSachThanhToan.map(tt => {
+                  if (tt.ngay === ngayHomNayStr && tt.soTien) {
+                      if (tt.phuongThuc === "Tiền mặt") {
+                          if (tt.daNopTien) tmDaNop += tt.soTien;
+                          else {
+                              tmChuaNop += tt.soTien;
+                              modified = true;
+                              return { ...tt, daNopTien: true };
+                          }
+                      } else {
+                          ckHomNay += tt.soTien;
+                      }
                   }
-              } else if (l.phuongThucCoc === "Chuyển khoản") ckHomNay += l.tienCoc;
-          }
-
-          if (l.ngayThanhToanThem === ngayHomNayStr && l.tienThanhToanThem) {
-              if (l.phuongThucThanhToanThem === "Tiền mặt") {
-                  if (l.daNopTienThanhToanThem) tmDaNop += l.tienThanhToanThem;
-                  else { 
-                     tmChuaNop += l.tienThanhToanThem; 
-                     if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {};
-                     lichUpdates[l.id!].daNopTienThanhToanThem = true;
-                  }
-              } else if (l.phuongThucThanhToanThem === "Chuyển khoản") ckHomNay += l.tienThanhToanThem;
+                  return tt;
+              });
+              if (modified) lichUpdates[l.id!] = { ...lichUpdates[l.id!], danhSachThanhToan: newList };
+          } else {
+              if (l.ngayGhiNhanCoc === ngayHomNayStr && l.tienCoc) {
+                  if (l.phuongThucCoc === "Tiền mặt") {
+                      if (l.daNopTienCoc) tmDaNop += l.tienCoc;
+                      else { tmChuaNop += l.tienCoc; if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {}; lichUpdates[l.id!].daNopTienCoc = true; }
+                  } else if (l.phuongThucCoc === "Chuyển khoản") ckHomNay += l.tienCoc;
+              }
+              if (l.ngayThanhToanThem === ngayHomNayStr && l.tienThanhToanThem) {
+                  if (l.phuongThucThanhToanThem === "Tiền mặt") {
+                      if (l.daNopTienThanhToanThem) tmDaNop += l.tienThanhToanThem;
+                      else { tmChuaNop += l.tienThanhToanThem; if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {}; lichUpdates[l.id!].daNopTienThanhToanThem = true; }
+                  } else if (l.phuongThucThanhToanThem === "Chuyển khoản") ckHomNay += l.tienThanhToanThem;
+              }
           }
       });
 
@@ -275,6 +312,25 @@ export default function HomePage() {
     }
   };
 
+  // ĐÃ SỬA: ĐỊNH NGHĨA KHỐI RECORD CHUẨN ĐỂ KHÔNG BÁO LỖI TYPE
+  const goiDichVuĐaNhom = danhSachGoiDichVu.reduce((acc, goi) => {
+    const loai = (goi as any).theLoai || "Khác";
+    if (!acc[loai]) acc[loai] = [];
+    acc[loai].push(goi);
+    return acc;
+  }, {} as Record<string, GoiDichVu[]>);
+
+  const nutMenu = [
+    { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
+    { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
+    { key: "phatSinh", icon: Wallet, label: "Dịch vụ thêm", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
+    { key: "tinhTrangKH", icon: Layers, label: "Kho Đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
+    { key: "chamCong", icon: Users, label: "Nhân sự", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
+    { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
+    { key: "khachHang", icon: UserCheck, label: "Khách hàng", color: "text-amber-600", bg: "bg-amber-50", adminOnly: true },
+    { key: "thongKe", icon: PieChart, label: "Kế toán", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
+  ] as const;
+
   if (dangTai) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải dữ liệu...</div>;
   if (!user) { 
     return ( 
@@ -292,25 +348,6 @@ export default function HomePage() {
       </div> 
     ); 
   }
-
-  // ĐÃ SỬA: Loại bỏ chiPhi, Gộp vào thongKe
-  const nutMenu = [
-    { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
-    { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
-    { key: "phatSinh", icon: Wallet, label: "Dịch vụ thêm", color: "text-emerald-600", bg: "bg-emerald-50", adminOnly: false },
-    { key: "tinhTrangKH", icon: Layers, label: "Kho Đồ", color: "text-amber-600", bg: "bg-amber-50", adminOnly: false },
-    { key: "chamCong", icon: Users, label: "Nhân sự", color: "text-teal-600", bg: "bg-teal-50", adminOnly: false },
-    { key: "luong", icon: FileSpreadsheet, label: "Bảng Lương", color: "text-violet-600", bg: "bg-violet-50", adminOnly: false },
-    { key: "khachHang", icon: UserCheck, label: "Khách hàng", color: "text-amber-600", bg: "bg-amber-50", adminOnly: true },
-    { key: "thongKe", icon: PieChart, label: "Kế toán", color: "text-rose-600", bg: "bg-rose-50", adminOnly: true },
-  ] as const;
-
-  const goiDichVuĐaNhom = danhSachGoiDichVu.reduce((acc, goi) => {
-    const loai = (goi as any).theLoai || "Khác";
-    if (!acc[loai]) acc[loai] = [];
-    acc[loai].push(goi);
-    return acc;
-  }, {} as Record<string, GoiDichVu[]>);
 
   return (
     <div className="min-h-screen bg-slate-50 p-3 md:p-6 pb-28 font-sans">
@@ -361,7 +398,6 @@ export default function HomePage() {
       {tab === "home" && (
         <div className="animate-fade-in space-y-4">
 
-          {/* ĐÃ SỬA: SỔ QUỸ LÀM GỌN HƠN */}
           {laAdmin && (
              <div className="animate-fade-in">
                <h2 className="font-black text-[15px] mb-2 text-slate-800 ml-1 tracking-tight">Sổ quỹ hôm nay</h2>
@@ -390,7 +426,6 @@ export default function HomePage() {
              </div>
           )}
 
-          {/* ĐÃ SỬA: CA LÀM VIỆC LÀM GỌN HƠN */}
           {(viecCuaToiHomNay.length > 0 || viecCuaToiNgayMai.length > 0) ? (
             <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl p-4 shadow-md shadow-blue-200 text-white relative overflow-hidden">
               <div className="absolute -right-2 -top-2 text-7xl opacity-10 pointer-events-none">🎯</div>
@@ -427,7 +462,6 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* ĐÃ SỬA: NỢ THU GỌN */}
           {khachNoTien.length > 0 && (
             <div className="bg-white border-2 border-rose-200 p-3 rounded-2xl shadow-sm relative overflow-hidden transition-all duration-300">
               <div className="absolute right-[-5px] top-[-15px] text-7xl opacity-5 pointer-events-none">💸</div>
@@ -436,7 +470,14 @@ export default function HomePage() {
                 <div className="flex flex-col gap-2 relative z-10 mt-3 animate-fade-in">
                   {khachNoTien.map(item => {
                     const tongTien = Number(item.giaTien || 0) + Number((item as any).tienDichVuThem || 0); 
-                    const tienDaThu = Number(item.tienCoc || 0) + Number(item.tienThanhToanThem || 0);
+                    
+                    let tienDaThu = 0;
+                    if (item.danhSachThanhToan && item.danhSachThanhToan.length > 0) {
+                        tienDaThu = item.danhSachThanhToan.reduce((a, b) => a + (b.soTien || 0), 0);
+                    } else {
+                        tienDaThu = Number(item.tienCoc || 0) + Number(item.tienThanhToanThem || 0);
+                    }
+                    
                     const tienNo = tongTien - tienDaThu; 
                     const ngayMoc = (item as any).ngayCuoi ? (item as any).ngayCuoi : item.ngay; 
                     return (
@@ -459,7 +500,6 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* ĐÃ SỬA: TÌNH TRẠNG LÀM GỌN */}
           <div>
             <div className="flex items-center justify-between mb-2 px-1"><h2 className="font-black text-[15px] text-slate-800 tracking-tight">Tình trạng hôm nay</h2></div>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-1.5 flex items-center justify-between">
@@ -471,7 +511,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* ĐÃ SỬA: LƯỚI TÍNH NĂNG NHỎ GỌN NHƯ APP NGÂN HÀNG */}
           <div>
             <h2 className="font-black text-[15px] mb-2 text-slate-800 ml-1 tracking-tight">Tính năng quản lý</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
@@ -509,7 +548,6 @@ export default function HomePage() {
           />
         )}
 
-        {/* ĐÃ SỬA: GỘP THỐNG KÊ VÀ CHI PHÍ VÀO CHUNG 1 CHỖ */}
         {tab === "thongKe" && laAdmin && (
           <div className="animate-fade-in">
              <div className="flex bg-slate-200/60 p-1.5 rounded-2xl mb-4 max-w-md mx-auto shadow-sm">
@@ -643,7 +681,7 @@ export default function HomePage() {
                            <div className="h-px bg-slate-200 flex-1"></div>
                         </div>
                         <div className="grid gap-2">
-                          {gois.map(goi => (
+                          {gois.map((goi: any) => (
                             <div key={goi.id} className="bg-white border border-slate-100 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-all group">
                               <div className="flex justify-between items-start mb-1.5">
                                 <div className="font-black text-slate-900 text-sm">{goi.tenGoi}</div>

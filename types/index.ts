@@ -18,15 +18,25 @@ export interface Lich {
   chiTietGoi?: string; 
   giaTien: number; 
   
+  // ĐÃ BỔ SUNG: Mảng lịch sử thanh toán nhiều đợt
+  danhSachThanhToan?: {
+    idStr: string;
+    soTien: number;
+    phuongThuc: "Tiền mặt" | "Chuyển khoản";
+    ngay: string;
+    daNopTien?: boolean;
+  }[];
+
+  // Giữ lại các biến cũ để tương thích ngược dữ liệu
   tienCoc?: number; 
   phuongThucCoc?: "Tiền mặt" | "Chuyển khoản" | "Chưa phân loại"; 
   ngayGhiNhanCoc?: string;
-  daNopTienCoc?: boolean; // BỔ SUNG: Trạng thái Sếp ký nhận Cọc
+  daNopTienCoc?: boolean; 
 
   tienThanhToanThem?: number;
   ngayThanhToanThem?: string;
   phuongThucThanhToanThem?: "Tiền mặt" | "Chuyển khoản";
-  daNopTienThanhToanThem?: boolean; // BỔ SUNG: Trạng thái Sếp ký nhận Thu Nợ
+  daNopTienThanhToanThem?: boolean; 
 
   dichVuThem?: string; 
   tienDichVuThem?: number; 
@@ -47,7 +57,7 @@ export interface PhatSinh {
   ngayTra: string; 
   soTien: number; 
   phuongThuc?: "Tiền mặt" | "Chuyển khoản" | "Chưa phân loại"; 
-  daNopTien?: boolean; // BỔ SUNG: Trạng thái Sếp ký nhận Phát Sinh
+  daNopTien?: boolean; 
   nguoiGhi: string; 
   ghiChu: string; 
   daTraDo?: boolean;

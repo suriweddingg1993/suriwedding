@@ -56,8 +56,8 @@ export default function TabLich({
   const [theLoaiDaChon, setTheLoaiDaChon] = useState(""); 
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
   
-  const [tienCoc, setTienCoc] = useState("");
-  const [phuongThucCoc, setPhuongThucCoc] = useState<"Tiền mặt" | "Chuyển khoản">("Chuyển khoản");
+  // MẢNG LỊCH SỬ THANH TOÁN (CỌC LẦN 1, LẦN 2...)
+  const [danhSachThanhToan, setDanhSachThanhToan] = useState<{idStr: string, soTien: string, phuongThuc: "Tiền mặt" | "Chuyển khoản", ngay: string, daNopTien: boolean}[]>([]);
 
   const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, gia: string}[]>([]);
 
@@ -144,7 +144,7 @@ export default function TabLich({
     setTenKhach(""); setSoDienThoai(""); setSoDienThoai2(""); 
     setGoiChup(""); setChiTietGoi(""); setGiaTien(""); 
     setTheLoaiDaChon(""); setTheLoaiKhac(""); 
-    setTienCoc(""); setPhuongThucCoc("Chuyển khoản");
+    setDanhSachThanhToan([]); // Xóa rỗng list thanh toán
     setDanhSachDichVuThem([]); 
   };
 
@@ -165,8 +165,27 @@ export default function TabLich({
       setTheLoaiKhac(loaiItem === "Khác" ? "" : loaiItem);
     }
 
-    setNgayCuoi(item.ngayCuoi || ""); setTienCoc(formatTienInput(String(item.tienCoc || 0))); 
-    setPhuongThucCoc(item.phuongThucCoc || "Chuyển khoản");
+    setNgayCuoi(item.ngayCuoi || ""); 
+
+    // ĐỌC DỮ LIỆU THANH TOÁN (Hỗ trợ tương thích ngược với hóa đơn cũ)
+    let arrThanhToan = [];
+    if (item.danhSachThanhToan && item.danhSachThanhToan.length > 0) {
+        arrThanhToan = item.danhSachThanhToan.map((t: any) => ({
+            idStr: t.idStr || Date.now().toString() + Math.random(),
+            soTien: formatTienInput(String(t.soTien)),
+            phuongThuc: t.phuongThuc || "Chuyển khoản",
+            ngay: t.ngay || item.ngay,
+            daNopTien: t.daNopTien || false
+        }));
+    } else {
+        if (item.tienCoc > 0) {
+            arrThanhToan.push({ idStr: "legacy_coc", soTien: formatTienInput(String(item.tienCoc)), phuongThuc: item.phuongThucCoc || "Chuyển khoản", ngay: item.ngayGhiNhanCoc || item.ngay, daNopTien: item.daNopTienCoc || false });
+        }
+        if (item.tienThanhToanThem > 0) {
+            arrThanhToan.push({ idStr: "legacy_them", soTien: formatTienInput(String(item.tienThanhToanThem)), phuongThuc: item.phuongThucThanhToanThem || "Chuyển khoản", ngay: item.ngayThanhToanThem || item.ngay, daNopTien: item.daNopTienThanhToanThem || false });
+        }
+    }
+    setDanhSachThanhToan(arrThanhToan as any);
 
     if (item.chiTietDichVuThem && Array.isArray(item.chiTietDichVuThem)) {
       setDanhSachDichVuThem(item.chiTietDichVuThem.map((d: any, idx: number) => ({ idStr: idx.toString(), ten: d.ten, gia: formatTienInput(String(d.gia)) })));
@@ -217,6 +236,10 @@ export default function TabLich({
     setDanhSachDichVuThem(newDs);
   };
 
+  const capNhatThanhToan = (idStr: string, field: 'soTien' | 'phuongThuc' | 'ngay', val: string) => {
+    setDanhSachThanhToan(danhSachThanhToan.map(tt => tt.idStr === idStr ? { ...tt, [field]: val } : tt));
+  }
+
   const handleLuuLichThongMinh = async () => {
     if (!ngay || !gio || !tenKhach || !soDienThoai) { 
       toast.error("Vui lòng điền đủ Ngày, Giờ, SĐT và Tên khách hàng!"); return; 
@@ -257,22 +280,20 @@ export default function TabLich({
         } catch (crmError) { console.warn("⚠️ Bỏ qua lỗi CRM:", crmError); }
       }
       
-      const oldItem = dangSua ? lichLamViec.find(l => l.id === dangSua) : null;
-      
       const duLieuLich: any = { 
         khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
         theLoai: finalTheLoai, goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
         giaTien: chuyenTienVeSo(giaTien) || 0, 
         
-        tienCoc: chuyenTienVeSo(tienCoc) || 0, 
-        phuongThucCoc: phuongThucCoc,
-        ngayGhiNhanCoc: oldItem ? (oldItem.ngayGhiNhanCoc || homNay()) : homNay(), 
-        daNopTienCoc: oldItem ? (oldItem as any).daNopTienCoc : false, // Nếu mới lưu bằng tiền mặt thì mặc định là Chưa nộp sếp
-        
-        tienThanhToanThem: oldItem ? (oldItem.tienThanhToanThem || 0) : 0,
-        ngayThanhToanThem: oldItem ? (oldItem.ngayThanhToanThem || "") : "",
-        phuongThucThanhToanThem: oldItem ? (oldItem.phuongThucThanhToanThem || "") : "",
-        daNopTienThanhToanThem: oldItem ? (oldItem as any).daNopTienThanhToanThem : false,
+        tienCoc: 0, 
+        tienThanhToanThem: 0, 
+        danhSachThanhToan: danhSachThanhToan.map(t => ({
+            idStr: t.idStr,
+            soTien: chuyenTienVeSo(t.soTien),
+            phuongThuc: t.phuongThuc,
+            ngay: t.ngay,
+            daNopTien: t.daNopTien
+        })),
 
         dichVuThem: chuoiDichVuPhu, tienDichVuThem: tongTienDichVuPhu, 
         chiTietDichVuThem: danhSachDichVuThem.map(d => ({ ten: d.ten, gia: chuyenTienVeSo(d.gia) })), 
@@ -288,7 +309,8 @@ export default function TabLich({
         toast.success("Đã thêm lịch thành công!"); 
       } 
       else { 
-        const tongTienCu = (Number(oldItem?.giaTien || 0)) + (Number((oldItem as any)?.tienDichVuThem || 0));
+        const oldLich = lichLamViec.find(l => l.id === dangSua);
+        const tongTienCu = (Number(oldLich?.giaTien || 0)) + (Number((oldLich as any)?.tienDichVuThem || 0));
         const chenhLech = tongTienMoi - tongTienCu;
 
         await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); 
@@ -369,14 +391,20 @@ export default function TabLich({
             };
             
             const tongTienCaLich = (item.giaTien || 0) + ((item as any).tienDichVuThem || 0);
-            const tienDaThu = (item.tienCoc || 0) + (item.tienThanhToanThem || 0);
+            
+            const tienDaThu = (item.danhSachThanhToan && item.danhSachThanhToan.length > 0) 
+                ? item.danhSachThanhToan.reduce((a, b) => a + (b.soTien || 0), 0) 
+                : (item.tienCoc || 0) + (item.tienThanhToanThem || 0);
+
             const tienNo = tongTienCaLich - tienDaThu;
             const currentTrangThai = item.trangThai || "Đã chốt lịch";
 
             const laThangCu = item.ngay.substring(0, 7) < localToday.substring(0, 7);
-            const daHoanThanh = currentTrangThai === "Hoàn thành";
             
-            const biKhoaVoiNhanVien = (laThangCu || daHoanThanh) && !laAdmin && tienNo <= 0;
+            // ĐÃ MỞ KHÓA SỬA LỊCH CHỤP: Nhân viên CÓ THỂ SỬA trong mọi trường hợp NẾU LÀ THÁNG HIỆN TẠI
+            // Nếu là Hóa đơn tháng cũ thì MỚI BỊ KHÓA LẠI
+            const biKhoaVoiNhanVien = laThangCu && !laAdmin && tienNo <= 0;
+            
             const phanCongData = (item as any).phanCong;
 
             return (
@@ -406,16 +434,15 @@ export default function TabLich({
                         <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 text-right w-fit ml-auto">Đã thu đủ</div>
                       ) : null}
                       
-                      {/* HIỂN THỊ CHÚ THÍCH TRẠNG THÁI TIỀN MẶT */}
-                      {item.phuongThucCoc === 'Tiền mặt' && (
-                        <div className={`text-[9px] mt-1 font-bold px-1.5 py-0.5 rounded text-right w-fit ml-auto ${(item as any).daNopTienCoc ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
-                           Cọc: {(item as any).daNopTienCoc ? '✓ Đã nộp sếp' : '⏳ Két (Chờ ký)'}
-                        </div>
-                      )}
-                      {item.phuongThucThanhToanThem === 'Tiền mặt' && (
-                        <div className={`text-[9px] mt-0.5 font-bold px-1.5 py-0.5 rounded text-right w-fit ml-auto ${(item as any).daNopTienThanhToanThem ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
-                           Thu nợ: {(item as any).daNopTienThanhToanThem ? '✓ Đã nộp sếp' : '⏳ Két (Chờ ký)'}
-                        </div>
+                      {/* HIỂN THỊ DANH SÁCH LỊCH SỬ THANH TOÁN (CỌC LẦN 1, LẦN 2...) */}
+                      {item.danhSachThanhToan && item.danhSachThanhToan.map(tt => (
+                         <div key={tt.idStr} className={`text-[9px] mt-1 font-bold px-1.5 py-0.5 rounded text-right w-fit ml-auto ${tt.phuongThuc === 'Tiền mặt' ? (tt.daNopTien ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100') : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                             {tt.ngay.split('-').reverse().join('/')}: +{formatTienInput(String(tt.soTien))} ({tt.phuongThuc === 'Tiền mặt' ? (tt.daNopTien ? 'TM-Đã nộp sếp' : 'TM-Chờ ký') : 'CK'})
+                         </div>
+                      ))}
+                      {/* Hiển thị tương thích ngược với hóa đơn cũ */}
+                      {(!item.danhSachThanhToan || item.danhSachThanhToan.length === 0) && item.tienCoc && (
+                         <div className="text-[9px] mt-1 font-bold px-1.5 py-0.5 rounded text-right w-fit ml-auto bg-slate-50 text-slate-500 border border-slate-200">Đã cọc: {formatTienInput(String(item.tienCoc))}</div>
                       )}
                     </div>
                   </div>
@@ -605,52 +632,69 @@ export default function TabLich({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl mt-2 transition-all">
-                <div className={hienNgayCuoi ? "col-span-1" : "col-span-2"}>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Khách đã cọc</label>
-                  <div className="relative">
-                    <input type="text" value={tienCoc} onChange={(e) => setTienCoc(formatTienInput(e.target.value))} placeholder="0" className="bg-white border border-slate-200 p-3 rounded-xl w-full text-emerald-600 font-black outline-none focus:ring-2 focus:ring-emerald-100 pr-6" />
-                    <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
+              {hienNgayCuoi && (
+                <div className="animate-fade-in mt-1 ml-1 mb-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Ngày cưới (Nếu có)</label>
+                  <input type="date" value={ngayCuoi} onChange={(e) => setNgayCuoi(e.target.value)} className="bg-white border border-slate-200 p-3.5 rounded-2xl w-full text-rose-600 font-bold outline-none focus:ring-2 focus:ring-rose-100" />
+                </div>
+              )}
+
+              {/* ĐÃ BỔ SUNG: KHỐI CHỨA LỊCH SỬ THANH TOÁN (CỌC LẦN 1, LẦN 2...) NĂNG ĐỘNG */}
+              <div className="col-span-2 mt-2 pt-1">
+                  <div className="flex justify-between items-center mb-2 ml-1">
+                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lịch sử thanh toán / Cọc</label>
+                     <button type="button" onClick={() => setDanhSachThanhToan([...danhSachThanhToan, {idStr: Date.now().toString(), soTien: "", phuongThuc: "Chuyển khoản", ngay: homNay(), daNopTien: false}])} className="bg-emerald-100 text-emerald-600 hover:bg-emerald-200 px-3 py-1.5 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 uppercase tracking-widest shadow-sm"><Plus size={12}/> Thêm Cọc</button>
                   </div>
                   
-                  <div className="flex gap-1 mt-2">
-                     <button type="button" onClick={(e) => { e.preventDefault(); setPhuongThucCoc("Tiền mặt"); }} className={`flex-1 py-2 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black border transition-all ${phuongThucCoc === 'Tiền mặt' ? 'bg-emerald-50 border-emerald-500 text-emerald-600 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}><HandCoins size={14}/> TM</button>
-                     <button type="button" onClick={(e) => { e.preventDefault(); setPhuongThucCoc("Chuyển khoản"); }} className={`flex-1 py-2 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black border transition-all ${phuongThucCoc === 'Chuyển khoản' ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}><Landmark size={14}/> CK</button>
-                  </div>
-                </div>
-                
-                {hienNgayCuoi && (
-                  <div className="col-span-1 animate-fade-in">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 block mb-1.5">Ngày cưới (Nếu có)</label>
-                    <input type="date" value={ngayCuoi} onChange={(e) => setNgayCuoi(e.target.value)} className="bg-white border border-slate-200 p-3 rounded-xl w-full text-rose-600 font-bold outline-none focus:ring-2 focus:ring-rose-100" />
-                  </div>
-                )}
+                  {danhSachThanhToan.map((tt, idx) => (
+                     <div key={tt.idStr} className="flex flex-wrap gap-2 mb-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl relative animate-fade-in">
+                        <input type="date" value={tt.ngay} onChange={(e) => capNhatThanhToan(tt.idStr, 'ngay', e.target.value)} className="bg-white border border-slate-200 p-2.5 rounded-lg text-slate-700 font-bold outline-none focus:ring-2 focus:ring-emerald-100 w-full sm:w-auto" />
+                        <div className="relative flex-1 min-w-[120px]">
+                           <input type="text" value={tt.soTien} onChange={(e) => capNhatThanhToan(tt.idStr, 'soTien', formatTienInput(e.target.value))} placeholder="Số tiền..." className="bg-white border border-slate-200 p-2.5 rounded-lg w-full text-emerald-600 font-black outline-none focus:ring-2 focus:ring-emerald-100 pr-6" />
+                           <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
+                        </div>
+                        <div className="flex gap-1 w-full sm:w-auto">
+                             <button type="button" onClick={() => capNhatThanhToan(tt.idStr, 'phuongThuc', 'Tiền mặt')} className={`flex-1 sm:w-16 py-2.5 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black border transition-all ${tt.phuongThuc === 'Tiền mặt' ? 'bg-emerald-50 border-emerald-500 text-emerald-600 shadow-sm' : 'bg-white border-slate-200 text-slate-400'}`}><HandCoins size={14}/> TM</button>
+                             <button type="button" onClick={() => capNhatThanhToan(tt.idStr, 'phuongThuc', 'Chuyển khoản')} className={`flex-1 sm:w-16 py-2.5 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black border transition-all ${tt.phuongThuc === 'Chuyển khoản' ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm' : 'bg-white border-slate-200 text-slate-400'}`}><Landmark size={14}/> CK</button>
+                             <button type="button" onClick={() => setDanhSachThanhToan(danhSachThanhToan.filter(x => x.idStr !== tt.idStr))} className="w-10 flex items-center justify-center bg-white border border-slate-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-all"><Trash2 size={14}/></button>
+                        </div>
+                        {tt.phuongThuc === "Tiền mặt" && (
+                            <div className="absolute -top-2 -right-2">
+                               {tt.daNopTien ? <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm">Sếp ký</span> : <span className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm">Chờ ký</span>}
+                            </div>
+                        )}
+                     </div>
+                  ))}
+                  {danhSachThanhToan.length === 0 && (
+                     <div className="text-[10px] font-bold text-slate-400 italic mb-2 text-center py-3 bg-white rounded-xl border border-dashed border-slate-200">Bấm thêm cọc để ghi nhận tiền khách trả</div>
+                  )}
+              </div>
 
-                <div className="col-span-2 mt-1 border-t border-slate-200 pt-3">
+              {/* KHỐI CHỨA DANH SÁCH DỊCH VỤ PHỤ NĂNG ĐỘNG */}
+              <div className="col-span-2 mt-1 pt-1">
                   <div className="flex justify-between items-center mb-2 ml-1">
                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dịch vụ in ấn / Phát sinh</label>
-                     <button onClick={() => setDanhSachDichVuThem([...danhSachDichVuThem, {idStr: Date.now().toString(), ten: "", gia: ""}])} className="bg-orange-100 text-orange-600 hover:bg-orange-200 px-3 py-1.5 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 uppercase tracking-widest shadow-sm"><Plus size={12}/> Thêm SP</button>
+                     <button type="button" onClick={() => setDanhSachDichVuThem([...danhSachDichVuThem, {idStr: Date.now().toString(), ten: "", gia: ""}])} className="bg-orange-100 text-orange-600 hover:bg-orange-200 px-3 py-1.5 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 uppercase tracking-widest shadow-sm"><Plus size={12}/> Thêm SP</button>
                   </div>
                   
                   {danhSachDichVuThem.map((dv, idx) => (
                      <div key={dv.idStr} className="flex gap-2 mb-2 animate-fade-in relative">
                         <div className="flex-1 relative">
-                           <input type="text" value={dv.ten} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'ten', e.target.value)} placeholder="Tên dịch vụ..." className="bg-white border border-slate-200 p-3 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100 pr-8" list={`san-pham-list-${dv.idStr}`} />
+                           <input type="text" value={dv.ten} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'ten', e.target.value)} placeholder="Tên dịch vụ..." className="bg-slate-50 border border-slate-200 p-3 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100 pr-8" list={`san-pham-list-${dv.idStr}`} />
                            <datalist id={`san-pham-list-${dv.idStr}`}>
                               {danhSachSanPham.map(sp => <option key={sp.id} value={sp.tenSanPham} />)}
                            </datalist>
                         </div>
                         <div className="relative w-28 sm:w-32 shrink-0">
-                           <input type="text" value={dv.gia} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'gia', formatTienInput(e.target.value))} placeholder="Giá..." className="bg-white border border-slate-200 p-3 rounded-xl w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-6" />
+                           <input type="text" value={dv.gia} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'gia', formatTienInput(e.target.value))} placeholder="Giá..." className="bg-slate-50 border border-slate-200 p-3 rounded-xl w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-6" />
                            <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
                         </div>
-                        <button onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all"><Trash2 size={16}/></button>
+                        <button type="button" onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all"><Trash2 size={16}/></button>
                      </div>
                   ))}
                   {danhSachDichVuThem.length === 0 && (
-                     <div className="text-[10px] font-bold text-slate-400 italic mb-2 ml-1 text-center py-2 bg-slate-100 rounded-xl border border-dashed border-slate-200">Bấm thêm dịch vụ để chọn sản phẩm.</div>
+                     <div className="text-[10px] font-bold text-slate-400 italic mb-2 text-center py-2 bg-slate-100 rounded-xl border border-dashed border-slate-200">Không có dịch vụ thêm</div>
                   )}
-                </div>
               </div>
 
             </div>
