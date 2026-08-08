@@ -66,8 +66,8 @@ export default function TabLich({
   
   const [danhSachThanhToan, setDanhSachThanhToan] = useState<{idStr: string, soTien: string, phuongThuc: "Tiền mặt" | "Chuyển khoản", ngay: string, daNopTien: boolean}[]>([]);
 
-  // ĐÃ SỬA: Thêm biến soLuong và đổi gia thành donGia cho chuẩn xác
-  const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, donGia: string, soLuong: number}[]>([]);
+  // ĐÃ SỬA: Cho phép soLuong nhận chuỗi rỗng ("") để gõ số mượt mà không bị ép lại 1
+  const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, donGia: string, soLuong: number | string}[]>([]);
 
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
@@ -194,12 +194,11 @@ export default function TabLich({
     }
     setDanhSachThanhToan(arrThanhToan as any);
 
-    // ĐÃ SỬA: Đọc dữ liệu cũ tương thích với mảng donGia và soLuong
     if (item.chiTietDichVuThem && Array.isArray(item.chiTietDichVuThem)) {
       setDanhSachDichVuThem(item.chiTietDichVuThem.map((d: any, idx: number) => ({ 
          idStr: idx.toString(), 
          ten: d.ten, 
-         donGia: formatTienInput(String(d.gia)), // SP cũ mặc định SL = 1 nên Đơn giá = Giá
+         donGia: formatTienInput(String(d.gia)), 
          soLuong: 1 
       })));
     } else if (item.dichVuThem) {
@@ -241,13 +240,11 @@ export default function TabLich({
   
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
-  // ĐÃ SỬA: Hàm tính toán thông minh kết hợp số lượng
   const capNhatDichVuPhu = (idStr: string, field: 'ten' | 'donGia' | 'soLuong', val: any) => {
     const newDs = danhSachDichVuThem.map(d => {
        if(d.idStr !== idStr) return d;
        let updated = { ...d, [field]: val };
        
-       // Tự động kéo đơn giá khi chọn tên SP
        if (field === 'ten') {
           const sp = danhSachSanPham.find(s => s.tenSanPham === val);
           if (sp) {
@@ -283,9 +280,8 @@ export default function TabLich({
       if (!dongY) return;
     }
 
-    // ĐÃ SỬA: Tính tổng giá trị dựa trên Đơn giá x Số Lượng
-    const tongTienDichVuPhu = danhSachDichVuThem.reduce((acc, curr) => acc + (chuyenTienVeSo(curr.donGia) * curr.soLuong), 0);
-    const chuoiDichVuPhu = danhSachDichVuThem.map(d => d.ten + (d.soLuong > 1 ? ` (x${d.soLuong})` : "")).filter(Boolean).join(", ");
+    const tongTienDichVuPhu = danhSachDichVuThem.reduce((acc, curr) => acc + (chuyenTienVeSo(curr.donGia) * (Number(curr.soLuong) || 0)), 0);
+    const chuoiDichVuPhu = danhSachDichVuThem.map(d => d.ten + ((Number(d.soLuong)||1) > 1 ? ` (x${Number(d.soLuong)||1})` : "")).filter(Boolean).join(", ");
     
     let finalKhId = khachHangId === "NEW" ? null : khachHangId;
     const tongTienMoi = chuyenTienVeSo(giaTien) + tongTienDichVuPhu;
@@ -325,8 +321,10 @@ export default function TabLich({
         })),
 
         dichVuThem: chuoiDichVuPhu, tienDichVuThem: tongTienDichVuPhu, 
-        // ĐÃ SỬA: Đẩy format lưu CSDL giữ nguyên cấu trúc chuẩn
-        chiTietDichVuThem: danhSachDichVuThem.map(d => ({ ten: d.ten + (d.soLuong > 1 ? ` (x${d.soLuong})` : ""), gia: chuyenTienVeSo(d.donGia) * d.soLuong })), 
+        chiTietDichVuThem: danhSachDichVuThem.map(d => ({ 
+            ten: d.ten + ((Number(d.soLuong)||1) > 1 ? ` (x${Number(d.soLuong)||1})` : ""), 
+            gia: chuyenTienVeSo(d.donGia) * (Number(d.soLuong)||1) 
+        })), 
         ngayCuoi: isKhongCanNgayCuoi ? "" : (ngayCuoi || "") 
       };
 
@@ -700,7 +698,7 @@ export default function TabLich({
                   )}
               </div>
 
-              {/* ĐÃ SỬA: KHỐI CHỨA DANH SÁCH DỊCH VỤ PHỤ NĂNG ĐỘNG (Có SL và cân đối UI) */}
+              {/* ĐÃ SỬA: Cho phép input Số lượng mềm dẻo không bị ép lại số 1 ngay khi gõ */}
               <div className="col-span-2 mt-1 pt-1">
                   <div className="flex justify-between items-center mb-2 ml-1">
                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dịch vụ in ấn / Phát sinh</label>
@@ -720,7 +718,22 @@ export default function TabLich({
                         <div className="flex gap-2 items-center w-full sm:w-auto">
                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg h-[42px] px-2 shrink-0">
                               <span className="text-[10px] font-bold text-slate-400 mr-1">SL:</span>
-                              <input type="number" min="1" value={dv.soLuong} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'soLuong', parseInt(e.target.value) || 1)} className="w-10 bg-transparent text-center font-black text-slate-700 outline-none text-sm" />
+                              <input 
+                                type="number" 
+                                min="1" 
+                                value={dv.soLuong} 
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    capNhatDichVuPhu(dv.idStr, 'soLuong', val === '' ? '' : parseInt(val, 10));
+                                }} 
+                                onBlur={(e) => {
+                                    // Khi click ra ngoài mà để trống, tự trả về 1
+                                    if (!dv.soLuong || Number(dv.soLuong) < 1) {
+                                        capNhatDichVuPhu(dv.idStr, 'soLuong', 1);
+                                    }
+                                }}
+                                className="w-10 bg-transparent text-center font-black text-slate-700 outline-none text-sm" 
+                              />
                            </div>
                            
                            <div className="relative flex-1 sm:w-32 h-[42px] shrink-0">
@@ -731,10 +744,9 @@ export default function TabLich({
                            <button type="button" onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-[42px] h-[42px] flex items-center justify-center bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-all shrink-0"><Trash2 size={16}/></button>
                         </div>
 
-                        {/* Hiển thị dòng tổng tiền nếu số lượng > 1 */}
-                        {dv.soLuong > 1 && (
+                        {Number(dv.soLuong) > 1 && (
                             <div className="absolute -bottom-2 right-4 bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded shadow-sm border border-orange-200 z-10">
-                                = Tổng: {formatTienInput(String(chuyenTienVeSo(dv.donGia) * dv.soLuong))}đ
+                                = Tổng: {formatTienInput(String(chuyenTienVeSo(dv.donGia) * Number(dv.soLuong)))}đ
                             </div>
                         )}
 
