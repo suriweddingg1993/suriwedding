@@ -66,7 +66,7 @@ export default function TabLich({
   
   const [danhSachThanhToan, setDanhSachThanhToan] = useState<{idStr: string, soTien: string, phuongThuc: "Tiền mặt" | "Chuyển khoản", ngay: string, daNopTien: boolean}[]>([]);
 
-  // ĐÃ SỬA: Cho phép soLuong nhận chuỗi rỗng ("") để gõ số mượt mà không bị ép lại 1
+  // BIẾN SẢN PHẨM MỚI: Tương thích với số lượng có thể trống tạm thời ("")
   const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, donGia: string, soLuong: number | string}[]>([]);
 
   const [showModal, setShowModal] = useState(false);
@@ -240,6 +240,7 @@ export default function TabLich({
   
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
+  // ĐÃ SỬA: Hàm cập nhật logic Số lượng & Đơn giá mượt mà
   const capNhatDichVuPhu = (idStr: string, field: 'ten' | 'donGia' | 'soLuong', val: any) => {
     const newDs = danhSachDichVuThem.map(d => {
        if(d.idStr !== idStr) return d;
@@ -521,18 +522,19 @@ export default function TabLich({
       <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} lichLamViec={lichLamViec} />
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
+      {/* ĐÃ SỬA: Form full màn hình, chống kéo xê dịch trái phải */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-[100] sm:p-4 overscroll-none touch-none">
-          <div className="bg-white w-full sm:max-w-md h-[92vh] sm:h-auto sm:max-h-[90vh] rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-auto border border-white">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] sm:p-4 overscroll-none touch-none overflow-hidden">
+          <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-auto border-0 sm:border border-white">
             
-            <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm z-10">
-              <button onClick={() => setShowModal(false)} className="text-slate-500 font-bold px-4 py-2 hover:bg-slate-200 rounded-xl transition-all">Hủy</button>
+            <div className="flex justify-between items-center p-4 sm:px-6 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm z-10">
+              <button onClick={() => setShowModal(false)} className="text-slate-500 font-bold px-3 py-2 hover:bg-slate-200 rounded-xl transition-all">Hủy</button>
               <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">{dangSua ? "✏️ Cập nhật" : "✨ Đặt lịch mới"}</h3>
-              <button onClick={handleLuuLichThongMinh} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 font-black px-4 py-2 rounded-xl transition-all">LƯU</button>
+              <button onClick={handleLuuLichThongMinh} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 font-black px-4 py-2 rounded-xl transition-all shadow-sm">LƯU</button>
             </div>
 
-            <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-4 pb-12 overscroll-contain">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4 pb-12 overscroll-contain">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày (*)</label>
                   <input type="date" value={ngay} onChange={(e) => setNgay(e.target.value)} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl w-full text-indigo-700 font-black outline-none focus:ring-4 focus:ring-indigo-50 transition-all" />
@@ -568,7 +570,7 @@ export default function TabLich({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                  <div className="col-span-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5 flex justify-between">Tên Khách Hàng (*)</label>
                   <input type="text" value={tenKhach} onChange={(e) => setTenKhach(e.target.value)} placeholder="Tên chú rể & cô dâu..." className={`border p-3.5 rounded-2xl w-full font-bold outline-none focus:ring-4 transition-all ${khachHangId && khachHangId !== "NEW" ? "bg-emerald-50/30 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-100 text-slate-900 focus:ring-indigo-50"}`} />
@@ -675,7 +677,7 @@ export default function TabLich({
                   </div>
                   
                   {danhSachThanhToan.map((tt, idx) => (
-                     <div key={tt.idStr} className="flex flex-wrap gap-2 mb-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl relative animate-fade-in">
+                     <div key={tt.idStr} className="flex flex-wrap gap-2 mb-2 p-3 bg-slate-50 border border-slate-200 rounded-xl relative animate-fade-in shadow-sm">
                         <input type="date" value={tt.ngay} onChange={(e) => capNhatThanhToan(tt.idStr, 'ngay', e.target.value)} className="bg-white border border-slate-200 p-2.5 rounded-lg text-slate-700 font-bold outline-none focus:ring-2 focus:ring-emerald-100 w-full sm:w-auto" />
                         <div className="relative flex-1 min-w-[120px]">
                            <input type="text" value={tt.soTien} onChange={(e) => capNhatThanhToan(tt.idStr, 'soTien', formatTienInput(e.target.value))} placeholder="Số tiền..." className="bg-white border border-slate-200 p-2.5 rounded-lg w-full text-emerald-600 font-black outline-none focus:ring-2 focus:ring-emerald-100 pr-6" />
@@ -698,7 +700,7 @@ export default function TabLich({
                   )}
               </div>
 
-              {/* ĐÃ SỬA: Cho phép input Số lượng mềm dẻo không bị ép lại số 1 ngay khi gõ */}
+              {/* ĐÃ SỬA: KHỐI DỊCH VỤ PHỤ NĂNG ĐỘNG RỘNG RÃI & TỰ ĐỘNG NHẢY GIÁ */}
               <div className="col-span-2 mt-1 pt-1">
                   <div className="flex justify-between items-center mb-2 ml-1">
                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dịch vụ in ấn / Phát sinh</label>
@@ -706,17 +708,22 @@ export default function TabLich({
                   </div>
                   
                   {danhSachDichVuThem.map((dv, idx) => (
-                     <div key={dv.idStr} className="flex flex-col sm:flex-row gap-2 mb-3 animate-fade-in p-3 bg-white border border-slate-200 rounded-xl relative shadow-sm">
+                     <div key={dv.idStr} className="flex flex-col gap-2.5 mb-3 animate-fade-in p-3 bg-slate-50/50 border border-slate-200 rounded-xl relative shadow-sm">
                         
-                        <div className="flex-1 relative">
-                           <input type="text" value={dv.ten} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'ten', e.target.value)} placeholder="Tên sản phẩm..." className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100 text-sm" list={`san-pham-list-${dv.idStr}`} />
-                           <datalist id={`san-pham-list-${dv.idStr}`}>
-                              {danhSachSanPham.map(sp => <option key={sp.id} value={sp.tenSanPham} />)}
-                           </datalist>
+                        {/* DÒNG 1: CHỌN SẢN PHẨM */}
+                        <div className="flex gap-2">
+                           <div className="flex-1 relative">
+                              <input type="text" value={dv.ten} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'ten', e.target.value)} placeholder="Tên sản phẩm..." className="bg-white border border-slate-200 p-2.5 rounded-lg w-full text-slate-700 font-bold outline-none focus:ring-2 focus:ring-orange-100 text-sm shadow-sm" list={`san-pham-list-${dv.idStr}`} />
+                              <datalist id={`san-pham-list-${dv.idStr}`}>
+                                 {danhSachSanPham.map(sp => <option key={sp.id} value={sp.tenSanPham} />)}
+                              </datalist>
+                           </div>
+                           <button type="button" onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-[42px] h-[42px] flex items-center justify-center bg-white border border-slate-200 text-rose-500 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all shrink-0 shadow-sm"><Trash2 size={16}/></button>
                         </div>
                         
-                        <div className="flex gap-2 items-center w-full sm:w-auto">
-                           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg h-[42px] px-2 shrink-0">
+                        {/* DÒNG 2: SỐ LƯỢNG x ĐƠN GIÁ = THÀNH TIỀN */}
+                        <div className="flex gap-2 items-center w-full">
+                           <div className="flex items-center bg-white border border-slate-200 shadow-sm rounded-lg h-[42px] px-2 shrink-0">
                               <span className="text-[10px] font-bold text-slate-400 mr-1">SL:</span>
                               <input 
                                 type="number" 
@@ -726,29 +733,28 @@ export default function TabLich({
                                     const val = e.target.value;
                                     capNhatDichVuPhu(dv.idStr, 'soLuong', val === '' ? '' : parseInt(val, 10));
                                 }} 
+                                onFocus={() => capNhatDichVuPhu(dv.idStr, 'soLuong', '')}
                                 onBlur={(e) => {
-                                    // Khi click ra ngoài mà để trống, tự trả về 1
                                     if (!dv.soLuong || Number(dv.soLuong) < 1) {
                                         capNhatDichVuPhu(dv.idStr, 'soLuong', 1);
                                     }
                                 }}
-                                className="w-10 bg-transparent text-center font-black text-slate-700 outline-none text-sm" 
+                                className="w-8 bg-transparent text-center font-black text-slate-700 outline-none text-sm" 
                               />
                            </div>
                            
-                           <div className="relative flex-1 sm:w-32 h-[42px] shrink-0">
-                              <input type="text" value={dv.donGia} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'donGia', formatTienInput(e.target.value))} placeholder="Đơn giá..." className="bg-slate-50 border border-slate-200 px-3 py-2.5 h-full rounded-lg w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-7 text-sm" />
-                              <span className="absolute right-2.5 top-3 text-slate-400 text-xs font-bold">đ</span>
+                           <span className="text-slate-400 font-bold text-xs">x</span>
+                           
+                           <div className="relative flex-1 h-[42px] shrink-0">
+                              <input type="text" value={dv.donGia} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'donGia', formatTienInput(e.target.value))} placeholder="Đơn giá..." className="bg-white border border-slate-200 shadow-sm px-2.5 py-2.5 h-full rounded-lg w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-6 text-sm" />
                            </div>
                            
-                           <button type="button" onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-[42px] h-[42px] flex items-center justify-center bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-all shrink-0"><Trash2 size={16}/></button>
+                           <span className="text-slate-400 font-bold text-xs">=</span>
+                           
+                           <div className="flex-1 h-[42px] flex items-center justify-end px-2 bg-orange-50 border border-orange-200 rounded-lg text-orange-700 font-black text-sm shadow-inner shrink-0 truncate">
+                              {formatTienInput(String(chuyenTienVeSo(dv.donGia) * (Number(dv.soLuong) || 0)))}
+                           </div>
                         </div>
-
-                        {Number(dv.soLuong) > 1 && (
-                            <div className="absolute -bottom-2 right-4 bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded shadow-sm border border-orange-200 z-10">
-                                = Tổng: {formatTienInput(String(chuyenTienVeSo(dv.donGia) * Number(dv.soLuong)))}đ
-                            </div>
-                        )}
 
                      </div>
                   ))}
