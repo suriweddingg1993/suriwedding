@@ -15,6 +15,15 @@ function chuyenTienVeSo(value: string) {
   return Number(value.toString().replace(/\./g, "")); 
 }
 
+// Hàm này giúp đồng bộ những tên gói cũ lúc trước nhân viên nhập sai 
+const chuanHoaTheLoai = (loai: string) => {
+    if (!loai) return "Khác";
+    if (loai === "Phóng sự cưới") return "Chụp phóng sự cưới";
+    if (loai === "Chụp em bé") return "Chụp trẻ em";
+    if (loai === "Chụp thời trang") return "Chụp beauty";
+    return loai;
+};
+
 interface TabLichProps {
   homNay: () => string;
   formatTienInput: (val: string) => string;
@@ -322,21 +331,18 @@ export default function TabLich({
     } catch (error: any) { toast.error("Lỗi: " + (error?.message || "Không xác định")); }
   };
 
-  // ĐÃ SỬA: Lọc danh sách gói chụp theo đúng thể loại đang được chọn
+  // ĐÃ SỬA: Lọc danh sách gói chụp theo đúng thể loại đang được chọn (Phiên dịch các gói cũ)
   const danhSachGoiLocTheoTheLoai = danhSachGoiDichVu.filter(goi => {
-     // Luôn hiển thị gói đang chọn để không bị rỗng khi Sửa lịch cũ
      if (goiChup && goi.tenGoi === goiChup) return true;
+     if (!theLoaiDaChon) return true;
      
-     if (!theLoaiDaChon) return true; // Chưa chọn thể loại thì hiện tất cả
-     
-     const loaiGoi = (goi as any).theLoai || "Khác";
+     const loaiGoi = chuanHoaTheLoai((goi as any).theLoai);
      if (theLoaiDaChon === "Khác") return loaiGoi === "Khác";
-     
      return loaiGoi === theLoaiDaChon;
   });
 
   const groupedPackagesLich = danhSachGoiLocTheoTheLoai.reduce((acc, goi) => {
-    const loai = (goi as any).theLoai || "Khác";
+    const loai = chuanHoaTheLoai((goi as any).theLoai);
     if (!acc[loai]) acc[loai] = [];
     acc[loai].push(goi);
     return acc;
@@ -560,7 +566,6 @@ export default function TabLich({
                         value={theLoaiDaChon} 
                         onChange={(e) => {
                            setTheLoaiDaChon(e.target.value);
-                           // ĐÃ SỬA: Xóa gói chụp cũ khi đổi thể loại để tránh rác dữ liệu
                            setGoiChup("");
                            setChiTietGoi("");
                            setGiaTien("");
@@ -595,25 +600,15 @@ export default function TabLich({
                 <div className="grid grid-cols-1 gap-3">
                   <div className="relative">
                     <select 
-                      value={danhSachGoiDichVu.some(g => g.tenGoi === goiChup) ? goiChup : (goiChup ? "Khác" : "")}
+                      value={danhSachGoiLocTheoTheLoai.some(g => g.tenGoi === goiChup) ? goiChup : (goiChup ? "Khác" : "")}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (val === "Khác") { setGoiChup(""); setChiTietGoi(""); setTheLoaiDaChon("Khác"); setTheLoaiKhac(""); } 
+                        if (val === "Khác") { setGoiChup(""); setChiTietGoi(""); } 
                         else {
-                          setGoiChup(val); const goi = danhSachGoiDichVu.find(g => g.tenGoi === val);
+                          setGoiChup(val); const goi = danhSachGoiLocTheoTheLoai.find(g => g.tenGoi === val);
                           if (goi) { 
                              setGiaTien(formatTienInput(String(goi.giaTien))); 
                              setChiTietGoi(goi.chiTiet || ""); 
-                             
-                             const loaiGoi = (goi as any).theLoai || "Chụp ảnh cưới";
-                             const standardTypes = ["Chụp ảnh cưới", "Chụp phóng sự cưới", "Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"];
-                             if (standardTypes.includes(loaiGoi)) {
-                               setTheLoaiDaChon(loaiGoi);
-                               setTheLoaiKhac("");
-                             } else {
-                               setTheLoaiDaChon("Khác");
-                               setTheLoaiKhac(loaiGoi);
-                             }
                           }
                         }
                       }}
@@ -630,7 +625,7 @@ export default function TabLich({
                     <ChevronDown size={16} className="absolute right-3 top-4 text-slate-400 pointer-events-none" />
                   </div>
 
-                  {(!danhSachGoiDichVu.some(g => g.tenGoi === goiChup) && goiChup !== "") && (
+                  {(!danhSachGoiLocTheoTheLoai.some(g => g.tenGoi === goiChup) && goiChup !== "") && (
                     <input type="text" value={goiChup} onChange={(e) => setGoiChup(e.target.value)} placeholder="Nhập tên gói chụp tùy chỉnh..." className="bg-white border border-slate-200 p-3.5 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-100 transition-all animate-fade-in" />
                   )}
 

@@ -21,7 +21,7 @@ const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loadin
 const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
-const APP_VERSION = "v1.3.1"; 
+const APP_VERSION = "v1.4.0"; 
 
 function homNay() { 
   const d = new Date(); 
@@ -312,7 +312,6 @@ export default function HomePage() {
     }
   };
 
-  // ĐÃ SỬA: ĐỊNH NGHĨA KHỐI RECORD CHUẨN ĐỂ KHÔNG BÁO LỖI TYPE
   const goiDichVuĐaNhom = danhSachGoiDichVu.reduce((acc, goi) => {
     const loai = (goi as any).theLoai || "Khác";
     if (!acc[loai]) acc[loai] = [];
@@ -636,10 +635,13 @@ export default function HomePage() {
                       <label className="text-[10px] font-bold text-amber-700 uppercase tracking-widest ml-1 block mb-1">Loại hình chụp (*)</label>
                       <select value={theLoaiGoiMoi} onChange={(e) => setTheLoaiGoiMoi(e.target.value)} className="bg-white border border-transparent p-3 rounded-xl w-full text-slate-900 font-bold outline-none focus:ring-4 focus:ring-amber-200 transition-all shadow-sm">
                         <option value="Chụp ảnh cưới">Chụp ảnh cưới</option>
-                        <option value="Phóng sự cưới">Phóng sự cưới</option>
+                        <option value="Chụp phóng sự cưới">Chụp phóng sự cưới</option>
                         <option value="Chụp gia đình">Chụp gia đình</option>
-                        <option value="Chụp em bé">Chụp em bé</option>
-                        <option value="Chụp thời trang">Chụp thời trang</option>
+                        <option value="Chụp trẻ em">Chụp trẻ em</option>
+                        <option value="Chụp beauty">Chụp beauty</option>
+                        <option value="Chụp sự kiện">Chụp sự kiện</option>
+                        <option value="Chụp chân dung">Chụp chân dung</option>
+                        <option value="Chụp kỷ yếu">Chụp kỷ yếu</option>
                         <option value="Khác">Khác</option>
                       </select>
                     </div>
