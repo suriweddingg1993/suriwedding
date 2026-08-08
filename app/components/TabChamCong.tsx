@@ -21,13 +21,15 @@ export default function TabChamCong({
   danhSachTaiKhoan
 }: TabChamCongProps) {
   
-  const todayStr = homNay();
-  // ĐÃ SỬA: Chuyển tháng thành State để có thể chọn xem lại lịch sử
-  const [thangChon, setThangChon] = useState(todayStr.slice(0, 7));
+  // THUẬT TOÁN ĐẢM BẢO 100% MÚI GIỜ VIỆT NAM (GMT+7)
+  // Loại bỏ hoàn toàn lỗi trôi ngày/giờ qua 12h trưa trên điện thoại
+  const getVnDate = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const getVnTime = () => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
 
-  const [currentTime, setCurrentTime] = useState(() => 
-    new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
-  );
+  const todayStr = getVnDate();
+  
+  const [thangChon, setThangChon] = useState(todayStr.slice(0, 7));
+  const [currentTime, setCurrentTime] = useState(getVnTime);
   
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [showModalYeuCau, setShowModalYeuCau] = useState(false);
@@ -48,7 +50,7 @@ export default function TabChamCong({
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }));
+      setCurrentTime(getVnTime());
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -180,13 +182,11 @@ export default function TabChamCong({
     .sort((a, b) => b.ngay.localeCompare(a.ngay)); 
   const danhSachNhanVien = danhSachTaiKhoan.filter(tk => tk.role !== "admin");
 
-  // THUẬT TOÁN ĐẾM NGÀY ĐỂ HIỂN THỊ CHÍNH XÁC NHƯ BẢNG LƯONG
   const year = parseInt(thangChon.split("-")[0]);
   const month = parseInt(thangChon.split("-")[1]);
   const daysInMonth = new Date(year, month, 0).getDate();
   const isCurrentMonth = thangChon === todayStr.slice(0, 7);
   const currentDayNum = parseInt(todayStr.slice(8, 10));
-  // Chỉ quét đến ngày hôm qua đối với tháng hiện tại
   const limitDay = isCurrentMonth ? currentDayNum : daysInMonth + 1;
   const pastDates: string[] = [];
   
