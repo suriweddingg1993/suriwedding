@@ -65,8 +65,6 @@ export default function TabLich({
   const [theLoaiKhac, setTheLoaiKhac] = useState("");
   
   const [danhSachThanhToan, setDanhSachThanhToan] = useState<{idStr: string, soTien: string, phuongThuc: "Tiền mặt" | "Chuyển khoản", ngay: string, daNopTien: boolean}[]>([]);
-
-  // BIẾN SẢN PHẨM MỚI: Tương thích với số lượng có thể trống tạm thời ("")
   const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, donGia: string, soLuong: number | string}[]>([]);
 
   const [showModal, setShowModal] = useState(false);
@@ -240,7 +238,6 @@ export default function TabLich({
   
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
-  // ĐÃ SỬA: Hàm cập nhật logic Số lượng & Đơn giá mượt mà
   const capNhatDichVuPhu = (idStr: string, field: 'ten' | 'donGia' | 'soLuong', val: any) => {
     const newDs = danhSachDichVuThem.map(d => {
        if(d.idStr !== idStr) return d;
@@ -522,10 +519,10 @@ export default function TabLich({
       <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} lichLamViec={lichLamViec} />
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
-      {/* ĐÃ SỬA: Form full màn hình, chống kéo xê dịch trái phải */}
+      {/* ĐÃ SỬA: Form Modal được cài touch-pan-y khóa cứng thao tác vuốt ngang, chỉ cho phép cuộn dọc */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] sm:p-4 overscroll-none touch-none overflow-hidden">
-          <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-auto border-0 sm:border border-white">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] sm:p-4 overscroll-none touch-none overflow-hidden w-full max-w-[100vw]">
+          <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-pan-y border-0 sm:border border-white relative">
             
             <div className="flex justify-between items-center p-4 sm:px-6 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm z-10">
               <button onClick={() => setShowModal(false)} className="text-slate-500 font-bold px-3 py-2 hover:bg-slate-200 rounded-xl transition-all">Hủy</button>
@@ -533,7 +530,8 @@ export default function TabLich({
               <button onClick={handleLuuLichThongMinh} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 font-black px-4 py-2 rounded-xl transition-all shadow-sm">LƯU</button>
             </div>
 
-            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4 pb-12 overscroll-contain">
+            {/* ĐÃ SỬA: overflow-x-hidden để triệt tiêu hoàn toàn thanh cuộn ngang */}
+            <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden custom-scrollbar flex-1 space-y-4 pb-20 overscroll-none w-full">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 block mb-1.5">Ngày (*)</label>
@@ -677,7 +675,7 @@ export default function TabLich({
                   </div>
                   
                   {danhSachThanhToan.map((tt, idx) => (
-                     <div key={tt.idStr} className="flex flex-wrap gap-2 mb-2 p-3 bg-slate-50 border border-slate-200 rounded-xl relative animate-fade-in shadow-sm">
+                     <div key={tt.idStr} className="flex flex-wrap gap-2 mb-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl relative animate-fade-in shadow-sm">
                         <input type="date" value={tt.ngay} onChange={(e) => capNhatThanhToan(tt.idStr, 'ngay', e.target.value)} className="bg-white border border-slate-200 p-2.5 rounded-lg text-slate-700 font-bold outline-none focus:ring-2 focus:ring-emerald-100 w-full sm:w-auto" />
                         <div className="relative flex-1 min-w-[120px]">
                            <input type="text" value={tt.soTien} onChange={(e) => capNhatThanhToan(tt.idStr, 'soTien', formatTienInput(e.target.value))} placeholder="Số tiền..." className="bg-white border border-slate-200 p-2.5 rounded-lg w-full text-emerald-600 font-black outline-none focus:ring-2 focus:ring-emerald-100 pr-6" />
@@ -700,7 +698,6 @@ export default function TabLich({
                   )}
               </div>
 
-              {/* ĐÃ SỬA: KHỐI DỊCH VỤ PHỤ NĂNG ĐỘNG RỘNG RÃI & TỰ ĐỘNG NHẢY GIÁ */}
               <div className="col-span-2 mt-1 pt-1">
                   <div className="flex justify-between items-center mb-2 ml-1">
                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dịch vụ in ấn / Phát sinh</label>
@@ -710,7 +707,6 @@ export default function TabLich({
                   {danhSachDichVuThem.map((dv, idx) => (
                      <div key={dv.idStr} className="flex flex-col gap-2.5 mb-3 animate-fade-in p-3 bg-slate-50/50 border border-slate-200 rounded-xl relative shadow-sm">
                         
-                        {/* DÒNG 1: CHỌN SẢN PHẨM */}
                         <div className="flex gap-2">
                            <div className="flex-1 relative">
                               <input type="text" value={dv.ten} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'ten', e.target.value)} placeholder="Tên sản phẩm..." className="bg-white border border-slate-200 p-2.5 rounded-lg w-full text-slate-700 font-bold outline-none focus:ring-2 focus:ring-orange-100 text-sm shadow-sm" list={`san-pham-list-${dv.idStr}`} />
@@ -721,7 +717,6 @@ export default function TabLich({
                            <button type="button" onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-[42px] h-[42px] flex items-center justify-center bg-white border border-slate-200 text-rose-500 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all shrink-0 shadow-sm"><Trash2 size={16}/></button>
                         </div>
                         
-                        {/* DÒNG 2: SỐ LƯỢNG x ĐƠN GIÁ = THÀNH TIỀN */}
                         <div className="flex gap-2 items-center w-full">
                            <div className="flex items-center bg-white border border-slate-200 shadow-sm rounded-lg h-[42px] px-2 shrink-0">
                               <span className="text-[10px] font-bold text-slate-400 mr-1">SL:</span>
