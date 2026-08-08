@@ -66,7 +66,8 @@ export default function TabLich({
   
   const [danhSachThanhToan, setDanhSachThanhToan] = useState<{idStr: string, soTien: string, phuongThuc: "Tiền mặt" | "Chuyển khoản", ngay: string, daNopTien: boolean}[]>([]);
 
-  const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, gia: string}[]>([]);
+  // ĐÃ SỬA: Thêm biến soLuong và đổi gia thành donGia cho chuẩn xác
+  const [danhSachDichVuThem, setDanhSachDichVuThem] = useState<{idStr: string, ten: string, donGia: string, soLuong: number}[]>([]);
 
   const [showModal, setShowModal] = useState(false);
   const [showHoaHongModal, setShowHoaHongModal] = useState(false);
@@ -193,10 +194,21 @@ export default function TabLich({
     }
     setDanhSachThanhToan(arrThanhToan as any);
 
+    // ĐÃ SỬA: Đọc dữ liệu cũ tương thích với mảng donGia và soLuong
     if (item.chiTietDichVuThem && Array.isArray(item.chiTietDichVuThem)) {
-      setDanhSachDichVuThem(item.chiTietDichVuThem.map((d: any, idx: number) => ({ idStr: idx.toString(), ten: d.ten, gia: formatTienInput(String(d.gia)) })));
+      setDanhSachDichVuThem(item.chiTietDichVuThem.map((d: any, idx: number) => ({ 
+         idStr: idx.toString(), 
+         ten: d.ten, 
+         donGia: formatTienInput(String(d.gia)), // SP cũ mặc định SL = 1 nên Đơn giá = Giá
+         soLuong: 1 
+      })));
     } else if (item.dichVuThem) {
-      setDanhSachDichVuThem([{ idStr: "old", ten: item.dichVuThem, gia: formatTienInput(String(item.tienDichVuThem || 0)) }]);
+      setDanhSachDichVuThem([{ 
+         idStr: "old", 
+         ten: item.dichVuThem, 
+         donGia: formatTienInput(String(item.tienDichVuThem || 0)), 
+         soLuong: 1 
+      }]);
     } else {
       setDanhSachDichVuThem([]);
     }
@@ -229,13 +241,18 @@ export default function TabLich({
   
   const capNhatTrangThai = async (id: string, trangThai: string) => { try { await updateDoc(doc(db, "lichStudio", id), { trangThai }); toast.success("Đã cập nhật"); } catch (error) { toast.error("Lỗi cập nhật"); } };
 
-  const capNhatDichVuPhu = (idStr: string, field: 'ten' | 'gia', val: string) => {
+  // ĐÃ SỬA: Hàm tính toán thông minh kết hợp số lượng
+  const capNhatDichVuPhu = (idStr: string, field: 'ten' | 'donGia' | 'soLuong', val: any) => {
     const newDs = danhSachDichVuThem.map(d => {
        if(d.idStr !== idStr) return d;
        let updated = { ...d, [field]: val };
+       
+       // Tự động kéo đơn giá khi chọn tên SP
        if (field === 'ten') {
           const sp = danhSachSanPham.find(s => s.tenSanPham === val);
-          if (sp) updated.gia = formatTienInput(String(sp.giaTien));
+          if (sp) {
+              updated.donGia = formatTienInput(String(sp.giaTien));
+          }
        }
        return updated;
     });
@@ -266,8 +283,9 @@ export default function TabLich({
       if (!dongY) return;
     }
 
-    const tongTienDichVuPhu = danhSachDichVuThem.reduce((acc, curr) => acc + chuyenTienVeSo(curr.gia), 0);
-    const chuoiDichVuPhu = danhSachDichVuThem.map(d => d.ten).filter(Boolean).join(", ");
+    // ĐÃ SỬA: Tính tổng giá trị dựa trên Đơn giá x Số Lượng
+    const tongTienDichVuPhu = danhSachDichVuThem.reduce((acc, curr) => acc + (chuyenTienVeSo(curr.donGia) * curr.soLuong), 0);
+    const chuoiDichVuPhu = danhSachDichVuThem.map(d => d.ten + (d.soLuong > 1 ? ` (x${d.soLuong})` : "")).filter(Boolean).join(", ");
     
     let finalKhId = khachHangId === "NEW" ? null : khachHangId;
     const tongTienMoi = chuyenTienVeSo(giaTien) + tongTienDichVuPhu;
@@ -275,7 +293,6 @@ export default function TabLich({
     const finalTheLoai = theLoaiDaChon === "Khác" && theLoaiKhac.trim() !== "" ? theLoaiKhac.trim() : (theLoaiDaChon || "Khác");
     const isKhongCanNgayCuoi = ["Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"].includes(finalTheLoai);
 
-    // BỔ SUNG CHỐT CHẶN: Phát hiện khách mới để không bị cộng bồi dữ liệu
     let isKhachVuaTao = false;
 
     try {
@@ -286,7 +303,7 @@ export default function TabLich({
             tongChiTieu: tongTienMoi, soLanDen: 1 
           });
           finalKhId = khRef.id;
-          isKhachVuaTao = true; // Đánh dấu đây là khách mới tinh
+          isKhachVuaTao = true; 
         } catch (crmError) { console.warn("⚠️ Bỏ qua lỗi CRM:", crmError); }
       }
       
@@ -308,7 +325,8 @@ export default function TabLich({
         })),
 
         dichVuThem: chuoiDichVuPhu, tienDichVuThem: tongTienDichVuPhu, 
-        chiTietDichVuThem: danhSachDichVuThem.map(d => ({ ten: d.ten, gia: chuyenTienVeSo(d.gia) })), 
+        // ĐÃ SỬA: Đẩy format lưu CSDL giữ nguyên cấu trúc chuẩn
+        chiTietDichVuThem: danhSachDichVuThem.map(d => ({ ten: d.ten + (d.soLuong > 1 ? ` (x${d.soLuong})` : ""), gia: chuyenTienVeSo(d.donGia) * d.soLuong })), 
         ngayCuoi: isKhongCanNgayCuoi ? "" : (ngayCuoi || "") 
       };
 
@@ -316,7 +334,6 @@ export default function TabLich({
         duLieuLich.trangThai = "Đã chốt lịch"; 
         await addDoc(collection(db, "lichStudio"), duLieuLich); 
         
-        // ĐÃ SỬA: Chỉ cộng dồn chi tiêu nếu ĐÓ LÀ KHÁCH CŨ
         if (finalKhId && !isKhachVuaTao) {
             try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tongTienMoi), soLanDen: increment(1) }); } catch(e){}
         }
@@ -683,27 +700,47 @@ export default function TabLich({
                   )}
               </div>
 
+              {/* ĐÃ SỬA: KHỐI CHỨA DANH SÁCH DỊCH VỤ PHỤ NĂNG ĐỘNG (Có SL và cân đối UI) */}
               <div className="col-span-2 mt-1 pt-1">
                   <div className="flex justify-between items-center mb-2 ml-1">
                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dịch vụ in ấn / Phát sinh</label>
-                     <button type="button" onClick={() => setDanhSachDichVuThem([...danhSachDichVuThem, {idStr: Date.now().toString(), ten: "", gia: ""}])} className="bg-orange-100 text-orange-600 hover:bg-orange-200 px-3 py-1.5 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 uppercase tracking-widest shadow-sm"><Plus size={12}/> Thêm SP</button>
+                     <button type="button" onClick={() => setDanhSachDichVuThem([...danhSachDichVuThem, {idStr: Date.now().toString(), ten: "", donGia: "", soLuong: 1}])} className="bg-orange-100 text-orange-600 hover:bg-orange-200 px-3 py-1.5 font-bold text-[10px] rounded-lg transition-all flex items-center gap-1 uppercase tracking-widest shadow-sm"><Plus size={12}/> Thêm SP</button>
                   </div>
                   
                   {danhSachDichVuThem.map((dv, idx) => (
-                     <div key={dv.idStr} className="flex gap-2 mb-2 animate-fade-in relative">
+                     <div key={dv.idStr} className="flex flex-col sm:flex-row gap-2 mb-3 animate-fade-in p-3 bg-white border border-slate-200 rounded-xl relative shadow-sm">
+                        
                         <div className="flex-1 relative">
-                           <input type="text" value={dv.ten} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'ten', e.target.value)} placeholder="Tên dịch vụ..." className="bg-slate-50 border border-slate-200 p-3 rounded-xl w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100 pr-8" list={`san-pham-list-${dv.idStr}`} />
+                           <input type="text" value={dv.ten} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'ten', e.target.value)} placeholder="Tên sản phẩm..." className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg w-full text-slate-700 font-medium outline-none focus:ring-2 focus:ring-orange-100 text-sm" list={`san-pham-list-${dv.idStr}`} />
                            <datalist id={`san-pham-list-${dv.idStr}`}>
                               {danhSachSanPham.map(sp => <option key={sp.id} value={sp.tenSanPham} />)}
                            </datalist>
                         </div>
-                        <div className="relative w-28 sm:w-32 shrink-0">
-                           <input type="text" value={dv.gia} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'gia', formatTienInput(e.target.value))} placeholder="Giá..." className="bg-slate-50 border border-slate-200 p-3 rounded-xl w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-6" />
-                           <span className="absolute right-2 top-3 text-slate-400 text-xs font-bold">đ</span>
+                        
+                        <div className="flex gap-2 items-center w-full sm:w-auto">
+                           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg h-[42px] px-2 shrink-0">
+                              <span className="text-[10px] font-bold text-slate-400 mr-1">SL:</span>
+                              <input type="number" min="1" value={dv.soLuong} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'soLuong', parseInt(e.target.value) || 1)} className="w-10 bg-transparent text-center font-black text-slate-700 outline-none text-sm" />
+                           </div>
+                           
+                           <div className="relative flex-1 sm:w-32 h-[42px] shrink-0">
+                              <input type="text" value={dv.donGia} onChange={(e) => capNhatDichVuPhu(dv.idStr, 'donGia', formatTienInput(e.target.value))} placeholder="Đơn giá..." className="bg-slate-50 border border-slate-200 px-3 py-2.5 h-full rounded-lg w-full text-orange-600 font-black outline-none focus:ring-2 focus:ring-orange-100 pr-7 text-sm" />
+                              <span className="absolute right-2.5 top-3 text-slate-400 text-xs font-bold">đ</span>
+                           </div>
+                           
+                           <button type="button" onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-[42px] h-[42px] flex items-center justify-center bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-all shrink-0"><Trash2 size={16}/></button>
                         </div>
-                        <button type="button" onClick={() => setDanhSachDichVuThem(danhSachDichVuThem.filter(d => d.idStr !== dv.idStr))} className="w-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all"><Trash2 size={16}/></button>
+
+                        {/* Hiển thị dòng tổng tiền nếu số lượng > 1 */}
+                        {dv.soLuong > 1 && (
+                            <div className="absolute -bottom-2 right-4 bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded shadow-sm border border-orange-200 z-10">
+                                = Tổng: {formatTienInput(String(chuyenTienVeSo(dv.donGia) * dv.soLuong))}đ
+                            </div>
+                        )}
+
                      </div>
                   ))}
+                  
                   {danhSachDichVuThem.length === 0 && (
                      <div className="text-[10px] font-bold text-slate-400 italic mb-2 text-center py-2 bg-slate-100 rounded-xl border border-dashed border-slate-200">Không có dịch vụ thêm</div>
                   )}
