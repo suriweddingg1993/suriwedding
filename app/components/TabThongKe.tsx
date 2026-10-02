@@ -27,7 +27,7 @@ export default function TabThongKe({
 }: TabThongKeProps) {
   
   // =======================================================
-  // 0. HÚT DỮ LIỆU CHI PHÍ VẬN HÀNH (TÍNH NĂNG MỚI)
+  // 0. HÚT DỮ LIỆU CHI PHÍ VẬN HÀNH
   // =======================================================
   const [danhSachChiPhi, setDanhSachChiPhi] = useState<any[]>([]);
   useEffect(() => {
@@ -38,30 +38,69 @@ export default function TabThongKe({
   }, []);
 
   // =======================================================
-  // 1. TÍNH TOÁN DOANH THU & TIẾN ĐỘ
+  // 1. TÍNH TOÁN DOANH THU & TIẾN ĐỘ (ĐÃ FIX LỖI KẾ TOÁN)
   // =======================================================
   const lichTrongThang = lichLamViec.filter(l => l.ngay.startsWith(thangThongKe));
   const phatSinhTrongThang = danhSachPhatSinh.filter(p => p.ngay.startsWith(thangThongKe));
 
-  let doanhThuLichDuKien = 0;
-  let thucThuLich = 0;
+  let doanhThuLichDuKien = 0; 
+  let tongCongNo = 0;
   let soHoanThanh = 0; let soHuy = 0; let soChuaChup = 0;
 
+  // TÍNH TỔNG HỢP ĐỒNG & CÔNG NỢ (Dựa theo Lịch của tháng được chọn)
   lichTrongThang.forEach(l => {
     const tongGia = Number(l.giaTien || 0) + Number((l as any).tienDichVuThem || 0);
     doanhThuLichDuKien += tongGia;
-    thucThuLich += Number(l.tienCoc || 0); 
     
-    if (l.trangThai === "Hoàn thành") soHoanThanh++;
+    let tienDaThuCuaLich = 0;
+    if (l.danhSachThanhToan && l.danhSachThanhToan.length > 0) {
+        tienDaThuCuaLich = l.danhSachThanhToan.reduce((a, b) => a + (Number(b.soTien) || 0), 0);
+    } else {
+        tienDaThuCuaLich = Number(l.tienCoc || 0) + Number((l as any).tienThanhToanThem || 0);
+    }
+    
+    // Tính công nợ chính xác của riêng các job tháng này
+    const no = tongGia - tienDaThuCuaLich;
+    if (no > 0) tongCongNo += no;
+
+    if (l.trangThai === "Hoàn thành" || l.trangThai === "Đã chụp xong") soHoanThanh++;
     else if (l.trangThai === "Hủy lịch") soHuy++;
     else soChuaChup++;
   });
 
-  const thucThuPhatSinh = phatSinhTrongThang.reduce((sum, item) => sum + Number(item.soTien || 0), 0);
-  
+  const doanhThuPhatSinhDuKien = phatSinhTrongThang.reduce((sum, item) => sum + Number(item.soTien || 0), 0);
+  const tongDuKien = doanhThuLichDuKien + doanhThuPhatSinhDuKien;
+
+  // === TÍNH DÒNG TIỀN THỰC THU TRONG THÁNG ===
+  // (Lọc đúng ngày khách trả tiền, khách thanh toán nợ cũ cũng sẽ được cộng vào tháng này)
+  let thucThuLich = 0;
+  lichLamViec.forEach(l => {
+      if (l.danhSachThanhToan && l.danhSachThanhToan.length > 0) {
+          l.danhSachThanhToan.forEach(tt => {
+              if (tt.ngay && tt.ngay.startsWith(thangThongKe)) {
+                  thucThuLich += Number(tt.soTien || 0);
+              }
+          });
+      } else {
+          // Xử lý đọc dữ liệu cũ nếu chưa update lên mảng thanh toán
+          const ngayCoc = (l as any).ngayGhiNhanCoc || l.ngay;
+          if (ngayCoc.startsWith(thangThongKe)) {
+              thucThuLich += Number(l.tienCoc || 0);
+          }
+          const ngayThem = (l as any).ngayThanhToanThem || l.ngay;
+          if (ngayThem.startsWith(thangThongKe)) {
+              thucThuLich += Number((l as any).tienThanhToanThem || 0);
+          }
+      }
+  });
+
+  // Phát sinh mặc định thu tiền trong ngày tạo
+  let thucThuPhatSinh = 0;
+  phatSinhTrongThang.forEach(p => {
+      thucThuPhatSinh += Number(p.soTien || 0);
+  });
+
   const tongThucThu = thucThuLich + thucThuPhatSinh;
-  const tongDuKien = doanhThuLichDuKien + thucThuPhatSinh;
-  const tongCongNo = tongDuKien - tongThucThu;
 
   // =======================================================
   // 2. TÍNH TOÁN QUỸ XUẤT LƯƠNG NHÂN VIÊN
@@ -180,7 +219,7 @@ export default function TabThongKe({
               </div>
             </div>
 
-            {/* THẺ THỰC THU VS QUỸ LƯƠNG VS CHI PHÍ VẬN HÀNH (ĐÃ CHIA 3 CỘT) */}
+            {/* THẺ THỰC THU VS QUỸ LƯƠNG VS CHI PHÍ VẬN HÀNH */}
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3 shadow-sm relative overflow-hidden">
                 <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1.5">
@@ -200,7 +239,6 @@ export default function TabThongKe({
                 </div>
               </div>
 
-              {/* MỤC MỚI: CHI PHÍ VẬN HÀNH */}
               <div className="bg-violet-50 border border-violet-100 rounded-2xl p-3 shadow-sm relative overflow-hidden">
                 <div className="flex items-center gap-1 text-[9px] font-black text-violet-600 uppercase tracking-widest mb-1.5">
                   <DollarSign size={12} /> VẬN HÀNH
