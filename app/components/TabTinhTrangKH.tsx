@@ -1,20 +1,29 @@
+import { useState } from "react";
 import NutCopy from "./NutCopy";
 import toast from "react-hot-toast";
 import { PhatSinh } from "../../types";
+import { ChevronDown } from "lucide-react";
 
 interface TabTinhTrangKHProps {
   quaHan: PhatSinh[];
   canTraHomNay: PhatSinh[];
   dangThue: PhatSinh[];
+  lichSuThue: PhatSinh[]; // ĐÃ THÊM: Dữ liệu lịch sử
   danhDauDaTraDo: (id: string) => Promise<void>;
+  formatTienInput: (val: string) => string; // ĐÃ THÊM: Hàm format tiền
 }
 
 export default function TabTinhTrangKH({
   quaHan,
   canTraHomNay,
   dangThue,
-  danhDauDaTraDo
+  lichSuThue,
+  danhDauDaTraDo,
+  formatTienInput
 }: TabTinhTrangKHProps) {
+  
+  // ĐÃ THÊM: Trạng thái đóng/mở danh sách lịch sử
+  const [showLichSu, setShowLichSu] = useState(false);
 
   const copyZaloTraDo = (item: PhatSinh) => {
     const ngayTraFormat = item.ngayTra ? item.ngayTra.split("-").reverse().join("/") : "";
@@ -156,7 +165,55 @@ export default function TabTinhTrangKH({
           </div>
         )}
       </div>
-      
+
+      {/* =======================================================
+          ĐÃ THÊM: MỤC LỊCH SỬ THUÊ ĐỒ (THU GỌN)
+      ======================================================== */}
+      <div className="mt-8 border-t border-slate-200 pt-6">
+        <button 
+          onClick={() => setShowLichSu(!showLichSu)} 
+          className="w-full flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100 active:scale-95 transition-all outline-none"
+        >
+          <h3 className="font-black text-slate-800 text-base flex items-center gap-2">
+            📦 Lịch sử khách đã thuê ({lichSuThue.length})
+          </h3>
+          <div className={`p-1.5 rounded-full bg-slate-50 text-slate-400 transition-transform ${showLichSu ? "rotate-180" : ""}`}>
+            <ChevronDown size={18} />
+          </div>
+        </button>
+
+        {showLichSu && (
+          <div className="mt-4 space-y-3 animate-fade-in">
+            {lichSuThue.length === 0 ? (
+              <div className="text-center py-8 bg-white border border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold text-sm">
+                Chưa có lịch sử giao dịch thuê đồ nào.
+              </div>
+            ) : (
+              lichSuThue.map((ps) => (
+                <div key={ps.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center hover:border-slate-200 transition-colors">
+                  <div>
+                    <div className="font-bold text-slate-800 text-base mb-1.5">{ps.tenKhach || "Khách hàng"}</div>
+                    <div className="text-[11px] font-medium text-slate-500 flex flex-col gap-0.5">
+                        <span className="flex items-center gap-1">Dịch vụ: <strong className="text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">{ps.loai}</strong></span>
+                        <span>Ngày thuê: <strong className="text-slate-700">{ps.ngay.split("-").reverse().join("/")}</strong></span>
+                        {ps.ngayTra && <span>Ngày trả: <strong className="text-slate-700">{ps.ngayTra.split("-").reverse().join("/")}</strong></span>}
+                    </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-1.5">
+                    <div className="text-lg font-black text-emerald-600">
+                      {formatTienInput(String(ps.soTien || 0))}đ
+                    </div>
+                    <div className="text-[9px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded uppercase tracking-wider border border-emerald-100">
+                      Hoàn tất
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

@@ -21,7 +21,7 @@ const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loadin
 const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
-const APP_VERSION = "v1.4.1"; // Cập nhật nhẹ version
+const APP_VERSION = "v1.4.1"; 
 
 function homNay() { 
   const d = new Date(); 
@@ -137,6 +137,11 @@ export default function HomePage() {
   const quaHan = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra < ngayHomNayStr);
   const dangThue = danhSachPhatSinh.filter((ps) => !ps.daTraDo && isThueDoCheck(ps.loai) && ps.ngayTra && ps.ngayTra > ngayHomNayStr);
   
+  // ĐÃ BỔ SUNG: Tính toán danh sách Lịch Sử Thuê Đồ (Các món đồ đã trả)
+  const lichSuThue = danhSachPhatSinh
+      .filter((ps) => ps.daTraDo && isThueDoCheck(ps.loai))
+      .sort((a, b) => b.ngay.localeCompare(a.ngay));
+
   const danhDauDaTraDo = async (id: string) => { 
     try { 
       await updateDoc(doc(db, "phatSinh", id), { daTraDo: true }); 
@@ -263,10 +268,6 @@ export default function HomePage() {
   const lichUpdates: Record<string, any> = {};
   const phatSinhUpdates: string[] = [];
 
-  // ==========================================
-  // ĐÃ SỬA: DỌN DẸP LOGIC KÉT TIỀN MẶT
-  // Bắt mọi khoản tiền mặt chưa nộp từ trước đến nay, chống thất thoát.
-  // ==========================================
   if (laAdmin && tab === "home") {
       lichLamViec.forEach(l => {
           if (l.danhSachThanhToan && l.danhSachThanhToan.length > 0) {
@@ -275,21 +276,20 @@ export default function HomePage() {
                   if (tt.soTien) {
                       if (tt.phuongThuc === "Tiền mặt") {
                           if (tt.daNopTien) {
-                              if (tt.ngay === ngayHomNayStr) tmDaNop += tt.soTien; // Đã nộp thì chỉ tính số liệu của hôm nay
+                              if (tt.ngay === ngayHomNayStr) tmDaNop += tt.soTien; 
                           } else {
-                              tmChuaNop += tt.soTien; // Chưa nộp thì quét tất cả các ngày
+                              tmChuaNop += tt.soTien; 
                               modified = true;
                               return { ...tt, daNopTien: true };
                           }
                       } else if (tt.phuongThuc === "Chuyển khoản" && tt.ngay === ngayHomNayStr) {
-                          ckHomNay += tt.soTien; // Chuyển khoản chỉ tính hôm nay
+                          ckHomNay += tt.soTien; 
                       }
                   }
                   return tt;
               });
               if (modified) lichUpdates[l.id!] = { ...lichUpdates[l.id!], danhSachThanhToan: newList };
           } else {
-              // Legacy data (Dữ liệu cũ)
               if (l.tienCoc) {
                   if (l.phuongThucCoc === "Tiền mặt") {
                       if ((l as any).daNopTienCoc) {
@@ -658,7 +658,8 @@ export default function HomePage() {
               </div>
             )}
 
-            {(!laAdmin || subTabKhoDo === "traDo") && (<TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} danhDauDaTraDo={danhDauDaTraDo} />)}
+            {/* ĐÃ CẬP NHẬT: TRUYỀN THÊM DỮ LIỆU LỊCH SỬ VÀO TAB KHO ĐỒ */}
+            {(!laAdmin || subTabKhoDo === "traDo") && (<TabTinhTrangKH quaHan={quaHan} canTraHomNay={canTraHomNay} dangThue={dangThue} lichSuThue={lichSuThue} formatTienInput={formatTienInput} danhDauDaTraDo={danhDauDaTraDo} />)}
 
             {(laAdmin && subTabKhoDo === "goiChup") && (
               <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100 max-w-3xl mx-auto animate-fade-in">
