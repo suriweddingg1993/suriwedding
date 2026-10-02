@@ -22,7 +22,6 @@ export default function TabChamCong({
 }: TabChamCongProps) {
   
   // THUẬT TOÁN ĐẢM BẢO 100% MÚI GIỜ VIỆT NAM (GMT+7)
-  // Loại bỏ hoàn toàn lỗi trôi ngày/giờ qua 12h trưa trên điện thoại
   const getVnDate = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const getVnTime = () => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
 
@@ -34,6 +33,9 @@ export default function TabChamCong({
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [showModalYeuCau, setShowModalYeuCau] = useState(false);
   
+  // KHÓA CHỐNG SPAM BẤM NHIỀU LẦN
+  const [isProcessing, setIsProcessing] = useState(false);
+
   // FORM YÊU CẦU
   const [ycNgay, setYcNgay] = useState(todayStr);
   const [ycLoai, setYcLoai] = useState("Quên Check-in");
@@ -57,9 +59,16 @@ export default function TabChamCong({
 
   const myRecordToday = danhSachChamCong.find((cc) => cc.uid === hoSoCuaToi?.id && cc.ngay === todayStr);
 
+  // ĐÃ SỬA: Xác định trạng thái nút cứng
+  const daCheckIn = !!myRecordToday?.checkIn;
+  const daCheckOut = !!myRecordToday?.checkOut;
+
   const handleCheckIn = async () => {
     if (!hoSoCuaToi) return toast.error("Lỗi tài khoản!");
-    if (myRecordToday?.checkIn) return toast.error("Bạn đã Check-in hôm nay rồi!");
+    if (daCheckIn) return toast.error("Bạn đã Check-in hôm nay rồi!");
+    if (isProcessing) return; // Chặn bấm đúp
+
+    setIsProcessing(true);
 
     const [h, m] = currentTime.split(":").map(Number);
     const timeInMins = h * 60 + m;
@@ -76,18 +85,31 @@ export default function TabChamCong({
         });
       }
       toast.success(isLate ? `Check-in muộn ${lateMins} phút!` : "Check-in thành công!");
-    } catch (error) { toast.error("Lỗi mạng!"); }
+    } catch (error: any) { 
+      console.error(error);
+      toast.error("Lỗi Check-in: " + (error?.message || "Vui lòng thử lại")); 
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleCheckOut = async () => {
     if (!hoSoCuaToi) return toast.error("Lỗi tài khoản!");
-    if (!myRecordToday?.checkIn) return toast.error("Bạn chưa Check-in!");
-    if (myRecordToday?.checkOut) return toast.error("Bạn đã Check-out rồi!");
+    if (!daCheckIn) return toast.error("Bạn chưa Check-in!");
+    if (daCheckOut) return toast.error("Bạn đã Check-out rồi!");
+    if (isProcessing) return; // Chặn bấm đúp
+
+    setIsProcessing(true);
 
     try {
       await updateDoc(doc(db, "chamCong", myRecordToday.id!), { checkOut: currentTime });
       toast.success("Check-out thành công. Nghỉ ngơi thôi!");
-    } catch (error) { toast.error("Lỗi mạng!"); }
+    } catch (error: any) { 
+      console.error(error);
+      toast.error("Lỗi Check-out: " + (error?.message || "Vui lòng thử lại")); 
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const guiYeuCau = async () => {
@@ -97,22 +119,32 @@ export default function TabChamCong({
     const recordExist = danhSachChamCong.find(cc => cc.uid === hoSoCuaToi.id && cc.ngay === ycNgay);
     const lyDoChiTiet = ycThoiGian ? `[Đề xuất giờ: ${ycThoiGian}] - ${ycLyDo}` : ycLyDo;
 
-    const payload: any = {
-      uid: hoSoCuaToi.id, email: hoSoCuaToi.email, ngay: ycNgay, 
-      loaiGiaiTrinh: ycLoai, lyDoGiaiTrinh: lyDoChiTiet, trangThaiGiaiTrinh: "Chờ duyệt",
-      thoiGianDeXuat: ycThoiGian 
-    };
-
     try {
       if (recordExist) {
-        await updateDoc(doc(db, "chamCong", recordExist.id!), { ...payload, uid: undefined, email: undefined, ngay: undefined });
+        await updateDoc(doc(db, "chamCong", recordExist.id!), { 
+          loaiGiaiTrinh: ycLoai, 
+          lyDoGiaiTrinh: lyDoChiTiet, 
+          trangThaiGiaiTrinh: "Chờ duyệt",
+          thoiGianDeXuat: ycThoiGian 
+        });
       } else {
-        await addDoc(collection(db, "chamCong"), payload);
+        await addDoc(collection(db, "chamCong"), {
+          uid: hoSoCuaToi.id, 
+          email: hoSoCuaToi.email, 
+          ngay: ycNgay, 
+          loaiGiaiTrinh: ycLoai, 
+          lyDoGiaiTrinh: lyDoChiTiet, 
+          trangThaiGiaiTrinh: "Chờ duyệt",
+          thoiGianDeXuat: ycThoiGian 
+        });
       }
       toast.success("Đã gửi yêu cầu cho Quản lý!");
       setShowModalYeuCau(false);
       setYcThoiGian(""); setYcLyDo("");
-    } catch (error) { toast.error("Lỗi gửi yêu cầu!"); }
+    } catch (error: any) { 
+      console.error(error);
+      toast.error("Lỗi gửi yêu cầu: " + (error?.message || "Vui lòng thử lại")); 
+    }
   };
 
   const duyetYeuCau = async (yc: ChamCong, trangThai: "Đã duyệt" | "Từ chối") => {
@@ -136,7 +168,10 @@ export default function TabChamCong({
 
       await updateDoc(doc(db, "chamCong", yc.id!), updates);
       toast.success(trangThai === "Đã duyệt" ? "Đã duyệt và cập nhật giờ công!" : "Đã từ chối!");
-    } catch (error) { toast.error("Lỗi cập nhật!"); }
+    } catch (error: any) { 
+      console.error(error);
+      toast.error("Lỗi cập nhật: " + (error?.message || "Vui lòng thử lại")); 
+    }
   };
 
   const moFormAdminSua = (cc: ChamCong, tenNV: string) => {
@@ -165,7 +200,10 @@ export default function TabChamCong({
       });
       toast.success("Đã ghi đè giờ công!");
       setShowAdminSua(false);
-    } catch(e) { toast.error("Lỗi cập nhật!"); }
+    } catch(error: any) { 
+      console.error(error);
+      toast.error("Lỗi cập nhật: " + (error?.message || "Vui lòng thử lại")); 
+    }
   };
 
   const toggleUser = (uid: string) => {
@@ -212,26 +250,26 @@ export default function TabChamCong({
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={handleCheckIn} 
-            disabled={!!myRecordToday?.checkIn} 
-            className={`group flex flex-col items-center justify-center p-5 rounded-2xl transition-all duration-300 ${myRecordToday?.checkIn ? "bg-slate-50 border border-slate-100 text-slate-400 opacity-60" : "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200 hover:-translate-y-1 active:scale-95 border border-blue-400"}`}
+            disabled={daCheckIn || isProcessing} 
+            className={`group flex flex-col items-center justify-center p-5 rounded-2xl transition-all duration-300 ${daCheckIn ? "bg-slate-50 border border-slate-100 text-slate-400 opacity-60 cursor-not-allowed" : "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200 hover:-translate-y-1 active:scale-95 border border-blue-400"}`}
           >
-            <div className={`p-3 rounded-full mb-2 transition-transform duration-300 ${myRecordToday?.checkIn ? "bg-slate-100 text-slate-400" : "bg-white/20 text-white group-hover:scale-110"}`}>
+            <div className={`p-3 rounded-full mb-2 transition-transform duration-300 ${daCheckIn ? "bg-slate-100 text-slate-400" : "bg-white/20 text-white group-hover:scale-110"}`}>
               <LogIn size={24} strokeWidth={2.5} />
             </div>
             <span className="font-black tracking-wide text-sm">CHECK IN</span>
-            <span className="text-[10px] mt-1 font-bold uppercase opacity-90">{myRecordToday?.checkIn ? `Đã điểm: ${myRecordToday.checkIn}` : "Vào ca làm"}</span>
+            <span className="text-[10px] mt-1 font-bold uppercase opacity-90">{daCheckIn ? `Đã điểm: ${myRecordToday?.checkIn}` : "Vào ca làm"}</span>
           </button>
           
           <button 
             onClick={handleCheckOut} 
-            disabled={!myRecordToday?.checkIn || !!myRecordToday?.checkOut} 
-            className={`group flex flex-col items-center justify-center p-5 rounded-2xl transition-all duration-300 ${!myRecordToday?.checkIn || myRecordToday?.checkOut ? "bg-slate-50 border border-slate-100 text-slate-400 opacity-60" : "bg-gradient-to-br from-orange-400 to-rose-500 text-white shadow-lg shadow-rose-200 hover:-translate-y-1 active:scale-95 border border-rose-400"}`}
+            disabled={!daCheckIn || daCheckOut || isProcessing} 
+            className={`group flex flex-col items-center justify-center p-5 rounded-2xl transition-all duration-300 ${!daCheckIn || daCheckOut ? "bg-slate-50 border border-slate-100 text-slate-400 opacity-60 cursor-not-allowed" : "bg-gradient-to-br from-orange-400 to-rose-500 text-white shadow-lg shadow-rose-200 hover:-translate-y-1 active:scale-95 border border-rose-400"}`}
           >
-            <div className={`p-3 rounded-full mb-2 transition-transform duration-300 ${!myRecordToday?.checkIn || myRecordToday?.checkOut ? "bg-slate-100 text-slate-400" : "bg-white/20 text-white group-hover:scale-110"}`}>
+            <div className={`p-3 rounded-full mb-2 transition-transform duration-300 ${!daCheckIn || daCheckOut ? "bg-slate-100 text-slate-400" : "bg-white/20 text-white group-hover:scale-110"}`}>
               <LogOut size={24} strokeWidth={2.5} />
             </div>
             <span className="font-black tracking-wide text-sm">CHECK OUT</span>
-            <span className="text-[10px] mt-1 font-bold uppercase opacity-90">{myRecordToday?.checkOut ? `Đã điểm: ${myRecordToday.checkOut}` : "Kết thúc ca"}</span>
+            <span className="text-[10px] mt-1 font-bold uppercase opacity-90">{daCheckOut ? `Đã điểm: ${myRecordToday?.checkOut}` : "Kết thúc ca"}</span>
           </button>
         </div>
       </div>
