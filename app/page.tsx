@@ -21,7 +21,7 @@ const TabKhachHang = dynamic(() => import("./components/TabKhachHang"), { loadin
 const TabChiPhi = dynamic(() => import("./components/TabChiPhi"), { loading: () => <div className="p-10 text-center text-slate-400 font-bold animate-pulse">Đang tải...</div> });
 
 const ADMIN_CHINH_EMAIL = "dangngocan93@gmail.com";
-const APP_VERSION = "v1.4.0"; 
+const APP_VERSION = "v1.4.1"; // Cập nhật nhẹ version
 
 function homNay() { 
   const d = new Date(); 
@@ -54,7 +54,6 @@ export default function HomePage() {
   const [subTabThongKe, setSubTabThongKe] = useState<"baoCao" | "chiPhi">("baoCao");
   const [thangThongKe, setThangThongKe] = useState("");
   
-  // ĐÃ CẬP NHẬT: Thêm subTab "luong" vào trạng thái
   const [subTabNhanSu, setSubTabNhanSu] = useState<"chamCong" | "danhSach" | "luong">("chamCong");
   const [subTabKhoDo, setSubTabKhoDo] = useState<"traDo" | "goiChup" | "sanPham">("traDo");
 
@@ -264,48 +263,74 @@ export default function HomePage() {
   const lichUpdates: Record<string, any> = {};
   const phatSinhUpdates: string[] = [];
 
+  // ==========================================
+  // ĐÃ SỬA: DỌN DẸP LOGIC KÉT TIỀN MẶT
+  // Bắt mọi khoản tiền mặt chưa nộp từ trước đến nay, chống thất thoát.
+  // ==========================================
   if (laAdmin && tab === "home") {
       lichLamViec.forEach(l => {
           if (l.danhSachThanhToan && l.danhSachThanhToan.length > 0) {
               let modified = false;
               const newList = l.danhSachThanhToan.map(tt => {
-                  if (tt.ngay === ngayHomNayStr && tt.soTien) {
+                  if (tt.soTien) {
                       if (tt.phuongThuc === "Tiền mặt") {
-                          if (tt.daNopTien) tmDaNop += tt.soTien;
-                          else {
-                              tmChuaNop += tt.soTien;
+                          if (tt.daNopTien) {
+                              if (tt.ngay === ngayHomNayStr) tmDaNop += tt.soTien; // Đã nộp thì chỉ tính số liệu của hôm nay
+                          } else {
+                              tmChuaNop += tt.soTien; // Chưa nộp thì quét tất cả các ngày
                               modified = true;
                               return { ...tt, daNopTien: true };
                           }
-                      } else {
-                          ckHomNay += tt.soTien;
+                      } else if (tt.phuongThuc === "Chuyển khoản" && tt.ngay === ngayHomNayStr) {
+                          ckHomNay += tt.soTien; // Chuyển khoản chỉ tính hôm nay
                       }
                   }
                   return tt;
               });
               if (modified) lichUpdates[l.id!] = { ...lichUpdates[l.id!], danhSachThanhToan: newList };
           } else {
-              if (l.ngayGhiNhanCoc === ngayHomNayStr && l.tienCoc) {
+              // Legacy data (Dữ liệu cũ)
+              if (l.tienCoc) {
                   if (l.phuongThucCoc === "Tiền mặt") {
-                      if (l.daNopTienCoc) tmDaNop += l.tienCoc;
-                      else { tmChuaNop += l.tienCoc; if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {}; lichUpdates[l.id!].daNopTienCoc = true; }
-                  } else if (l.phuongThucCoc === "Chuyển khoản") ckHomNay += l.tienCoc;
+                      if ((l as any).daNopTienCoc) {
+                          if (l.ngayGhiNhanCoc === ngayHomNayStr) tmDaNop += l.tienCoc;
+                      } else {
+                          tmChuaNop += l.tienCoc; 
+                          if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {}; 
+                          lichUpdates[l.id!].daNopTienCoc = true; 
+                      }
+                  } else if (l.phuongThucCoc === "Chuyển khoản" && l.ngayGhiNhanCoc === ngayHomNayStr) {
+                      ckHomNay += l.tienCoc;
+                  }
               }
-              if (l.ngayThanhToanThem === ngayHomNayStr && l.tienThanhToanThem) {
+              if (l.tienThanhToanThem) {
                   if (l.phuongThucThanhToanThem === "Tiền mặt") {
-                      if (l.daNopTienThanhToanThem) tmDaNop += l.tienThanhToanThem;
-                      else { tmChuaNop += l.tienThanhToanThem; if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {}; lichUpdates[l.id!].daNopTienThanhToanThem = true; }
-                  } else if (l.phuongThucThanhToanThem === "Chuyển khoản") ckHomNay += l.tienThanhToanThem;
+                      if ((l as any).daNopTienThanhToanThem) {
+                          if (l.ngayThanhToanThem === ngayHomNayStr) tmDaNop += l.tienThanhToanThem;
+                      } else {
+                          tmChuaNop += l.tienThanhToanThem; 
+                          if (!lichUpdates[l.id!]) lichUpdates[l.id!] = {}; 
+                          lichUpdates[l.id!].daNopTienThanhToanThem = true; 
+                      }
+                  } else if (l.phuongThucThanhToanThem === "Chuyển khoản" && l.ngayThanhToanThem === ngayHomNayStr) {
+                      ckHomNay += l.tienThanhToanThem;
+                  }
               }
           }
       });
 
       danhSachPhatSinh.forEach(ps => {
-          if (ps.ngay === ngayHomNayStr && ps.soTien) {
+          if (ps.soTien) {
               if (ps.phuongThuc === "Tiền mặt") {
-                  if (ps.daNopTien) tmDaNop += ps.soTien;
-                  else { tmChuaNop += ps.soTien; phatSinhUpdates.push(ps.id!); }
-              } else if (ps.phuongThuc === "Chuyển khoản") ckHomNay += ps.soTien;
+                  if (ps.daNopTien) {
+                      if (ps.ngay === ngayHomNayStr) tmDaNop += ps.soTien;
+                  } else {
+                      tmChuaNop += ps.soTien; 
+                      phatSinhUpdates.push(ps.id!); 
+                  }
+              } else if (ps.phuongThuc === "Chuyển khoản" && ps.ngay === ngayHomNayStr) {
+                  ckHomNay += ps.soTien;
+              }
           }
       });
   }
@@ -332,7 +357,6 @@ export default function HomePage() {
     return acc;
   }, {} as Record<string, GoiDichVu[]>);
 
-  // ĐÃ CẬP NHẬT: Xóa mục Lương riêng lẻ, gộp vào chung Nhân sự
   const nutMenu = [
     { key: "home", icon: Home, label: "Trang chủ", color: "text-blue-600", bg: "bg-blue-50", adminOnly: false },
     { key: "lich", icon: CalendarDays, label: "Lịch chụp", color: "text-indigo-600", bg: "bg-indigo-50", adminOnly: false },
@@ -608,7 +632,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ĐÃ CẬP NHẬT: Gộp Bảng Lương vào trong Nhân sự */}
         {tab === "chamCong" && (
           <div className="animate-fade-in">
             <div className="flex overflow-x-auto custom-scrollbar bg-slate-200/60 p-1.5 rounded-2xl mb-4 max-w-lg mx-auto shadow-sm gap-1">
@@ -778,7 +801,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ĐÃ CẬP NHẬT: Mục 'Quản lý' trỏ thẳng vào 'Nhân sự' */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200/50 flex justify-around items-end pt-1.5 pb-5 md:pb-3 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] z-40">
         {[
           { key: "home", icon: Home, label: "Trang chủ" }, 

@@ -28,6 +28,8 @@ export default function TabPhatSinh({
   const [selectedDate, setSelectedDate] = useState(localToday);
   const [currentMonth, setCurrentMonth] = useState(new Date(localToday));
 
+  const [dangSuaId, setDangSuaId] = useState<string | null>(null);
+
   const [psKhachHangId, setPsKhachHangId] = useState<string | null>(null);
   const [psNgay, setPsNgay] = useState(localToday);
   const [psTenKhach, setPsTenKhach] = useState("");
@@ -56,13 +58,14 @@ export default function TabPhatSinh({
   }, [showModal, showHoaHongModal]);
 
   useEffect(() => {
-    if (psSoDienThoai.length >= 9) {
-      const khachCu = danhSachKhachHang.find(kh => kh.soDienThoai === psSoDienThoai);
+    const cleanPhone = psSoDienThoai.replace(/\s/g, "");
+    if (cleanPhone.length >= 9) {
+      const khachCu = danhSachKhachHang.find(kh => (kh.soDienThoai || "").replace(/\s/g, "") === cleanPhone);
       if (khachCu) {
         setPsKhachHangId(khachCu.id!);
         setPsTenKhach(khachCu.tenKhach);
       } else { setPsKhachHangId(null); }
-    } else if (psSoDienThoai.length < 9) { setPsKhachHangId(null); }
+    } else if (cleanPhone.length < 9) { setPsKhachHangId(null); }
   }, [psSoDienThoai, danhSachKhachHang]);
 
   const isThueDo = (loai: string) => (loai || "").toLowerCase().includes("thuê");
@@ -93,6 +96,39 @@ export default function TabPhatSinh({
     await deleteDoc(doc(db, "phatSinh", id)); toast.success("Đã xóa"); 
   };
 
+  const resetForm = () => {
+    setDangSuaId(null); setPsKhachHangId(null);
+    setPsNgay(selectedDate); setPsTenKhach(""); setPsSoDienThoai(""); 
+    setPsLoaiDaChon(""); setPsLoaiKhac(""); setPsNgayTra(""); setPsSoTien(""); 
+    setPsPhuongThuc("Chuyển khoản"); setPsGhiChu("");
+  };
+
+  const handleSua = (item: PhatSinh) => {
+    setDangSuaId(item.id!);
+    setPsKhachHangId(item.khachHangId || null);
+    setPsNgay(item.ngay);
+    setPsTenKhach(item.tenKhach || "");
+    setPsSoDienThoai(item.soDienThoai || "");
+    
+    const standardTypes = ["Thuê váy", "Thuê vest", "Thuê áo dài", "Thuê phụ kiện", "Make-up lẻ", "In thêm ảnh", "Chụp lấy ngay", "Bán lẻ", "Phí di chuyển", "Phí chụp thêm", "Phí đền bù"];
+    if (standardTypes.includes(item.loai)) {
+      setPsLoaiDaChon(item.loai);
+      setPsLoaiKhac("");
+    } else {
+      setPsLoaiDaChon("Khác");
+      setPsLoaiKhac(item.loai);
+    }
+    
+    setPsNgayTra(item.ngayTra || "");
+    setPsSoTien(formatTienInput(String(item.soTien || 0)));
+    
+    // ĐÃ SỬA LỖI TYPESCRIPT: Ép kiểu tuyệt đối để trình biên dịch không báo lỗi
+    setPsPhuongThuc(item.phuongThuc === "Tiền mặt" ? "Tiền mặt" : "Chuyển khoản");
+    
+    setPsGhiChu(item.ghiChu || "");
+    setShowModal(true);
+  };
+
   const xacNhanNhanTien = () => {
     if (!tienHoaHong) { toast.error("Vui lòng nhập số tiền!"); return; }
     if (!hoSoCuaToi) { toast.error("Không tìm thấy tài khoản!"); return; }
@@ -108,8 +144,9 @@ export default function TabPhatSinh({
 
   const handleThemPhatSinh = async () => {
     const finalLoai = psLoaiDaChon === "Khác" && psLoaiKhac.trim() !== "" ? psLoaiKhac.trim() : psLoaiDaChon;
+    const cleanPhone = psSoDienThoai.replace(/\s/g, ""); 
 
-    if (!psNgay || !finalLoai || !psSoTien || !psTenKhach || !psSoDienThoai) { 
+    if (!psNgay || !finalLoai || !psSoTien || !psTenKhach || !cleanPhone) { 
       toast.error("Vui lòng điền đủ Ngày, Khách, SĐT, Dịch vụ & Tiền!"); return; 
     }
     if (isThueDo(finalLoai) && !psNgayTra) {
@@ -120,9 +157,9 @@ export default function TabPhatSinh({
     const tienPhatSinhMoi = chuyenTienVeSo(psSoTien);
 
     try {
-      if (!finalKhId) {
+      if (!finalKhId && !dangSuaId) {
         const khRef = await addDoc(collection(db, "khachHang"), {
-          tenKhach: psTenKhach, soDienThoai: psSoDienThoai, 
+          tenKhach: psTenKhach, soDienThoai: cleanPhone, 
           nguonKhach: "Tự động tạo từ Phát sinh", 
           ngayTao: new Date().toISOString(),
           tongChiTieu: tienPhatSinhMoi,
@@ -130,25 +167,40 @@ export default function TabPhatSinh({
         });
         finalKhId = khRef.id;
         toast.success(`Đã tự động tạo Hồ sơ CRM cho khách mới!`);
-      } else {
-         try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tienPhatSinhMoi), soLanDen: increment(1) }); } catch(e){}
-      }
-
-      await addDoc(collection(db, "phatSinh"), { 
+      } 
+      
+      const psData: any = {
         khachHangId: finalKhId,
-        ngay: psNgay, tenKhach: psTenKhach, soDienThoai: psSoDienThoai, 
+        ngay: psNgay, tenKhach: psTenKhach, soDienThoai: cleanPhone, 
         loai: finalLoai, ngayTra: isThueDo(finalLoai) ? psNgayTra : "", 
         soTien: tienPhatSinhMoi, 
         phuongThuc: psPhuongThuc, 
-        daNopTien: false, // Bổ sung mặc định là Chưa ký nhận
-        nguoiGhi: hoSoCuaToi?.email || "", ghiChu: psGhiChu 
-      }); 
+        ghiChu: psGhiChu 
+      };
+
+      if (dangSuaId) {
+        const oldItem = danhSachPhatSinh.find(p => p.id === dangSuaId);
+        const tienCu = Number(oldItem?.soTien || 0);
+        const chenhLech = tienPhatSinhMoi - tienCu;
+        
+        await updateDoc(doc(db, "phatSinh", dangSuaId), psData);
+        if (finalKhId && chenhLech !== 0) {
+           try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(chenhLech) }); } catch(e){}
+        }
+        toast.success("Đã cập nhật dịch vụ phát sinh");
+      } else {
+        psData.daNopTien = false; 
+        psData.nguoiGhi = hoSoCuaToi?.email || "";
+        
+        await addDoc(collection(db, "phatSinh"), psData); 
+        if (finalKhId && psKhachHangId) { 
+           try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tienPhatSinhMoi), soLanDen: increment(1) }); } catch(e){}
+        }
+        toast.success("Đã lưu dịch vụ phát sinh"); 
+      }
       
-      setPsNgay(localToday); setPsTenKhach(""); setPsSoDienThoai(""); 
-      setPsLoaiDaChon(""); setPsLoaiKhac(""); setPsNgayTra(""); setPsSoTien(""); 
-      setPsPhuongThuc("Chuyển khoản"); setPsGhiChu(""); 
+      resetForm();
       setShowModal(false);
-      toast.success("Đã lưu dịch vụ phát sinh"); 
     } catch (error) { toast.error("Lỗi cập nhật CSDL"); }
   };
 
@@ -222,14 +274,20 @@ export default function TabPhatSinh({
           </div>
         ) : (
           [...dsGiaoDichNgayNay].reverse().map((item: PhatSinh) => (
-            <div key={item.id} className="bg-white p-5 rounded-3xl border border-slate-100 mb-3 shadow-sm relative hover:shadow-md transition-all">
+            <div key={item.id} className="bg-white p-5 rounded-3xl border border-slate-100 mb-3 shadow-sm relative hover:shadow-md transition-all group">
               <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${isThueDo(item.loai) ? "bg-orange-500" : "bg-emerald-500"}`}></div>
-              <div className="flex justify-between ml-2">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
+              
+              {/* Nút Sửa và Xóa ở góc trên */}
+              <div className="absolute right-3 top-3 flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button onClick={() => handleSua(item)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">✏️</button>
+                 {laAdmin && item.id && <button onClick={() => xoaPhatSinh(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all">🗑</button>}
+              </div>
+
+              <div className="flex justify-between ml-2 mt-1">
+                <div className="pr-12">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                      <div className="text-[10px] font-black px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-600 w-fit">{item.loai}</div>
                      
-                     {/* Báo hiệu Nhận tiền mặt hay chuyển khoản (Đã thêm trạng thái Sếp ký) */}
                      {item.phuongThuc === "Tiền mặt" ? (
                         <div className={`text-[10px] font-black px-2 py-1 rounded-md border flex items-center gap-1 ${item.daNopTien ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-orange-200 text-orange-600 bg-orange-50'}`}>
                             <HandCoins size={12}/> TM {item.daNopTien ? '(Sếp đã nhận)' : '(Két)'}
@@ -239,24 +297,23 @@ export default function TabPhatSinh({
                      )}
                   </div>
                   
-                  <div className="font-black text-slate-800 text-lg flex items-center gap-1.5 mt-1">
+                  <div className="font-black text-slate-800 text-lg flex items-center gap-1.5 mt-1 leading-tight">
                     {item.tenKhach} {item.khachHangId && <span title="Khách hàng CRM"><UserCheck size={16} className="text-emerald-500"/></span>}
                   </div>
                   {item.ghiChu && <div className="text-xs font-medium text-slate-500 mt-1 italic">{item.ghiChu}</div>}
                 </div>
-                <div className="text-xl font-black text-emerald-600">+{formatTienInput(String(item.soTien || 0))}</div>
               </div>
               
-              <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 ml-2">
+              <div className="flex justify-between items-end mt-4 pt-4 border-t border-slate-100 ml-2">
                 <button onClick={() => { setPhatSinhDangChon(item); setShowHoaHongModal(true); }} className="bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95">🙋‍♂️ Nhận hoa hồng</button>
-                {laAdmin && item.id && <button onClick={() => xoaPhatSinh(item.id as string)} className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all">🗑</button>}
+                <div className="text-xl font-black text-emerald-600">+{formatTienInput(String(item.soTien || 0))}</div>
               </div>
             </div>
           ))
         )}
       </div>
 
-      <button onClick={() => { setPsNgay(selectedDate); setShowModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full text-3xl shadow-xl shadow-emerald-200/50 z-40 hover:scale-110 active:scale-90 transition-all flex items-center justify-center"><Wallet size={24}/></button>
+      <button onClick={() => { resetForm(); setPsNgay(selectedDate); setShowModal(true); }} className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full text-3xl shadow-xl shadow-emerald-200/50 z-40 hover:scale-110 active:scale-90 transition-all flex items-center justify-center"><Wallet size={24}/></button>
 
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-end sm:items-center z-[100] sm:p-4 overscroll-none touch-none">
@@ -265,7 +322,7 @@ export default function TabPhatSinh({
             <div className="flex justify-between items-center p-4 bg-slate-50 border-b border-slate-200 shrink-0 shadow-sm z-10">
               <button onClick={() => setShowModal(false)} className="text-slate-500 font-bold px-4 py-2 hover:bg-slate-200 rounded-xl transition-all active:scale-95">Hủy</button>
               <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                ✨ Dịch vụ phát sinh
+                {dangSuaId ? "✏️ Cập nhật phát sinh" : "✨ Dịch vụ phát sinh"}
               </h3>
               <button onClick={handleThemPhatSinh} className="text-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-black px-4 py-2 rounded-xl transition-all active:scale-95">LƯU</button>
             </div>
@@ -278,7 +335,7 @@ export default function TabPhatSinh({
                   <div className="relative">
                     <input type="tel" value={psSoDienThoai} onChange={(e) => setPsSoDienThoai(e.target.value)} placeholder="Nhập SĐT để tìm kiếm tự động..." className={`bg-slate-50 border p-3.5 rounded-2xl w-full text-slate-900 font-black outline-none focus:ring-4 transition-all pr-24 ${psKhachHangId ? "border-emerald-200 focus:ring-emerald-50 bg-emerald-50/30" : "border-slate-100 focus:ring-emerald-50"}`} />
                     {psKhachHangId && <span className="absolute right-3 top-3.5 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={12}/> Khách cũ</span>}
-                    {!psKhachHangId && psSoDienThoai.length >= 9 && <span className="absolute right-3 top-3.5 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-1 rounded-lg uppercase tracking-wider">✨ Tạo mới</span>}
+                    {!psKhachHangId && psSoDienThoai.replace(/\s/g, "").length >= 9 && <span className="absolute right-3 top-3.5 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-1 rounded-lg uppercase tracking-wider">✨ Tạo mới</span>}
                   </div>
                 </div>
 

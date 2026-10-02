@@ -102,16 +102,18 @@ export default function TabLich({
     return () => unsubGoi();
   }, []);
 
+  // ĐÃ SỬA: Loại bỏ khoảng trắng khi tìm SĐT để không bị lỗi
   useEffect(() => {
-    if (!dangSua && soDienThoai.length >= 9) {
-      const matches = danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai);
+    if (!dangSua && soDienThoai.replace(/\s/g, "").length >= 9) {
+      const cleanPhone = soDienThoai.replace(/\s/g, "");
+      const matches = danhSachKhachHang.filter(kh => (kh.soDienThoai || "").replace(/\s/g, "") === cleanPhone);
       if (matches.length === 1 && khachHangId !== "NEW") {
         setKhachHangId(matches[0].id!); setTenKhach(matches[0].tenKhach);
         if (matches[0].soDienThoai2) setSoDienThoai2(matches[0].soDienThoai2);
       } else if (matches.length === 0) {
         setKhachHangId(null);
       }
-    } else if (soDienThoai.length < 9) { 
+    } else if (soDienThoai.replace(/\s/g, "").length < 9) { 
       setKhachHangId(null); 
     }
   }, [soDienThoai, danhSachKhachHang, dangSua]);
@@ -286,25 +288,23 @@ export default function TabLich({
 
     const finalTheLoai = theLoaiDaChon === "Khác" && theLoaiKhac.trim() !== "" ? theLoaiKhac.trim() : (theLoaiDaChon || "Khác");
     const isKhongCanNgayCuoi = ["Chụp gia đình", "Chụp trẻ em", "Chụp beauty", "Chụp sự kiện", "Chụp chân dung", "Chụp kỷ yếu"].includes(finalTheLoai);
-
-    let isKhachVuaTao = false;
+    const cleanPhone = soDienThoai.replace(/\s/g, "");
 
     try {
       if (!finalKhId && !dangSua) {
         try {
           const khRef = await addDoc(collection(db, "khachHang"), {
-            tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", nguonKhach: "Tự động tạo từ Lịch", ngayTao: new Date().toISOString(),
+            tenKhach: tenKhach || "", soDienThoai: cleanPhone || "", soDienThoai2: soDienThoai2 || "", nguonKhach: "Tự động tạo từ Lịch", ngayTao: new Date().toISOString(),
             tongChiTieu: tongTienMoi, soLanDen: 1 
           });
           finalKhId = khRef.id;
-          isKhachVuaTao = true; 
         } catch (crmError) { console.warn("⚠️ Bỏ qua lỗi CRM:", crmError); }
       }
       
       const oldItem = dangSua ? lichLamViec.find(l => l.id === dangSua) : null;
       
       const duLieuLich: any = { 
-        khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: soDienThoai || "", soDienThoai2: soDienThoai2 || "", 
+        khachHangId: finalKhId || null, ngay: ngay || "", gio: gio || "", tenKhach: tenKhach || "", soDienThoai: cleanPhone || "", soDienThoai2: soDienThoai2 || "", 
         theLoai: finalTheLoai, goiChup: goiChup || "", chiTietGoi: chiTietGoi || "", 
         giaTien: chuyenTienVeSo(giaTien) || 0, 
         
@@ -330,18 +330,29 @@ export default function TabLich({
         duLieuLich.trangThai = "Đã chốt lịch"; 
         await addDoc(collection(db, "lichStudio"), duLieuLich); 
         
-        if (finalKhId && !isKhachVuaTao) {
+        if (finalKhId && khachHangId !== "NEW") {
             try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tongTienMoi), soLanDen: increment(1) }); } catch(e){}
         }
         toast.success("Đã thêm lịch thành công!"); 
       } 
       else { 
+        // ==============================================================
+        // ĐÃ SỬA LỖI CRM (Tính lại doanh thu nếu lỡ chọn nhầm Khách Hàng)
+        // ==============================================================
         const tongTienCu = (Number(oldItem?.giaTien || 0)) + (Number((oldItem as any)?.tienDichVuThem || 0));
-        const chenhLech = tongTienMoi - tongTienCu;
 
         await updateDoc(doc(db, "lichStudio", dangSua), duLieuLich); 
-        if (finalKhId && chenhLech !== 0) {
-            try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(chenhLech) }); } catch(e){}
+        
+        if (oldItem?.khachHangId && finalKhId && oldItem.khachHangId !== finalKhId) {
+             // Đổi người: Trừ tiền và số lần đến của người cũ, cộng sang cho người mới
+             try { await updateDoc(doc(db, "khachHang", oldItem.khachHangId), { tongChiTieu: increment(-tongTienCu), soLanDen: increment(-1) }); } catch(e){}
+             try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(tongTienMoi), soLanDen: increment(1) }); } catch(e){}
+        } else {
+             // Giữ nguyên người: Chỉ tính toán lại chênh lệch số tiền nếu có thay đổi
+             const chenhLech = tongTienMoi - tongTienCu;
+             if (finalKhId && chenhLech !== 0) {
+                 try { await updateDoc(doc(db, "khachHang", finalKhId), { tongChiTieu: increment(chenhLech) }); } catch(e){}
+             }
         }
         toast.success("Đã lưu thay đổi!"); 
       } 
@@ -435,8 +446,6 @@ export default function TabLich({
             const currentTrangThai = item.trangThai || "Đã chốt lịch";
 
             const laThangCu = item.ngay.substring(0, 7) < localToday.substring(0, 7);
-            const daHoanThanh = currentTrangThai === "Hoàn thành";
-            
             const biKhoaVoiNhanVien = laThangCu && !laAdmin && tienNo <= 0;
             
             const phanCongData = (item as any).phanCong;
@@ -519,7 +528,6 @@ export default function TabLich({
       <ModalHoaDon hoaDonData={hoaDonData} setHoaDonData={setHoaDonData} hdDiaChi={hdDiaChi} setHdDiaChi={setHdDiaChi} homNay={homNay} formatTienInput={formatTienInput} danhSachPhatSinh={danhSachPhatSinh} lichLamViec={lichLamViec} />
       <ModalBaoCao showHoaHongModal={showHoaHongModal} setShowHoaHongModal={setShowHoaHongModal} lichDangChon={lichDangChon} vaiTro={vaiTro} setVaiTro={setVaiTro} tienHoaHong={tienHoaHong} setTienHoaHong={setTienHoaHong} formatTienInput={formatTienInput} xacNhanNhanTien={xacNhanNhanTien} />
 
-      {/* ĐÃ SỬA: Form Modal được cài touch-pan-y khóa cứng thao tác vuốt ngang, chỉ cho phép cuộn dọc */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] sm:p-4 overscroll-none touch-none overflow-hidden w-full max-w-[100vw]">
           <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl rounded-none sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-fade-in touch-pan-y border-0 sm:border border-white relative">
@@ -530,7 +538,6 @@ export default function TabLich({
               <button onClick={handleLuuLichThongMinh} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 font-black px-4 py-2 rounded-xl transition-all shadow-sm">LƯU</button>
             </div>
 
-            {/* ĐÃ SỬA: overflow-x-hidden để triệt tiêu hoàn toàn thanh cuộn ngang */}
             <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden custom-scrollbar flex-1 space-y-4 pb-20 overscroll-none w-full">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
@@ -548,15 +555,15 @@ export default function TabLich({
                 <div className="relative">
                   <input type="tel" value={soDienThoai} onChange={(e) => setSoDienThoai(e.target.value)} placeholder="Nhập SĐT..." className={`bg-slate-50 border p-3.5 rounded-2xl w-full text-slate-900 font-black outline-none focus:ring-4 transition-all pr-24 ${khachHangId && khachHangId !== "NEW" ? "border-emerald-200 focus:ring-emerald-50 bg-emerald-50/30" : "border-slate-100 focus:ring-indigo-50"}`} />
                   {khachHangId && khachHangId !== "NEW" && <span className="absolute right-3 top-3.5 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1"><CheckCircle2 size={12}/> Khách cũ</span>}
-                  {(!khachHangId || khachHangId === "NEW") && soDienThoai.length >= 9 && <span className="absolute right-3 top-3.5 text-[10px] font-black text-blue-600 bg-blue-100 px-2 py-1 rounded-lg uppercase tracking-wider">✨ Tạo mới</span>}
+                  {(!khachHangId || khachHangId === "NEW") && soDienThoai.replace(/\s/g, "").length >= 9 && <span className="absolute right-3 top-3.5 text-[10px] font-black text-blue-600 bg-blue-100 px-2 py-1 rounded-lg uppercase tracking-wider">✨ Tạo mới</span>}
                 </div>
               </div>
 
-              {!dangSua && soDienThoai.length >= 9 && danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai).length > 0 && (
+              {!dangSua && soDienThoai.replace(/\s/g, "").length >= 9 && danhSachKhachHang.filter(kh => (kh.soDienThoai || "").replace(/\s/g, "") === soDienThoai.replace(/\s/g, "")).length > 0 && (
                 <div className="bg-blue-50 border border-blue-100 p-3 rounded-2xl mt-1 animate-fade-in">
                   <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-2 flex items-center gap-1"><Search size={12}/> Chọn người dùng số này:</div>
                   <div className="flex flex-wrap gap-2">
-                    {danhSachKhachHang.filter(kh => kh.soDienThoai === soDienThoai).map(kh => (
+                    {danhSachKhachHang.filter(kh => (kh.soDienThoai || "").replace(/\s/g, "") === soDienThoai.replace(/\s/g, "")).map(kh => (
                       <button key={kh.id} onClick={(e) => { e.preventDefault(); setKhachHangId(kh.id!); setTenKhach(kh.tenKhach); if(kh.soDienThoai2) setSoDienThoai2(kh.soDienThoai2); }} className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${khachHangId === kh.id ? "bg-blue-600 text-white border-blue-600 shadow-md" : "bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50"}`}>
                         👤 {kh.tenKhach}
                       </button>

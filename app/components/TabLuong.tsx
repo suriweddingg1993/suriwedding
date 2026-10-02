@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChamCong, ThuHuong, TaiKhoan } from "../../types";
-import { ChevronDown, ChevronUp, Maximize2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Maximize2, Clock, CheckCircle2 } from "lucide-react";
 
 interface BangLuong extends TaiKhoan {
   soNgayNghi: number;
@@ -9,6 +9,7 @@ interface BangLuong extends TaiKhoan {
   phatDiMuon: number;
   phatNghi: number;
   chuyenCan: boolean;
+  isThangHienTai: boolean; // Bổ sung cờ nhận diện tháng
   tienChuyenCan: number;
   tongThuHuong: number;
   thuHuongThang: ThuHuong[];
@@ -39,7 +40,6 @@ export default function TabLuong({
   const [thangChon, setThangChon] = useState(homNayStr.slice(0, 7));
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
-  // ĐÃ THÊM: State để quản lý Modal xem chi tiết Hoa hồng toàn màn hình
   const [modalChiTietUid, setModalChiTietUid] = useState<string | null>(null);
 
   const [showModal, setShowModal] = useState(false);
@@ -119,7 +119,7 @@ export default function TabLuong({
 
     return { 
       ...tk, soNgayNghi, soLanMuon, tongPhutMuon, phatDiMuon, phatNghi, 
-      chuyenCan, tienChuyenCan, tongThuHuong, thuHuongThang, luongTamTinh 
+      chuyenCan, isThangHienTai: isCurrentMonth, tienChuyenCan, tongThuHuong, thuHuongThang, luongTamTinh 
     };
   };
 
@@ -132,7 +132,6 @@ export default function TabLuong({
     else setExpandedRowId(id);
   };
 
-  // Dữ liệu cho Modal Chi Tiết Hoa Hồng
   const userDetails = laAdmin 
     ? bangLuongNhanVien.find(nv => nv.id === modalChiTietUid) 
     : (luongCuaToi?.id === modalChiTietUid ? luongCuaToi : null);
@@ -184,8 +183,12 @@ export default function TabLuong({
                     
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <div className="text-[10px] uppercase font-bold text-slate-400">Thực Lãnh</div>
-                        <div className="text-lg font-black text-indigo-700">{formatTienInput(String(nv.luongTamTinh))}đ</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-400">
+                           {nv.isThangHienTai ? "Dự kiến lãnh" : "Thực Lãnh"}
+                        </div>
+                        <div className={`text-lg font-black ${nv.isThangHienTai ? "text-blue-600" : "text-indigo-700"}`}>
+                           {formatTienInput(String(nv.luongTamTinh))}đ
+                        </div>
                       </div>
                       <div className={`p-1.5 rounded-full transition-transform duration-300 ${isExpanded ? "bg-indigo-100 text-indigo-600 rotate-180" : "bg-slate-50 text-slate-400"}`}>
                         <ChevronDown size={20} />
@@ -215,11 +218,17 @@ export default function TabLuong({
                           <div className="bg-white rounded-xl p-3 border border-slate-100 shadow-sm">
                             <div className="text-[10px] font-bold uppercase text-slate-400 mb-2">Chuyên Cần</div>
                             <div className="flex flex-col justify-center h-[calc(100%-24px)]">
-                               <div className={`text-sm font-black ${nv.chuyenCan ? "text-emerald-600" : "text-rose-500 line-through opacity-70"}`}>
+                               <div className={`text-sm font-black ${nv.chuyenCan ? (nv.isThangHienTai ? "text-blue-600" : "text-emerald-600") : "text-rose-500 line-through opacity-70"}`}>
                                  +{formatTienInput(String(nv.thuongChuyenCan || 0))}đ
                                </div>
-                               <div className="text-[10px] font-bold text-slate-400 mt-0.5">
-                                 {nv.chuyenCan ? "Đạt đủ điều kiện tháng" : "Vi phạm quy định giờ giấc"}
+                               <div className={`text-[10px] font-bold mt-1 flex items-center gap-1 ${nv.chuyenCan ? (nv.isThangHienTai ? "text-blue-500" : "text-emerald-600") : "text-rose-500"}`}>
+                                 {!nv.chuyenCan ? (
+                                    <>❌ Vi phạm quy định</>
+                                 ) : nv.isThangHienTai ? (
+                                    <><Clock size={12} className="animate-pulse"/> Đang đạt (Chưa chốt)</>
+                                 ) : (
+                                    <><CheckCircle2 size={12}/> Đạt điều kiện tháng</>
+                                 )}
                                </div>
                             </div>
                           </div>
@@ -229,7 +238,6 @@ export default function TabLuong({
                           <div className="flex justify-between items-center mb-3">
                             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Hoa hồng & Ứng ({nv.thuHuongThang.length})</div>
                             <div className="flex gap-2">
-                              {/* NÚT PHÓNG TO */}
                               <button onClick={() => setModalChiTietUid(nv.id!)} className="bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors uppercase tracking-wider flex items-center gap-1"><Maximize2 size={12}/> Phóng to</button>
                               <button onClick={() => moModalThuHuong(nv.id!, nv.email, nv.hoTen || "")} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors uppercase tracking-wider">+ Thêm</button>
                             </div>
@@ -253,7 +261,6 @@ export default function TabLuong({
                                 </div>
                               ))
                             )}
-                            {/* Overlay báo hiệu có thể click để xem đầy đủ */}
                             {nv.thuHuongThang.length > 0 && (
                               <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent flex items-end justify-center pb-2 opacity-90 group-hover:opacity-100 transition-opacity">
                                 <span className="bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-md">Chạm để xem chi tiết đầy đủ</span>
@@ -281,8 +288,14 @@ export default function TabLuong({
 
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 text-white shadow-lg shadow-blue-200 mb-6 relative overflow-hidden">
               <div className="absolute -right-4 -top-4 text-8xl opacity-10 pointer-events-none">✨</div>
-              <div className="text-xs font-bold mb-1 uppercase text-blue-200 tracking-wider">Tổng lương tạm tính</div>
+              <div className="text-xs font-bold mb-1 uppercase text-blue-200 tracking-wider flex items-center gap-1.5">
+                 {luongCuaToi.isThangHienTai ? <Clock size={14} className="animate-pulse"/> : <CheckCircle2 size={14}/>} 
+                 {luongCuaToi.isThangHienTai ? "Tổng lương dự kiến" : "Tổng lương thực lãnh"}
+              </div>
               <div className="text-4xl font-black drop-shadow-sm">{formatTienInput(String(luongCuaToi.luongTamTinh))}đ</div>
+              {luongCuaToi.isThangHienTai && (
+                 <div className="mt-2 text-[9px] text-blue-100 bg-black/20 w-fit px-2 py-1 rounded border border-white/10">* Số liệu tạm tính và có thể thay đổi khi kết thúc tháng.</div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-3">
@@ -304,12 +317,20 @@ export default function TabLuong({
               </div>
             </div>
 
-            <div className={`border rounded-2xl p-4 flex justify-between items-center mt-3 mb-4 shadow-sm ${luongCuaToi.chuyenCan ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-100"}`}>
+            <div className={`border rounded-2xl p-4 flex justify-between items-center mt-3 mb-4 shadow-sm ${luongCuaToi.chuyenCan ? (luongCuaToi.isThangHienTai ? "bg-blue-50 border-blue-200" : "bg-emerald-50 border-emerald-200") : "bg-rose-50 border-rose-100"}`}>
               <div>
-                <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${luongCuaToi.chuyenCan ? "text-emerald-600" : "text-rose-500"}`}>Thưởng chuyên cần</div>
-                <div className={`text-xs font-black ${luongCuaToi.chuyenCan ? "text-emerald-700" : "text-rose-600"}`}>{luongCuaToi.chuyenCan ? "✅ Đạt điều kiện" : "❌ Vi phạm nội quy"}</div>
+                <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${luongCuaToi.chuyenCan ? (luongCuaToi.isThangHienTai ? "text-blue-600" : "text-emerald-600") : "text-rose-500"}`}>Thưởng chuyên cần</div>
+                <div className={`text-xs font-black flex items-center gap-1 ${luongCuaToi.chuyenCan ? (luongCuaToi.isThangHienTai ? "text-blue-700" : "text-emerald-700") : "text-rose-600"}`}>
+                    {!luongCuaToi.chuyenCan ? (
+                        <>❌ Vi phạm nội quy</>
+                    ) : luongCuaToi.isThangHienTai ? (
+                        <><Clock size={14} className="animate-pulse"/> Đang đạt (Chưa chốt)</>
+                    ) : (
+                        <><CheckCircle2 size={14}/> Đạt điều kiện</>
+                    )}
+                </div>
               </div>
-              <div className={`text-xl font-black ${luongCuaToi.chuyenCan ? "text-emerald-700" : "text-rose-400 line-through opacity-70"}`}>+{formatTienInput(String(luongCuaToi.tienChuyenCan))}đ</div>
+              <div className={`text-xl font-black ${luongCuaToi.chuyenCan ? (luongCuaToi.isThangHienTai ? "text-blue-700" : "text-emerald-700") : "text-rose-400 line-through opacity-70"}`}>+{formatTienInput(String(luongCuaToi.tienChuyenCan))}đ</div>
             </div>
 
             <div className="border border-indigo-100 bg-white rounded-2xl p-4 shadow-sm">
@@ -322,7 +343,6 @@ export default function TabLuong({
                 </div>
                 <div className="flex flex-col gap-1.5 shrink-0">
                   <button onClick={() => hoSoCuaToi && uidCuaToi && moModalThuHuong(uidCuaToi, hoSoCuaToi.email, hoSoCuaToi.hoTen || "")} className="bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 text-[10px] font-black px-4 py-2 rounded-lg shadow-sm transition-all uppercase tracking-wide">Thêm HH</button>
-                  {/* NÚT PHÓNG TO CHO NHÂN VIÊN */}
                   <button onClick={() => setModalChiTietUid(luongCuaToi.id!)} className="bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95 text-[10px] font-black px-4 py-2 rounded-lg transition-all uppercase tracking-wide flex items-center justify-center gap-1"><Maximize2 size={12}/> Phóng to</button>
                 </div>
               </div>
@@ -345,7 +365,6 @@ export default function TabLuong({
                     </div>
                   ))
                 )}
-                {/* Overlay báo hiệu có thể click để xem đầy đủ */}
                 {luongCuaToi.thuHuongThang.length > 0 && (
                   <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent flex items-end justify-center pb-2 opacity-90 group-hover:opacity-100 transition-opacity">
                     <span className="bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-md">Chạm để xem chi tiết đầy đủ</span>
@@ -364,7 +383,6 @@ export default function TabLuong({
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
           <div className="bg-slate-50 rounded-[2rem] w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] animate-fade-in overflow-hidden border border-white">
             
-            {/* Header Modal */}
             <div className="p-5 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 relative">
               <div>
                 <h3 className="text-lg font-black text-slate-800 tracking-tight">Chi tiết Giao dịch</h3>
@@ -373,7 +391,6 @@ export default function TabLuong({
               <button onClick={() => setModalChiTietUid(null)} className="w-10 h-10 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-full text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shadow-sm active:scale-95">✕</button>
             </div>
 
-            {/* Content Modal hiển thị siêu to khổng lồ */}
             <div className="overflow-y-auto p-5 space-y-4 custom-scrollbar flex-1">
               {listThuHuongModal.length === 0 ? (
                 <div className="text-center text-sm font-medium text-slate-400 py-10 italic">Chưa có dữ liệu giao dịch.</div>
@@ -382,7 +399,6 @@ export default function TabLuong({
                   <div key={th.id} className={`flex flex-col gap-3 p-5 rounded-2xl border bg-white shadow-sm transition-all hover:shadow-md ${th.soTien && th.soTien < 0 ? "border-rose-100" : "border-emerald-100"}`}>
                     
                     <div className="flex justify-between items-start gap-4">
-                      {/* Cho phép text xuống dòng tự do với whitespace-pre-wrap */}
                       <div className="font-bold text-slate-700 text-sm leading-relaxed whitespace-pre-wrap flex-1">{th.moTa}</div>
                       <button onClick={() => th.id && xoaThuHuong(th.id)} className="w-8 h-8 shrink-0 flex items-center justify-center bg-slate-50 border border-slate-200 rounded-full text-slate-400 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition-colors active:scale-95">✕</button>
                     </div>
